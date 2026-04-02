@@ -1,10 +1,19 @@
 /**
  * Browser-side Gemini API client.
  * Calls the Gemini REST API directly — no backend needed.
+ *
+ * Tries multiple models in order. If one is rate-limited, falls back to the next.
  */
 
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
+const GEMINI_MODELS = [
+  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+];
+
+function modelUrl(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 const API_KEY_STORAGE = 'slovak-gemini-api-key';
 
@@ -39,26 +48,47 @@ export async function askGemini(
     body.systemInstruction = { parts: [{ text: systemPrompt }] };
   }
 
-  const res = await fetch(`${GEMINI_URL}?key=${key}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const payload = JSON.stringify(body);
+  let lastError = '';
 
-  if (!res.ok) {
-    const err = await res.text();
+  for (const model of GEMINI_MODELS) {
+    const url = `${modelUrl(model)}?key=${key}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+    });
+
     if (res.status === 429) {
-      throw new Error('Rate limited by Gemini. Wait a moment and try again.');
+      // Rate limited on this model — try the next one
+      lastError = `${model} rate limited`;
+      continue;
     }
-    throw new Error(`Gemini API error ${res.status}: ${err}`);
+
+    if (!res.ok) {
+      const err = await res.text();
+      // If it's a model-not-found or permission error, try next model
+      if (res.status === 404 || res.status === 403) {
+        lastError = `${model}: ${res.status}`;
+        continue;
+      }
+      throw new Error(`Gemini error (${model}, ${res.status}): ${err.substring(0, 200)}`);
+    }
+
+    const data = await res.json();
+    try {
+      return data.candidates[0].content.parts[0].text;
+    } catch {
+      throw new Error(`Unexpected response format from ${model}`);
+    }
   }
 
-  const data = await res.json();
-  try {
-    return data.candidates[0].content.parts[0].text;
-  } catch {
-    throw new Error('Unexpected Gemini response format');
-  }
+  throw new Error(
+    `All Gemini models are rate limited (${lastError}). ` +
+    'Try creating a new API key in a NEW Google Cloud project at https://aistudio.google.com/apikey ' +
+    '(click "Create API key in new project").'
+  );
 }
 
 export async function askGeminiJson(
