@@ -48,6 +48,7 @@ export default function Home() {
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [modes, setModes] = useState<Mode[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [encouragement] = useState(() =>
@@ -76,6 +77,7 @@ export default function Home() {
   const handleStart = async () => {
     if (!selectedMode || !user) return;
     setLoading(true);
+    setError('');
     try {
       const session = await createSession({
         user_id: user.id,
@@ -85,7 +87,9 @@ export default function Home() {
       });
       navigate(`/session/${session.id}`);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to start session';
       console.error('Failed to create session:', err);
+      setError(msg);
       setLoading(false);
     }
   };
@@ -307,6 +311,14 @@ export default function Home() {
                 Begin Learning
                 <ArrowRight size={17} />
               </motion.button>
+
+              {error && (
+                <div className="text-center">
+                  <span className="text-[13px] text-danger bg-danger-muted px-4 py-2.5 rounded-lg inline-block">
+                    {error}
+                  </span>
+                </div>
+              )}
 
               <p className="text-xs text-text-faint text-center">
                 You'll have a natural conversation with an AI tutor.
