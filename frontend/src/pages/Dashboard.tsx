@@ -9,7 +9,7 @@ import { getDashboard } from '../lib/api';
 import type { DashboardStats } from '../lib/types';
 
 const modeLabels: Record<string, { label: string; color: string }> = {
-  vocab: { label: 'Vocabulary', color: 'bg-mode-vocab' },
+  vocabulary: { label: 'Vocabulary', color: 'bg-mode-vocab' },
   grammar: { label: 'Grammar', color: 'bg-mode-grammar' },
   conversation: { label: 'Conversation', color: 'bg-mode-conversation' },
   translation: { label: 'Translation', color: 'bg-mode-translation' },

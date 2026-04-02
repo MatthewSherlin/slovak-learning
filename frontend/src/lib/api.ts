@@ -27,14 +27,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // Users
 export const getUsers = () =>
-  request<{ users: User[] }>('/users').then((r) => r.users);
+  request<User[]>('/users');
 
 // Modes & Topics
 export const getModes = () =>
-  request<{ modes: Mode[] }>('/modes').then((r) => r.modes);
+  request<Mode[]>('/modes');
 
 export const getTopics = (mode: string) =>
-  request<{ topics: Topic[] }>(`/topics/${mode}`).then((r) => r.topics);
+  request<Topic[]>(`/topics/${mode}`);
 
 // Sessions
 export const createSession = (data: {
@@ -54,11 +54,11 @@ export const getSession = (id: string) =>
 export const submitAnswer = (sessionId: string, answer: string) =>
   request<Session>(`/sessions/${sessionId}/answer`, {
     method: 'POST',
-    body: JSON.stringify({ session_id: sessionId, answer }),
+    body: JSON.stringify({ answer }),
   });
 
 export const requestHint = (sessionId: string) =>
-  request<{ hint: string }>(`/sessions/${sessionId}/hint`, {
+  request<Session>(`/sessions/${sessionId}/hint`, {
     method: 'POST',
   });
 
@@ -69,11 +69,11 @@ export const endSession = (sessionId: string) =>
 
 export const listSessions = (userId?: string) => {
   const query = userId ? `?user_id=${userId}` : '';
-  return request<{ sessions: SessionSummary[] }>(`/sessions${query}`).then((r) => r.sessions);
+  return request<SessionSummary[]>(`/sessions${query}`);
 };
 
 export const deleteSession = (sessionId: string) =>
-  request<{ status: string }>(`/sessions/${sessionId}`, {
+  request<{ ok: boolean }>(`/sessions/${sessionId}`, {
     method: 'DELETE',
   });
 
@@ -83,4 +83,4 @@ export const getDashboard = (userId: string) =>
 
 // Leaderboard
 export const getLeaderboard = () =>
-  request<{ entries: LeaderboardEntry[] }>('/leaderboard').then((r) => r.entries);
+  request<LeaderboardEntry[]>('/leaderboard');

@@ -9,7 +9,7 @@ import { listSessions, deleteSession } from '../lib/api';
 import type { SessionSummary } from '../lib/types';
 
 const modeColors: Record<string, string> = {
-  vocab: 'text-mode-vocab',
+  vocabulary: 'text-mode-vocab',
   grammar: 'text-mode-grammar',
   conversation: 'text-mode-conversation',
   translation: 'text-mode-translation',

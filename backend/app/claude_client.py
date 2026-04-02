@@ -14,7 +14,7 @@ async def ask_claude(
     timeout: int = 120,
     retries: int = 2,
 ) -> str:
-    cmd = [settings.claude_bin, "-p", prompt, "--output-format", "text"]
+    cmd = [settings.claude_bin, "-p", prompt, "--output-format", "text", "--model", settings.claude_model]
     if system_prompt:
         cmd += ["--system-prompt", system_prompt]
 

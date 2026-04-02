@@ -82,7 +82,7 @@ class DashboardStats(BaseModel):
 class CreateSessionRequest(BaseModel):
     user_id: str
     mode: PracticeMode
-    topic: str
+    topic: str = "general"
     difficulty: Difficulty = Difficulty.beginner
 
 

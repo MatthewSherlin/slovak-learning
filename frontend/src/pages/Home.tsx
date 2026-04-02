@@ -14,7 +14,7 @@ import { createSession, getTopics, getModes, getDashboard } from '../lib/api';
 import type { LearningMode, Difficulty, Topic, Mode, DashboardStats } from '../lib/types';
 
 const modeDescriptions: Record<LearningMode, string> = {
-  vocab:
+  vocabulary:
     'Build your Slovak word bank. Learn new words with context, examples, and usage patterns.',
   grammar:
     'Master Slovak grammar rules. Cases, conjugation, verb aspects, and sentence structure.',
@@ -25,18 +25,18 @@ const modeDescriptions: Record<LearningMode, string> = {
 };
 
 const defaultQuestionCounts: Record<LearningMode, number> = {
-  vocab: 20,
+  vocabulary: 20,
   grammar: 20,
   conversation: 15,
   translation: 20,
 };
 
 const encouragements = [
-  "Kazdy den je nova prilezitost. -- Every day is a new opportunity.",
-  "Kto sa pyta, ten sa ucit nechce prestat.",
-  "Slowly but surely -- pomaly, ale iste.",
+  "Každý deň je nová príležitosť. — Every day is a new opportunity.",
+  "Kto sa pýta, ten sa učiť nechce prestať.",
+  "Pomaly, ale isto. — Slowly but surely.",
   "Learning Slovak opens doors to a beautiful culture.",
-  "Mistakes are proof that you're trying. Chyby su dokaz, ze sa snazis.",
+  "Chyby sú dôkaz, že sa snažíš. — Mistakes are proof that you're trying.",
 ];
 
 export default function Home() {
@@ -46,7 +46,7 @@ export default function Home() {
   const [selectedMode, setSelectedMode] = useState<LearningMode | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>('');
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
   const [loading, setLoading] = useState(false);
   const [modes, setModes] = useState<Mode[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -274,9 +274,9 @@ export default function Home() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {([
-                    { key: 'easy' as Difficulty, label: 'Beginner', desc: 'Basic phrases & words' },
-                    { key: 'medium' as Difficulty, label: 'Intermediate', desc: 'Conversation level' },
-                    { key: 'hard' as Difficulty, label: 'Advanced', desc: 'Native-like fluency' },
+                    { key: 'beginner' as Difficulty, label: 'Beginner', desc: 'Basic phrases & words' },
+                    { key: 'intermediate' as Difficulty, label: 'Intermediate', desc: 'Conversation level' },
+                    { key: 'advanced' as Difficulty, label: 'Advanced', desc: 'Native-like fluency' },
                   ]).map((d) => (
                     <button
                       key={d.key}

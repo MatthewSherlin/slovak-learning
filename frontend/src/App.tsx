@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import UserPicker, { useUser } from './components/UserPicker';
+import UserPicker, { useUser, UserProvider } from './components/UserPicker';
 import Home from './pages/Home';
 import Session from './pages/Session';
 import History from './pages/History';
@@ -40,7 +40,9 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <UserProvider>
+        <AppShell />
+      </UserProvider>
     </BrowserRouter>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { User } from '../lib/types';
@@ -10,7 +10,19 @@ const USERS: User[] = [
 
 const STORAGE_KEY = 'slovak-learning-user';
 
-export function useUser() {
+interface UserContextValue {
+  user: User | null;
+  setUser: (u: User | null) => void;
+  users: User[];
+}
+
+const UserContext = createContext<UserContextValue>({
+  user: null,
+  setUser: () => {},
+  users: USERS,
+});
+
+export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -32,7 +44,15 @@ export function useUser() {
     }
   }, []);
 
-  return { user, setUser, users: USERS };
+  return (
+    <UserContext.Provider value={{ user, setUser, users: USERS }}>
+      {children}
+    </UserContext.Provider>
+  );
+}
+
+export function useUser() {
+  return useContext(UserContext);
 }
 
 interface UserPickerProps {

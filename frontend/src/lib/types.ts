@@ -1,5 +1,5 @@
-export type LearningMode = 'vocab' | 'grammar' | 'conversation' | 'translation';
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type LearningMode = 'vocabulary' | 'grammar' | 'conversation' | 'translation';
+export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
 
 export interface User {
   id: string;
@@ -34,7 +34,7 @@ export interface FeedbackScore {
 export interface VocabEntry {
   slovak: string;
   english: string;
-  example: string;
+  example: string | null;
 }
 
 export interface SessionFeedback {

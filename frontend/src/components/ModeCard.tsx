@@ -12,14 +12,14 @@ interface ModeCardProps {
 }
 
 const icons: Record<LearningMode, typeof BookText> = {
-  vocab: BookText,
+  vocabulary: BookText,
   grammar: Puzzle,
   conversation: MessageCircle,
   translation: Languages,
 };
 
 const styles: Record<LearningMode, { gradient: string; iconBg: string; iconColor: string; borderHover: string }> = {
-  vocab: {
+  vocabulary: {
     gradient: 'from-emerald-500/8 via-transparent to-teal-500/5',
     iconBg: 'bg-emerald-500/12',
     iconColor: 'text-mode-vocab',
