@@ -18,8 +18,8 @@ export default function ApiKeySetup({ open, onComplete }: ApiKeySetupProps) {
       setError('Please enter an API key');
       return;
     }
-    if (!trimmed.startsWith('AIza')) {
-      setError('That doesn\'t look like a Gemini API key (should start with AIza)');
+    if (trimmed.length < 10) {
+      setError('That key looks too short');
       return;
     }
     setApiKey(trimmed);
@@ -52,7 +52,7 @@ export default function ApiKeySetup({ open, onComplete }: ApiKeySetupProps) {
           </div>
 
           <p className="text-sm text-text-muted mb-6 leading-relaxed">
-            SlovakPrep uses Google's Gemini AI to power your lessons.
+            SlovakPrep uses OpenRouter to power your lessons with free AI models.
             You'll need a free API key to get started.
           </p>
 
@@ -62,16 +62,16 @@ export default function ApiKeySetup({ open, onComplete }: ApiKeySetupProps) {
               <li>
                 Go to{' '}
                 <a
-                  href="https://aistudio.google.com/apikey"
+                  href="https://openrouter.ai/keys"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-accent hover:underline inline-flex items-center gap-0.5"
                 >
-                  Google AI Studio <ExternalLink size={9} />
+                  openrouter.ai/keys <ExternalLink size={9} />
                 </a>
               </li>
-              <li>Sign in with your Google account</li>
-              <li>Click "Create API key"</li>
+              <li>Create a free account (Google sign-in works)</li>
+              <li>Click "Create Key"</li>
               <li>Copy and paste it below</li>
             </ol>
           </div>
@@ -80,7 +80,7 @@ export default function ApiKeySetup({ open, onComplete }: ApiKeySetupProps) {
             type="text"
             value={key}
             onChange={(e) => { setKey(e.target.value); setError(''); }}
-            placeholder="AIzaSy..."
+            placeholder="sk-or-..."
             className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[13px] text-text-primary placeholder:text-text-faint focus:border-border-focus transition-colors font-mono mb-2"
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
           />
@@ -100,7 +100,7 @@ export default function ApiKeySetup({ open, onComplete }: ApiKeySetupProps) {
           </motion.button>
 
           <p className="text-[10.5px] text-text-faint text-center mt-4">
-            Your key stays in your browser. The free tier gives 15 req/min and 1,500/day.
+            Your key stays in your browser. Uses free AI models — no charges.
           </p>
         </motion.div>
       </motion.div>

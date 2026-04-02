@@ -1,21 +1,19 @@
 /**
- * Browser-side Gemini API client.
- * Calls the Gemini REST API directly — no backend needed.
+ * Browser-side LLM client using OpenRouter.
+ * Free models, no backend needed, CORS supported.
  *
- * Tries multiple models in order. If one is rate-limited, falls back to the next.
+ * https://openrouter.ai — free tier with generous limits.
  */
 
-const GEMINI_MODELS = [
-  'gemini-2.0-flash-lite',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+const FREE_MODELS = [
+  'google/gemma-3-27b-it:free',
+  'meta-llama/llama-4-scout:free',
+  'deepseek/deepseek-chat-v3-0324:free',
 ];
 
-function modelUrl(model: string): string {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-}
-
-const API_KEY_STORAGE = 'slovak-gemini-api-key';
+const API_KEY_STORAGE = 'slovak-api-key';
 
 export function getApiKey(): string | null {
   return localStorage.getItem(API_KEY_STORAGE);
@@ -34,61 +32,65 @@ export async function askGemini(
   systemPrompt?: string,
 ): Promise<string> {
   const key = getApiKey();
-  if (!key) throw new Error('No Gemini API key configured. Go to Settings to add one.');
+  if (!key) throw new Error('No API key configured. Go to Settings to add one.');
 
-  const body: Record<string, unknown> = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 2048,
-    },
-  };
-
+  const messages: Array<{ role: string; content: string }> = [];
   if (systemPrompt) {
-    body.systemInstruction = { parts: [{ text: systemPrompt }] };
+    messages.push({ role: 'system', content: systemPrompt });
   }
+  messages.push({ role: 'user', content: prompt });
 
-  const payload = JSON.stringify(body);
   let lastError = '';
 
-  for (const model of GEMINI_MODELS) {
-    const url = `${modelUrl(model)}?key=${key}`;
+  for (const model of FREE_MODELS) {
+    try {
+      const res = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.7,
+          max_tokens: 2048,
+        }),
+      });
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload,
-    });
-
-    if (res.status === 429) {
-      // Rate limited on this model — try the next one
-      lastError = `${model} rate limited`;
-      continue;
-    }
-
-    if (!res.ok) {
-      const err = await res.text();
-      // If it's a model-not-found or permission error, try next model
-      if (res.status === 404 || res.status === 403) {
-        lastError = `${model}: ${res.status}`;
+      if (res.status === 429) {
+        lastError = `${model} rate limited`;
         continue;
       }
-      throw new Error(`Gemini error (${model}, ${res.status}): ${err.substring(0, 200)}`);
-    }
 
-    const data = await res.json();
-    try {
-      return data.candidates[0].content.parts[0].text;
-    } catch {
-      throw new Error(`Unexpected response format from ${model}`);
+      if (!res.ok) {
+        const err = await res.text();
+        lastError = `${model}: ${res.status} - ${err.substring(0, 100)}`;
+        continue;
+      }
+
+      const data = await res.json();
+
+      if (data.error) {
+        lastError = `${model}: ${data.error.message || JSON.stringify(data.error).substring(0, 100)}`;
+        continue;
+      }
+
+      const text = data.choices?.[0]?.message?.content;
+      if (!text) {
+        lastError = `${model}: empty response`;
+        continue;
+      }
+
+      return text;
+    } catch (e) {
+      lastError = `${model}: ${e instanceof Error ? e.message : 'network error'}`;
+      continue;
     }
   }
 
-  throw new Error(
-    `All Gemini models are rate limited (${lastError}). ` +
-    'Try creating a new API key in a NEW Google Cloud project at https://aistudio.google.com/apikey ' +
-    '(click "Create API key in new project").'
-  );
+  throw new Error(`All models failed. Last error: ${lastError}`);
 }
 
 export async function askGeminiJson(

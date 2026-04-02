@@ -13,7 +13,7 @@ export default function Settings() {
     setHasKey(!!existing);
     if (existing) {
       // Show masked key
-      setKey('AIza' + '*'.repeat(existing.length - 8) + existing.slice(-4));
+      setKey(existing.slice(0, 5) + '*'.repeat(Math.max(existing.length - 9, 4)) + existing.slice(-4));
     }
   }, []);
 
@@ -24,7 +24,8 @@ export default function Settings() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     // Mask it after saving
-    const masked = 'AIza' + '*'.repeat(key.trim().length - 8) + key.trim().slice(-4);
+    const trimmed = key.trim();
+    const masked = trimmed.slice(0, 5) + '*'.repeat(Math.max(trimmed.length - 9, 4)) + trimmed.slice(-4);
     setKey(masked);
   };
 
@@ -59,19 +60,19 @@ export default function Settings() {
       >
         <h3 className="text-[15px] font-semibold text-text-primary mb-1 flex items-center gap-2">
           <Key size={16} className="text-accent" />
-          Gemini API Key
+          OpenRouter API Key
         </h3>
         <p className="text-[12.5px] text-text-muted mb-5 leading-relaxed">
-          This app uses Google's Gemini AI for tutoring. Get a free API key from{' '}
+          This app uses OpenRouter to power AI tutoring with free models. Get a free API key from{' '}
           <a
-            href="https://aistudio.google.com/apikey"
+            href="https://openrouter.ai/keys"
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent hover:underline inline-flex items-center gap-0.5"
           >
-            Google AI Studio <ExternalLink size={10} />
+            openrouter.ai/keys <ExternalLink size={10} />
           </a>
-          . The free tier gives you 15 requests/minute and 1,500/day — plenty for learning.
+          . Sign up with Google, click "Create Key", and paste it here. Free models, no charges.
         </p>
 
         <div className="flex gap-2">
@@ -79,7 +80,7 @@ export default function Settings() {
             type="text"
             value={key}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="AIzaSy..."
+            placeholder="sk-or-..."
             className="flex-1 bg-surface-2 border border-border rounded-xl px-4 py-3 text-[13px] text-text-primary placeholder:text-text-faint focus:border-border-focus transition-colors font-mono"
           />
           <motion.button
@@ -110,8 +111,8 @@ export default function Settings() {
 
         <div className="mt-5 p-3 bg-surface-2 rounded-xl border border-border-subtle">
           <p className="text-[11px] text-text-faint leading-relaxed">
-            Your API key is stored locally in your browser and never sent to any server except Google's Gemini API.
-            All session data is also stored locally. Nothing leaves your browser.
+            Your API key is stored locally in your browser and only sent to OpenRouter's API.
+            All session data is also stored locally. Nothing else leaves your browser.
           </p>
         </div>
       </motion.div>
