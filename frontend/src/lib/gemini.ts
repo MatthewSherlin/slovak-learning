@@ -8,10 +8,9 @@
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const FREE_MODELS = [
+  'openrouter/free',
   'google/gemma-3-27b-it:free',
   'google/gemma-3-12b-it:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free',
-  'meta-llama/llama-3.2-3b-instruct:free',
 ];
 
 const API_KEY_STORAGE = 'slovak-api-key';
@@ -60,8 +59,8 @@ export async function askGemini(
         }),
       });
 
-      if (res.status === 429) {
-        lastError = `${model} rate limited`;
+      if (res.status === 429 || res.status === 402) {
+        lastError = `${model}: ${res.status === 429 ? 'rate limited' : 'payment required'}`;
         continue;
       }
 
