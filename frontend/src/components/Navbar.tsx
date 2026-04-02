@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, History, BarChart3, BookOpen, Trophy, Languages } from 'lucide-react';
+import { Home, History, BarChart3, BookOpen, Trophy, Languages, Settings } from 'lucide-react';
 import { useUser } from './UserPicker';
 
 const links = [
@@ -9,6 +9,7 @@ const links = [
   { to: '/history', icon: History, label: 'History' },
   { to: '/dashboard', icon: BarChart3, label: 'Stats' },
   { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 interface NavbarProps {

@@ -1,0 +1,175 @@
+/** Slovak language learning question banks organized by mode and topic. */
+
+export const QUESTIONS: Record<string, Record<string, string[]>> = {
+  vocabulary: {
+    greetings_basics: [
+      "Teach me how to greet someone in Slovak — formal and informal. Start with 'Ahoj' and 'Dobrý deň'.",
+      "What are the basic polite phrases in Slovak? Please, thank you, excuse me, sorry.",
+      "How do I introduce myself in Slovak? Name, where I'm from, what I do.",
+      "Teach me how to say goodbye in Slovak — casual vs formal situations.",
+      "What are common everyday phrases like 'How are you?', 'I'm fine', 'See you later'?",
+    ],
+    food_drink: [
+      'Teach me Slovak words for common foods — bread, meat, vegetables, fruit.',
+      'How do I order at a restaurant in Slovak? Phrases for ordering, asking for the check, etc.',
+      'What are common Slovak dishes and how do I say them? Bryndzové halušky, kapustnica, etc.',
+      'Teach me drinks vocabulary in Slovak — water, coffee, beer, wine, juice.',
+      'How do I talk about cooking in Slovak? Basic verbs and kitchen vocabulary.',
+    ],
+    numbers_time: [
+      'Teach me numbers 1-20 in Slovak and how to pronounce them.',
+      "How do I tell time in Slovak? Hours, minutes, 'What time is it?'",
+      'Teach me days of the week and months in Slovak.',
+      'How do I talk about dates in Slovak? Birthdays, appointments, holidays.',
+      'Teach me larger numbers (20-1000) and how to use them for prices and quantities.',
+    ],
+    family_people: [
+      'Teach me family vocabulary in Slovak — mother, father, siblings, etc.',
+      'How do I describe people in Slovak? Appearance, personality, age.',
+      'What are common terms of endearment in Slovak? For a partner, child, friend.',
+      'Teach me professions/occupations in Slovak.',
+      'How do I talk about relationships in Slovak? Boyfriend, girlfriend, husband, wife, friend.',
+    ],
+    travel_directions: [
+      'Teach me essential travel phrases in Slovak — airport, train station, hotel.',
+      'How do I ask for and understand directions in Slovak?',
+      'What are common places vocabulary? Store, pharmacy, hospital, bank, post office.',
+      'Teach me transportation words in Slovak — bus, train, taxi, walking.',
+      'How do I handle common travel situations in Slovak? Lost, need help, emergencies.',
+    ],
+  },
+  grammar: {
+    noun_cases: [
+      'Explain the Slovak case system. Start with nominative and accusative — when do I use each?',
+      'Teach me the genitive case in Slovak. When is it used and how do nouns change?',
+      'Explain dative and locative cases in Slovak with everyday examples.',
+      'How does the instrumental case work in Slovak? Give me common patterns.',
+      'Show me how all 6 cases work together with a simple sentence, transforming each noun.',
+    ],
+    verb_conjugation: [
+      'Teach me present tense verb conjugation in Slovak. What are the main patterns?',
+      'How do I form past tense in Slovak? Show me regular patterns.',
+      'Explain the future tense in Slovak — how is it different from English?',
+      'Teach me the most common irregular verbs in Slovak — byť, mať, ísť, jesť, vedieť.',
+      'How do perfective vs imperfective verbs work in Slovak? This is confusing — help me understand.',
+    ],
+    adjective_agreement: [
+      'How do adjectives agree with nouns in Slovak? Gender, number, case.',
+      'Teach me comparative and superlative forms of common Slovak adjectives.',
+      'How do possessive adjectives work in Slovak? My, your, his, her, our, their.',
+      'Explain demonstrative pronouns/adjectives in Slovak — this, that, these, those.',
+      'How do I use adjectives with prepositions in Slovak?',
+    ],
+    prepositions: [
+      'Teach me common Slovak prepositions and which cases they require.',
+      'Explain prepositions of place in Slovak — in, on, under, next to, between.',
+      'How do motion vs location prepositions differ in Slovak? (v/do, na, etc.)',
+      'Teach me time prepositions in Slovak — at, during, before, after, since.',
+      'What are the trickiest prepositions in Slovak for English speakers?',
+    ],
+    word_order: [
+      "How does Slovak word order work? Is it really 'free' word order?",
+      'Explain how to form questions in Slovak — word order and question words.',
+      'How do I make negative sentences in Slovak? Double negatives?',
+      "Teach me how to use reflexive verbs in Slovak and where to place 'sa/si'.",
+      'How do clitics work in Slovak? The 2nd position rule.',
+    ],
+  },
+  conversation: {
+    daily_life: [
+      'Let\'s have a conversation about my daily routine in Slovak. Ask me what I did today.',
+      'Practice a conversation about weekend plans in Slovak with me.',
+      'Let\'s talk about hobbies and free time activities in Slovak.',
+      'Have a conversation with me about the weather in Slovak.',
+      'Let\'s practice talking about work/school in Slovak — asking and answering questions.',
+    ],
+    shopping: [
+      "Role-play: I'm shopping at a Slovak grocery store. You're the shopkeeper.",
+      "Practice: I'm at a clothing store in Bratislava. Help me buy something.",
+      "Role-play: I'm at a Slovak market asking about prices and bargaining.",
+      'Practice ordering at a Slovak café — coffee, pastries, paying.',
+      "Role-play: I'm at a Slovak bookstore/electronics shop looking for something specific.",
+    ],
+    social: [
+      "Let's practice meeting someone new at a party in Slovakia. Start the conversation.",
+      "Role-play: I'm visiting Slovak friends for dinner. Practice the social customs.",
+      'Practice having a phone call in Slovak — calling to make an appointment.',
+      "Let's practice making plans with friends in Slovak — suggesting activities, agreeing, declining.",
+      "Role-play: I'm at a Slovak pub watching a hockey game. Let's chat casually.",
+    ],
+    travel_situations: [
+      'Role-play: I just arrived at Bratislava airport and need to get to my hotel.',
+      'Practice: I\'m checking into a hotel in Slovak. Handle the whole interaction.',
+      "Role-play: I'm lost in a Slovak city and need to ask for directions.",
+      'Practice: I need to see a doctor in Slovakia. Help me explain my symptoms.',
+      "Role-play: I'm at a Slovak train station buying tickets to Košice.",
+    ],
+    cultural: [
+      "Tell me about Slovak holidays and traditions. Let's discuss them in simple Slovak.",
+      "Let's talk about Slovak food culture — what should I try and why?",
+      'Practice a conversation about Slovak vs American culture differences.',
+      "Let's discuss popular things in Slovakia — music, sports, TV, nature.",
+      'Talk to me about Bratislava in Slovak — what to see, where to go.',
+    ],
+  },
+  translation: {
+    english_to_slovak: [
+      'Translate these everyday sentences to Slovak and explain any tricky grammar.',
+      'Give me 5 English sentences about daily activities to translate to Slovak.',
+      'Translate these social phrases to Slovak: making plans, expressing opinions, agreeing/disagreeing.',
+      'Give me short English paragraphs about travel to translate into Slovak.',
+      'Translate these questions from English to Slovak and explain the word order.',
+    ],
+    slovak_to_english: [
+      'Give me Slovak sentences to translate to English. Start with simple ones.',
+      "Show me a short Slovak text about daily life — I'll try to translate it.",
+      'Give me Slovak dialogue to translate and explain any idioms or expressions.',
+      "Show me Slovak signs/menus/notices that I might see in Bratislava to translate.",
+      'Give me a Slovak weather report or news headline to translate.',
+    ],
+    fill_in_blanks: [
+      'Give me Slovak sentences with missing words (blanks) for me to fill in.',
+      'Create fill-in-the-blank exercises for Slovak verb conjugations.',
+      'Give me Slovak sentences with missing prepositions for me to complete.',
+      'Create exercises where I fill in the correct case ending in Slovak.',
+      "Give me a Slovak dialogue with blanks — I need to complete both sides.",
+    ],
+    error_correction: [
+      "Write some Slovak sentences with intentional mistakes — I'll find and fix them.",
+      'Give me Slovak sentences with wrong case endings to correct.',
+      "Show me common mistakes English speakers make in Slovak — I'll try the correct version.",
+      'Give me Slovak sentences with wrong word order for me to fix.',
+      'Write a short Slovak paragraph with 5 hidden errors for me to spot.',
+    ],
+  },
+};
+
+export const TOPICS: Record<string, Record<string, string>> = {
+  vocabulary: {
+    greetings_basics: 'Greetings & Basics',
+    food_drink: 'Food & Drink',
+    numbers_time: 'Numbers & Time',
+    family_people: 'Family & People',
+    travel_directions: 'Travel & Directions',
+  },
+  grammar: {
+    noun_cases: 'Noun Cases',
+    verb_conjugation: 'Verb Conjugation',
+    adjective_agreement: 'Adjectives',
+    prepositions: 'Prepositions',
+    word_order: 'Word Order',
+  },
+  conversation: {
+    daily_life: 'Daily Life',
+    shopping: 'Shopping',
+    social: 'Social Situations',
+    travel_situations: 'Travel Situations',
+    cultural: 'Culture & Traditions',
+  },
+  translation: {
+    english_to_slovak: 'English → Slovak',
+    slovak_to_english: 'Slovak → English',
+    fill_in_blanks: 'Fill in the Blanks',
+    error_correction: 'Error Correction',
+  },
+};
