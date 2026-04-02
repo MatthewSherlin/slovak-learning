@@ -70,7 +70,20 @@ export async function askGemini(
         continue;
       }
 
-      const data = await res.json();
+      const body = await res.text();
+      if (!body || !body.trim()) {
+        lastError = `${model}: empty response body`;
+        continue;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any;
+      try {
+        data = JSON.parse(body);
+      } catch {
+        lastError = `${model}: invalid JSON response`;
+        continue;
+      }
 
       if (data.error) {
         lastError = `${model}: ${data.error.message || JSON.stringify(data.error).substring(0, 100)}`;
