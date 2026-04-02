@@ -9,8 +9,9 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const FREE_MODELS = [
   'google/gemma-3-27b-it:free',
-  'meta-llama/llama-4-scout:free',
-  'deepseek/deepseek-chat-v3-0324:free',
+  'google/gemma-3-12b-it:free',
+  'nousresearch/hermes-3-llama-3.1-405b:free',
+  'meta-llama/llama-3.2-3b-instruct:free',
 ];
 
 const API_KEY_STORAGE = 'slovak-api-key';
