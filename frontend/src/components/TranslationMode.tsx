@@ -89,8 +89,10 @@ export default function TranslationMode({ session, setSession }: TranslationMode
     }
   };
 
-  const handleEnd = async () => {
+  const handleEnd = useCallback(async () => {
+    if (ending || feedback) return;
     setEnding(true);
+    setEndError('');
     try {
       const fb = await endSession(session.id);
       setFeedback(fb);
@@ -100,7 +102,14 @@ export default function TranslationMode({ session, setSession }: TranslationMode
       setEnding(false);
       setEndError('Failed to get feedback. Please try again.');
     }
-  };
+  }, [ending, feedback, session.id, setSession]);
+
+  // Auto-end when exercises complete
+  useEffect(() => {
+    if (ex.phase === 'complete' && !ending && !feedback) {
+      handleEnd();
+    }
+  }, [ex.phase, ending, feedback, handleEnd]);
 
   if (feedback) {
     return <FeedbackView session={session} feedback={feedback} />;

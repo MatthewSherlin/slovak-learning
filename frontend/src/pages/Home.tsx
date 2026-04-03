@@ -112,15 +112,16 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      // Ensure focus areas are persisted before creating session
+      // Persist focus areas and pass them directly to session creation
       if (focusAreas.length > 0) {
-        await updateUserPreferences(user.id, { custom_focus_areas: focusAreas });
+        updateUserPreferences(user.id, { custom_focus_areas: focusAreas }).catch(() => {});
       }
       const session = await createSession({
         user_id: user.id,
         mode: selectedMode,
         difficulty,
         topic: selectedTopic || undefined,
+        focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
       });
       navigate(`/session/${session.id}`);
     } catch (err) {

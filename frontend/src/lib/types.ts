@@ -139,6 +139,7 @@ export interface Session {
   created_at: string;
   feedback: SessionFeedback | null;
   exercises?: ExerciseData;
+  focus_areas?: string[];
 }
 
 export interface SessionSummary {

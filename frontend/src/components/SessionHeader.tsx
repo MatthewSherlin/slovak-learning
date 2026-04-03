@@ -13,6 +13,9 @@ interface SessionHeaderProps {
 export default function SessionHeader({ session, onEnd, ending, canEnd = true, children }: SessionHeaderProps) {
   const navigate = useNavigate();
   const modeLabel = session.mode.charAt(0).toUpperCase() + session.mode.slice(1);
+  const topicDisplay = session.focus_areas?.length
+    ? session.focus_areas.join(', ')
+    : session.topic.replace(/_/g, ' ');
 
   return (
     <div className="border-b border-border-subtle glass px-6 py-2.5">
@@ -32,21 +35,23 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
               </span>
             </div>
             <div className="text-[11px] text-text-faint mt-0.5">
-              {session.topic.replace(/_/g, ' ')}
+              {topicDisplay}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {children}
-          <button
-            onClick={onEnd}
-            disabled={ending || !canEnd}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            <Square size={10} />
-            End & Get Feedback
-          </button>
+          {!ending && (
+            <button
+              onClick={onEnd}
+              disabled={!canEnd}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <Square size={10} />
+              End & Get Feedback
+            </button>
+          )}
         </div>
       </div>
     </div>

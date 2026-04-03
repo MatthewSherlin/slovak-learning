@@ -153,6 +153,7 @@ async def create(req: CreateSessionRequest):
             "mode": req.mode.value,
             "topic": req.topic,
             "difficulty": req.difficulty.value,
+            "focus_areas": req.focus_areas,
         })
         return session
 

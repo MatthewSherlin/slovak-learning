@@ -202,6 +202,7 @@ class CreateSessionRequest(BaseModel):
     mode: PracticeMode
     topic: str = "general"
     difficulty: Difficulty = Difficulty.beginner
+    focus_areas: list[str] = []
 
 
 class AnswerRequest(BaseModel):
