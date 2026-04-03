@@ -128,7 +128,7 @@ export default function TranslationMode({ session, setSession }: TranslationMode
         <div className="flex-1 overflow-y-auto px-6 py-10">
           <div className="max-w-lg mx-auto text-center">
             {ending ? (
-              <div className="py-12">
+              <div className="flex flex-col items-center justify-center py-24">
                 <LoadingDots text="Analyzing your translations" />
                 <p className="text-[11px] text-text-faint mt-3">Generating detailed feedback...</p>
               </div>
