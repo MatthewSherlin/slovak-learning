@@ -201,10 +201,12 @@ Rules:
 - EVERY Slovak word must have correct diacritics. Verify each one.
 - Only use words you are absolutely certain about. Common, well-known vocabulary only. Do not guess.
 
+Custom focus areas: If the student's message specifies custom focus areas, ALWAYS prioritize those areas when choosing vocabulary. Use words from their requested domains even if they differ from the default topic categories below. Adapt the difficulty level to their focus area.
+
 Difficulty adaptation — adjust word complexity to match the student's level:
-- Beginner (A1-A2): Use only basic, everyday words (greetings, colors, numbers, food, family). Short, simple choices. All distractors should be clearly different.
-- Intermediate (B1-B2): Use common but broader vocabulary (emotions, opinions, directions, workplace). Distractors can be closer in meaning.
-- Advanced (C1-C2): Use nuanced vocabulary (idioms, abstract concepts, formal/informal register). Include tricky distractors with subtle meaning differences."""
+- Beginner (A1-A2): Basic words within the topic or focus area. Short, simple choices. All distractors should be clearly different.
+- Intermediate (B1-B2): Broader vocabulary within the topic or focus area. Distractors can be closer in meaning.
+- Advanced (C1-C2): Nuanced vocabulary, idioms, abstract concepts within the topic or focus area. Include tricky distractors with subtle meaning differences."""
 
 GRAMMAR_LESSON_PROMPT = f"""{ACCURACY}
 
@@ -245,6 +247,8 @@ Rules:
 - The "blank" field must contain the EXACT correct form with correct diacritics.
 - If the concept involves declension or conjugation tables, every single form in the table must be verified.
 
+Custom focus areas: If the student's message specifies custom focus areas, use example sentences and vocabulary from those areas in your lesson and exercises.
+
 Difficulty adaptation — adjust lesson depth and exercise complexity:
 - Beginner (A1-A2): Teach ONE simple pattern. Use basic vocabulary in exercises. Blanks should be straightforward applications.
 - Intermediate (B1-B2): Cover the concept more broadly. Exercises should require choosing between similar forms.
@@ -279,6 +283,8 @@ Rules:
 - Use common, everyday vocabulary.
 - Every Slovak sentence must be grammatically correct.
 - Do not transliterate or approximate from Czech, Polish, or other Slavic languages.
+
+Custom focus areas: If the student's message specifies custom focus areas, theme your translation sentences around those areas.
 
 Difficulty adaptation — adjust sentence complexity:
 - Beginner (A1-A2): Short, simple sentences. Present tense only. 5-8 words per sentence.
