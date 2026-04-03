@@ -23,6 +23,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const [showResult, setShowResult] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState('');
   const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [streak, setStreak] = useState(0);
   const [shakeInput, setShakeInput] = useState(false);
@@ -89,6 +90,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
       setSession(updated);
     } catch {
       setEnding(false);
+      setEndError('Failed to get feedback. Please try again.');
     }
   };
 
@@ -243,6 +245,9 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                   ))}
                 </div>
 
+                {endError && (
+                  <p className="text-red-400 text-[13px] text-center mb-2">{endError}</p>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

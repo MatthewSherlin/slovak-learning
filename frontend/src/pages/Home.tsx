@@ -112,6 +112,10 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
+      // Ensure focus areas are persisted before creating session
+      if (focusAreas.length > 0) {
+        await updateUserPreferences(user.id, { custom_focus_areas: focusAreas });
+      }
       const session = await createSession({
         user_id: user.id,
         mode: selectedMode,
@@ -418,13 +422,20 @@ export default function Home() {
                     type="text"
                     value={focusInput}
                     onChange={(e) => setFocusInput(e.target.value)}
-                    onKeyDown={(e) => {
+                    onKeyDown={async (e) => {
                       if (e.key === 'Enter' && focusInput.trim()) {
                         e.preventDefault();
                         const updated = [...focusAreas, focusInput.trim()];
                         setFocusAreas(updated);
                         setFocusInput('');
-                        if (user) updateUserPreferences(user.id, { custom_focus_areas: updated });
+                        if (user) {
+                          try {
+                            await updateUserPreferences(user.id, { custom_focus_areas: updated });
+                          } catch {
+                            // Revert on failure
+                            setFocusAreas(focusAreas);
+                          }
+                        }
                       }
                     }}
                     placeholder="Type and press Enter..."
@@ -440,10 +451,17 @@ export default function Home() {
                       >
                         {area}
                         <button
-                          onClick={() => {
+                          onClick={async () => {
+                            const prev = focusAreas;
                             const updated = focusAreas.filter((_, j) => j !== i);
                             setFocusAreas(updated);
-                            if (user) updateUserPreferences(user.id, { custom_focus_areas: updated });
+                            if (user) {
+                              try {
+                                await updateUserPreferences(user.id, { custom_focus_areas: updated });
+                              } catch {
+                                setFocusAreas(prev);
+                              }
+                            }
                           }}
                           className="ml-0.5 text-accent/60 hover:text-accent cursor-pointer bg-transparent border-none text-[11px] leading-none"
                         >

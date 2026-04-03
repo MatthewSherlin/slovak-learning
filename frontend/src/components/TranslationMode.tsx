@@ -29,6 +29,7 @@ export default function TranslationMode({ session, setSession }: TranslationMode
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [error, setError] = useState('');
+  const [endError, setEndError] = useState('');
 
   const handleSubmit = async () => {
     if (!input.trim() || submitting) return;
@@ -97,6 +98,7 @@ export default function TranslationMode({ session, setSession }: TranslationMode
       setSession(updated);
     } catch {
       setEnding(false);
+      setEndError('Failed to get feedback. Please try again.');
     }
   };
 
@@ -196,6 +198,9 @@ export default function TranslationMode({ session, setSession }: TranslationMode
                   })}
                 </div>
 
+                {endError && (
+                  <p className="text-red-400 text-[13px] text-center mb-2">{endError}</p>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

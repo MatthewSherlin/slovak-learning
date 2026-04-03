@@ -182,6 +182,22 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
             "related to these interests — override the default topic categories if needed."
         )
 
+    # Hard deduplication: fetch all previously seen words and exclude them
+    all_vocab = await get_vocab_progress(db, req["user_id"])
+    if all_vocab:
+        # Exclude mastered words (>= 80% accuracy); allow weak words for reinforcement
+        mastered_words = [
+            w["slovak"]
+            for w in all_vocab
+            if w["times_seen"] >= 2 and w["times_correct"] / w["times_seen"] >= 0.8
+        ]
+        if mastered_words:
+            word_list = ", ".join(mastered_words[:50])  # cap at 50 to avoid prompt bloat
+            prompt += (
+                f"\n\nDO NOT use any of these words — the student has already mastered them: "
+                f"{word_list}"
+            )
+
     data = await ask_json(prompt, VOCAB_BATCH_PROMPT)
     questions = data.get("questions", [])
 

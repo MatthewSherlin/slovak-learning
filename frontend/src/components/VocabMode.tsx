@@ -20,6 +20,7 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState('');
   const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [streak, setStreak] = useState(0);
   const [shakeCards, setShakeCards] = useState<Set<number>>(new Set());
@@ -86,7 +87,9 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
       setFeedback(fb);
       const updated = await getSession(session.id);
       setSession(updated);
-    } catch {
+    } catch (err) {
+      console.error('Failed to end session:', err);
+      setEndError('Failed to get feedback. Please try again.');
       setEnding(false);
     }
   };
@@ -176,6 +179,9 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
                   })}
                 </div>
 
+                {endError && (
+                  <p className="text-red-400 text-[13px] text-center mb-2">{endError}</p>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
