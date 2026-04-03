@@ -112,16 +112,24 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
+      // Capture any pending text in the focus input
+      const allFocusAreas = focusInput.trim()
+        ? [...focusAreas, focusInput.trim()]
+        : focusAreas;
+      if (focusInput.trim()) {
+        setFocusAreas(allFocusAreas);
+        setFocusInput('');
+      }
       // Persist focus areas and pass them directly to session creation
-      if (focusAreas.length > 0) {
-        updateUserPreferences(user.id, { custom_focus_areas: focusAreas }).catch(() => {});
+      if (allFocusAreas.length > 0) {
+        updateUserPreferences(user.id, { custom_focus_areas: allFocusAreas }).catch(() => {});
       }
       const session = await createSession({
         user_id: user.id,
         mode: selectedMode,
         difficulty,
         topic: selectedTopic || undefined,
-        focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
+        focus_areas: allFocusAreas.length > 0 ? allFocusAreas : undefined,
       });
       navigate(`/session/${session.id}`);
     } catch (err) {
@@ -439,7 +447,7 @@ export default function Home() {
                         }
                       }
                     }}
-                    placeholder="Type and press Enter..."
+                    placeholder="e.g. skateboarding, food ordering..."
                     className="flex-1 px-3 py-2 rounded-lg text-[13px] bg-surface-2 border border-border text-text-primary placeholder:text-text-faint focus:border-accent/50 focus:outline-none"
                   />
                 </div>
