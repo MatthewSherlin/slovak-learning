@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 _DEFAULT_USERS = [
     {"id": "matt", "name": "Matt", "avatar": "M", "color": "#5ea4f7"},
     {"id": "zuki", "name": "Zuki", "avatar": "Z", "color": "#f472b6"},
+    {"id": "guest", "name": "Guest", "avatar": "G", "color": "#a78bfa"},
 ]
 
 
