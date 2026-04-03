@@ -1,24 +1,23 @@
-from pydantic_settings import BaseSettings
-import shutil
+import os
 from pathlib import Path
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # LLM provider: "gemini" or "claude"
-    llm_provider: str = "gemini"
+    anthropic_api_key: str = os.environ.get("ANTHROPIC_API_KEY", "")
+    anthropic_model: str = "claude-haiku-4-5-20251001"
 
-    # Gemini settings
-    gemini_api_key: str = ""
+    db_path: Path = Path(__file__).resolve().parent.parent / "data" / "slovak.db"
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://nilrehsttam.github.io",
+        "https://matthewsherlin.github.io",
+    ]
 
-    # Claude CLI settings (fallback)
-    claude_bin: str = shutil.which("claude") or "claude"
-    claude_model: str = "sonnet"
-
-    data_dir: Path = Path(__file__).resolve().parent.parent / "data"
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
-
-    model_config = {"env_prefix": "SLOVAK_"}
+    model_config = {"env_prefix": "SLOVAK_", "env_file": ".env"}
 
 
 settings = Settings()
-settings.data_dir.mkdir(parents=True, exist_ok=True)
+settings.db_path.parent.mkdir(parents=True, exist_ok=True)

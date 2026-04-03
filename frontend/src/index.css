@@ -23,6 +23,12 @@
   --color-accent-muted: rgba(94, 164, 247, 0.12);
   --color-accent-glow: rgba(94, 164, 247, 0.25);
 
+  /* Glass */
+  --color-glass-bg: rgba(23, 26, 36, 0.75);
+
+  /* Map */
+  --map-opacity: 0.03;
+
   /* Semantic */
   --color-success: #5de4a5;
   --color-success-muted: rgba(93, 228, 165, 0.12);
@@ -49,6 +55,47 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-2xl: 24px;
+}
+
+/* -- Light mode overrides ---------------- */
+
+[data-theme="light"] {
+  --color-bg: #f8f9fc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f2f7;
+  --color-surface-3: #e4e7ef;
+  --color-surface-hover: #dce0eb;
+  --color-border: #d0d5e2;
+  --color-border-subtle: #e2e6f0;
+  --color-border-focus: #4a93e8;
+
+  --color-text-primary: #1a1e2e;
+  --color-text-secondary: #4a5068;
+  --color-text-muted: #6b7289;
+  --color-text-faint: #9098b0;
+
+  --color-accent: #4a93e8;
+  --color-accent-hover: #3a7fd4;
+  --color-accent-muted: rgba(74, 147, 232, 0.10);
+  --color-accent-glow: rgba(74, 147, 232, 0.20);
+
+  --color-success: #2da96e;
+  --color-success-muted: rgba(45, 169, 110, 0.10);
+  --color-warning: #c99a2e;
+  --color-warning-muted: rgba(201, 154, 46, 0.10);
+  --color-danger: #d44a4a;
+  --color-danger-muted: rgba(212, 74, 74, 0.10);
+  --color-info: #4a93e8;
+  --color-info-muted: rgba(74, 147, 232, 0.10);
+
+  --color-mode-vocab: #2da96e;
+  --color-mode-grammar: #7c5cc4;
+  --color-mode-conversation: #c99a2e;
+  --color-mode-translation: #c47aa0;
+
+  --color-glass-bg: rgba(255, 255, 255, 0.80);
+
+  --map-opacity: 0.04;
 }
 
 /* -- Base -------------------------------- */
@@ -187,7 +234,7 @@ select {
   100% { background-position: 200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, transparent 30%, rgba(94,164,247,0.06) 50%, transparent 70%);
+  background: linear-gradient(90deg, transparent 30%, var(--color-accent-muted) 50%, transparent 70%);
   background-size: 200% 100%;
   animation: shimmer 2.5s ease-in-out infinite;
 }
@@ -222,7 +269,37 @@ select {
 /* -- Glass effect ------------------------ */
 
 .glass {
-  background: rgba(23, 26, 36, 0.75);
+  background: var(--color-glass-bg);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* -- Slovakia map background ------------ */
+
+.slovakia-map-bg {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.slovakia-map-svg {
+  width: 90vw;
+  max-width: 1200px;
+  opacity: var(--map-opacity);
+  filter: blur(0.5px);
+  color: var(--color-text-primary);
+  animation: map-drift 120s ease-in-out infinite;
+}
+
+@keyframes map-drift {
+  0%   { transform: rotate(0deg) translate(0, 0); }
+  25%  { transform: rotate(1.5deg) translate(6px, -4px); }
+  50%  { transform: rotate(-1deg) translate(-4px, 6px); }
+  75%  { transform: rotate(2deg) translate(4px, 3px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
 }

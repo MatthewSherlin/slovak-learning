@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -22,22 +24,18 @@ class Message(BaseModel):
     content: str
 
 
-class Session(BaseModel):
-    id: str
-    user_id: str
-    mode: PracticeMode
-    topic: str
-    difficulty: Difficulty
-    messages: list[Message]
-    completed: bool
-    created_at: str
-    feedback: SessionFeedback | None = None
-
+# ── Feedback ─────────────────────────────────────────────────────────
 
 class FeedbackScore(BaseModel):
     category: str
     score: float
     comment: str
+
+
+class VocabEntry(BaseModel):
+    slovak: str
+    english: str
+    example: str | None = None
 
 
 class SessionFeedback(BaseModel):
@@ -50,10 +48,96 @@ class SessionFeedback(BaseModel):
     grammar_notes: list[str] = []
 
 
-class VocabEntry(BaseModel):
-    slovak: str
-    english: str
-    example: str | None = None
+# ── Vocabulary exercise types ────────────────────────────────────────
+
+class VocabQuestion(BaseModel):
+    word: str
+    direction: str  # "sk-en" | "en-sk"
+    choices: list[str]
+    correctIndex: int
+    explanation: str
+
+
+class VocabExerciseData(BaseModel):
+    type: Literal["vocabulary"] = "vocabulary"
+    questions: list[VocabQuestion]
+    currentIndex: int = 0
+    answers: list[int | None] = []
+    retryQueue: list[int] = []
+    phase: str = "questions"  # "questions" | "retry" | "complete"
+
+
+# ── Grammar exercise types ───────────────────────────────────────────
+
+class GrammarLesson(BaseModel):
+    concept: str
+    explanation: str
+    examples: list[str]
+    table: str | None = None
+
+
+class GrammarExercise(BaseModel):
+    sentence: str
+    blank: str
+    hint: str | None = None
+    explanation: str
+
+
+class GrammarExerciseData(BaseModel):
+    type: Literal["grammar"] = "grammar"
+    lesson: GrammarLesson
+    exercises: list[GrammarExercise]
+    currentIndex: int = 0
+    answers: list[str | None] = []
+    correct: list[bool | None] = []
+    phase: str = "lesson"  # "lesson" | "exercises" | "complete"
+
+
+# ── Translation exercise types ───────────────────────────────────────
+
+class TranslationExerciseItem(BaseModel):
+    source: str
+    direction: str  # "sk-en" | "en-sk"
+    modelAnswer: str
+    keyPoints: list[str]
+
+
+class TranslationAnswer(BaseModel):
+    userAnswer: str
+    score: float
+    feedback: str
+
+
+class TranslationExerciseData(BaseModel):
+    type: Literal["translation"] = "translation"
+    exercises: list[TranslationExerciseItem]
+    currentIndex: int = 0
+    answers: list[TranslationAnswer | None] = []
+    phase: str = "exercises"  # "exercises" | "complete"
+
+
+# ── Conversation exercise types ──────────────────────────────────────
+
+class ConversationExerciseData(BaseModel):
+    type: Literal["conversation"] = "conversation"
+    exchangeCount: int = 0
+    maxExchanges: int = 10
+    phase: str = "active"  # "active" | "complete"
+
+
+# ── Session ──────────────────────────────────────────────────────────
+
+class Session(BaseModel):
+    id: str
+    user_id: str
+    mode: PracticeMode
+    topic: str
+    difficulty: Difficulty
+    messages: list[Message]
+    completed: bool
+    created_at: str
+    feedback: SessionFeedback | None = None
+    exercises: VocabExerciseData | GrammarExerciseData | TranslationExerciseData | ConversationExerciseData | None = None
 
 
 class SessionSummary(BaseModel):
@@ -68,6 +152,24 @@ class SessionSummary(BaseModel):
     created_at: str
 
 
+class VocabProgressEntry(BaseModel):
+    slovak: str
+    english: str
+    times_seen: int
+    times_correct: int
+    last_seen_at: str
+    source_mode: str
+
+
+class VocabProgressStats(BaseModel):
+    total_words: int
+    mastered: int
+    learning: int
+    new_or_weak: int
+    weak_words: list[VocabProgressEntry] = []
+    recent_words: list[VocabProgressEntry] = []
+
+
 class DashboardStats(BaseModel):
     total_sessions: int
     completed_sessions: int
@@ -77,13 +179,7 @@ class DashboardStats(BaseModel):
     weak_areas: list[str]
     recent_sessions: list[SessionSummary]
     vocab_count: int
-
-
-class CreateSessionRequest(BaseModel):
-    user_id: str
-    mode: PracticeMode
-    topic: str = "general"
-    difficulty: Difficulty = Difficulty.beginner
+    vocab_stats: VocabProgressStats | None = None
 
 
 class LeaderboardEntry(BaseModel):
@@ -99,5 +195,36 @@ class LeaderboardEntry(BaseModel):
     xp: int
 
 
+# ── Request models ───────────────────────────────────────────────────
+
+class CreateSessionRequest(BaseModel):
+    user_id: str
+    mode: PracticeMode
+    topic: str = "general"
+    difficulty: Difficulty = Difficulty.beginner
+
+
 class AnswerRequest(BaseModel):
     answer: str
+
+
+class VocabAnswerRequest(BaseModel):
+    choiceIndex: int
+
+
+class GrammarAnswerRequest(BaseModel):
+    answer: str
+
+
+class TranslationAnswerRequest(BaseModel):
+    answer: str
+
+
+class UserPreferences(BaseModel):
+    user_id: str
+    custom_focus_areas: list[str] = []
+    updated_at: str | None = None
+
+
+class UpdatePreferencesRequest(BaseModel):
+    custom_focus_areas: list[str]

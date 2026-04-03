@@ -2,11 +2,7 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { User } from '../lib/types';
-
-const USERS: User[] = [
-  { id: 'matt', name: 'Matt', avatar: 'M', color: '#5ea4f7' },
-  { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f0a8d0' },
-];
+import { getUsers } from '../lib/api';
 
 const STORAGE_KEY = 'slovak-learning-user';
 
@@ -19,7 +15,7 @@ interface UserContextValue {
 const UserContext = createContext<UserContextValue>({
   user: null,
   setUser: () => {},
-  users: USERS,
+  users: [],
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -34,6 +30,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
     return null;
   });
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    getUsers().then(setUsers).catch(() => {
+      // Fallback if backend is unreachable
+      setUsers([
+        { id: 'matt', name: 'Matt', avatar: 'M', color: '#5ea4f7' },
+        { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f0a8d0' },
+      ]);
+    });
+  }, []);
 
   const setUser = useCallback((u: User | null) => {
     setUserState(u);
@@ -45,7 +52,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, setUser, users: USERS }}>
+    <UserContext.Provider value={{ user, setUser, users }}>
       {children}
     </UserContext.Provider>
   );
@@ -62,6 +69,7 @@ interface UserPickerProps {
 }
 
 export default function UserPicker({ open, onClose, onSelect }: UserPickerProps) {
+  const { users } = useUser();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -106,7 +114,7 @@ export default function UserPicker({ open, onClose, onSelect }: UserPickerProps)
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {USERS.map((u, i) => (
+              {users.map((u, i) => (
                 <motion.button
                   key={u.id}
                   initial={{ opacity: 0, y: 12 }}

@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Home, History, BarChart3, BookOpen, Trophy, Languages, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Home, History, BarChart3, BookOpen, Trophy, Sun, Moon } from 'lucide-react';
 import { useUser } from './UserPicker';
+import { useTheme } from './ThemeProvider';
 
 const links = [
   { to: '/', icon: Home, label: 'Practice' },
@@ -9,7 +10,6 @@ const links = [
   { to: '/history', icon: History, label: 'History' },
   { to: '/dashboard', icon: BarChart3, label: 'Stats' },
   { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 interface NavbarProps {
@@ -19,6 +19,7 @@ interface NavbarProps {
 export default function Navbar({ onUserClick }: NavbarProps) {
   const location = useLocation();
   const { user } = useUser();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border-subtle">
@@ -28,7 +29,11 @@ export default function Navbar({ onUserClick }: NavbarProps) {
             whileHover={{ rotate: 8 }}
             className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-sky-400 flex items-center justify-center shadow-lg shadow-accent/20"
           >
-            <Languages size={15} className="text-white" />
+            <svg width="15" height="15" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="white"/>
+              <rect x="10" y="7" width="12" height="3.2" rx="1" fill="white"/>
+              <rect x="8" y="14" width="16" height="3.2" rx="1" fill="white"/>
+            </svg>
           </motion.div>
           <span className="text-text-primary font-semibold text-[15px] tracking-tight group-hover:text-accent transition-colors duration-200">
             SlovakPrep
@@ -53,6 +58,26 @@ export default function Navbar({ onUserClick }: NavbarProps) {
               </Link>
             );
           })}
+
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="ml-2 w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer border-none text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-all duration-200"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={theme}
+                initial={{ scale: 0, rotate: -90, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                exit={{ scale: 0, rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center justify-center"
+              >
+                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              </motion.span>
+            </AnimatePresence>
+          </button>
 
           {/* User Avatar */}
           <button

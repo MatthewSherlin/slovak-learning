@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Trophy, TrendingUp, Target, BookOpen, Sparkles, BookText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import ScoreBadge from './ScoreBadge';
 import type { Session, SessionFeedback } from '../lib/types';
 
 interface FeedbackViewProps {
@@ -13,17 +12,32 @@ interface FeedbackViewProps {
 export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
   const navigate = useNavigate();
 
+  const score = feedback.overall_score;
+  const pct = score * 10;
+
   const scoreLabel =
-    feedback.overall_score >= 8 ? 'Vyborne!' :
-    feedback.overall_score >= 6 ? 'Dobre!' :
-    feedback.overall_score >= 4 ? 'Getting there' :
+    score >= 8 ? 'Vyborne!' :
+    score >= 6 ? 'Dobre!' :
+    score >= 4 ? 'Getting there' :
     'Keep practicing';
 
   const scoreMessage =
-    feedback.overall_score >= 8 ? "Excellent work! Your Slovak is coming along beautifully." :
-    feedback.overall_score >= 6 ? "Good progress. Focus on the areas below to level up." :
-    feedback.overall_score >= 4 ? "You're making progress. Review the vocabulary and try again." :
+    score >= 8 ? "Excellent work! Your Slovak is coming along beautifully." :
+    score >= 6 ? "Good progress. Focus on the areas below to level up." :
+    score >= 4 ? "You're making progress. Review the vocabulary and try again." :
     "Everyone starts somewhere. Check out the Guides page and give it another shot.";
+
+  const ringColor =
+    score >= 8 ? 'var(--color-success)' :
+    score >= 6 ? 'var(--color-accent)' :
+    score >= 4 ? 'var(--color-warning)' :
+    'var(--color-danger)';
+
+  const ringTextColor =
+    score >= 8 ? 'text-success' :
+    score >= 6 ? 'text-accent' :
+    score >= 4 ? 'text-warning' :
+    'text-danger';
 
   return (
     <div className="min-h-screen pt-14">
@@ -39,14 +53,37 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
           </button>
         </motion.div>
 
-        {/* Overall Score */}
+        {/* Overall Score — animated ring */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
           className="text-center mb-10"
         >
-          <ScoreBadge score={feedback.overall_score} size="lg" />
+          <div className="relative w-28 h-28 mx-auto">
+            <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--color-surface-3)" strokeWidth="8" />
+              <motion.circle
+                cx="60" cy="60" r="52" fill="none"
+                stroke={ringColor}
+                strokeWidth="8" strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 52}`}
+                initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
+                animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - pct / 100) }}
+                transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.span
+                className={`text-3xl font-bold tabular-nums ${ringTextColor}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                {score}
+              </motion.span>
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-text-primary mt-5 tracking-tight">{scoreLabel}</h2>
           <p className="text-text-muted text-sm mt-2 max-w-md mx-auto">
             {scoreMessage}
@@ -88,7 +125,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${s.score * 10}%` }}
-                      transition={{ delay: 0.2 + i * 0.1, duration: 0.6, ease: 'easeOut' }}
+                      transition={{ delay: 0.2 + i * 0.15, duration: 0.8, ease: 'easeOut' }}
                       className={`h-1.5 rounded-full ${
                         s.score >= 8 ? 'bg-success' :
                         s.score >= 6 ? 'bg-accent' :

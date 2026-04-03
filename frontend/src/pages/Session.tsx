@@ -5,43 +5,36 @@ import { Send, Lightbulb, Square, ArrowLeft, Clock, MessageSquare } from 'lucide
 import ChatMessage from '../components/ChatMessage';
 import LoadingDots from '../components/LoadingDots';
 import FeedbackView from '../components/FeedbackView';
+import VocabMode from '../components/VocabMode';
+import GrammarMode from '../components/GrammarMode';
+import TranslationMode from '../components/TranslationMode';
+import ConversationMode from '../components/ConversationMode';
 import { getSession, submitAnswer, requestHint, endSession } from '../lib/api';
 import type { Session as SessionType, SessionFeedback } from '../lib/types';
 
-export default function Session() {
-  const { id } = useParams<{ id: string }>();
+// Legacy chat UI for old sessions that don't have structured exercises
+function LegacyChatMode({ session, setSession }: { session: SessionType; setSession: (s: SessionType) => void }) {
   const navigate = useNavigate();
-  const [session, setSession] = useState<SessionType | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [hintLoading, setHintLoading] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [feedback, setFeedback] = useState<SessionFeedback | null>(null);
+  const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [error, setError] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (id) {
-      getSession(id).then((s) => {
-        setSession(s);
-        if (s.feedback) setFeedback(s.feedback);
-      }).catch(() => navigate('/'));
-    }
-  }, [id, navigate]);
-
-  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [session?.messages, loading]);
+  }, [session.messages, loading]);
 
   const handleSubmit = async () => {
-    if (!input.trim() || !session || loading) return;
+    if (!input.trim() || loading) return;
     const answer = input.trim();
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setLoading(true);
     setError('');
-
     try {
       const updated = await submitAnswer(session.id, answer);
       setSession(updated);
@@ -55,11 +48,10 @@ export default function Session() {
   };
 
   const handleHint = async () => {
-    if (!session || hintLoading) return;
+    if (hintLoading) return;
     setHintLoading(true);
     try {
-      await requestHint(session.id);
-      const updated = await getSession(session.id);
+      const updated = await requestHint(session.id);
       setSession(updated);
     } catch {
       setError('Failed to get hint.');
@@ -69,7 +61,6 @@ export default function Session() {
   };
 
   const handleEnd = async () => {
-    if (!session || ending) return;
     setEnding(true);
     try {
       const fb = await endSession(session.id);
@@ -96,14 +87,6 @@ export default function Session() {
     el.style.height = Math.min(el.scrollHeight, 200) + 'px';
   };
 
-  if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingDots text="Loading session" />
-      </div>
-    );
-  }
-
   if (feedback) {
     return <FeedbackView session={session} feedback={feedback} />;
   }
@@ -113,29 +96,20 @@ export default function Session() {
 
   return (
     <div className="flex flex-col h-screen pt-14">
-      {/* Session Header Bar */}
       <div className="border-b border-border-subtle glass px-6 py-2.5">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/')}
-              className="text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer p-1 transition-colors"
-            >
+            <button onClick={() => navigate('/')} className="text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer p-1 transition-colors">
               <ArrowLeft size={16} />
             </button>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-semibold text-text-primary">{modeLabel}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-3 text-text-faint capitalize font-medium">
-                  {session.difficulty}
-                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-3 text-text-faint capitalize font-medium">{session.difficulty}</span>
               </div>
-              <div className="text-[11px] text-text-faint mt-0.5">
-                {session.topic.replace(/_/g, ' ')}
-              </div>
+              <div className="text-[11px] text-text-faint mt-0.5">{session.topic.replace(/_/g, ' ')}</div>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
               <MessageSquare size={11} />
@@ -153,19 +127,13 @@ export default function Session() {
         </div>
       </div>
 
-      {/* Chat Area */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-3xl mx-auto">
           {session.messages.map((msg, i) => (
             <ChatMessage key={i} message={msg} index={i} />
           ))}
-
           {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex gap-3 my-5"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3 my-5">
               <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-accent-muted text-accent mt-1">
                 <div className="w-3.5 h-3.5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
               </div>
@@ -174,39 +142,26 @@ export default function Session() {
               </div>
             </motion.div>
           )}
-
           {ending && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center my-8"
-            >
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center my-8">
               <div className="bg-surface-2 border border-border rounded-2xl px-6 py-5 text-center max-w-sm">
                 <LoadingDots text="Analyzing your responses" />
-                <p className="text-[11px] text-text-faint mt-3">
-                  Generating detailed feedback and vocabulary review...
-                </p>
+                <p className="text-[11px] text-text-faint mt-3">Generating detailed feedback and vocabulary review...</p>
               </div>
             </motion.div>
           )}
-
           {error && (
             <div className="text-center my-4">
-              <span className="text-[13px] text-danger bg-danger-muted px-4 py-2 rounded-lg inline-block">
-                {error}
-              </span>
+              <span className="text-[13px] text-danger bg-danger-muted px-4 py-2 rounded-lg inline-block">{error}</span>
             </div>
           )}
-
           <div ref={chatEndRef} />
         </div>
       </div>
 
-      {/* Input Bar */}
       {!session.completed && !ending && (
         <div className="border-t border-border-subtle glass px-6 py-4">
           <div className="max-w-3xl mx-auto">
-            {/* Quick Actions */}
             <div className="flex gap-2 mb-3">
               <button
                 onClick={handleHint}
@@ -221,8 +176,6 @@ export default function Session() {
                 <span>Take your time -- there's no timer</span>
               </div>
             </div>
-
-            {/* Input Area */}
             <div className="flex gap-3 items-end">
               <div className="flex-1 relative">
                 <textarea
@@ -249,4 +202,51 @@ export default function Session() {
       )}
     </div>
   );
+}
+
+// Main session page — routes to mode-specific components
+export default function Session() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [session, setSession] = useState<SessionType | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      getSession(id).then(setSession).catch(() => navigate('/'));
+    }
+  }, [id, navigate]);
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingDots text="Loading session" />
+      </div>
+    );
+  }
+
+  // Feedback already shown? Let FeedbackView handle it for legacy sessions
+  // For new sessions, the mode components handle their own feedback display
+  if (session.feedback && !session.exercises) {
+    return <FeedbackView session={session} feedback={session.feedback} />;
+  }
+
+  const handleEnd = () => {
+    // Mode components handle their own end flow
+  };
+
+  // Route to mode-specific component based on exercises type
+  const mode = session.exercises?.type ?? null;
+
+  switch (mode) {
+    case 'vocabulary':
+      return <VocabMode session={session} setSession={setSession} onEnd={handleEnd} />;
+    case 'grammar':
+      return <GrammarMode session={session} setSession={setSession} onEnd={handleEnd} />;
+    case 'translation':
+      return <TranslationMode session={session} setSession={setSession} onEnd={handleEnd} />;
+    case 'conversation':
+      return <ConversationMode session={session} setSession={setSession} onEnd={handleEnd} />;
+    default:
+      return <LegacyChatMode session={session} setSession={setSession} />;
+  }
 }

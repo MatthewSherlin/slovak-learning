@@ -29,8 +29,11 @@ trap cleanup SIGINT SIGTERM
 if [ ! -d "$BACKEND_DIR/.venv" ]; then
     echo -e "${GREEN}▸${NC} Creating Python virtual environment..."
     python3 -m venv "$BACKEND_DIR/.venv"
-    "$BACKEND_DIR/.venv/bin/pip" install -e "$BACKEND_DIR" 2>&1 | tail -2
 fi
+
+# Always install/upgrade deps to pick up new packages
+echo -e "${GREEN}▸${NC} Installing backend dependencies..."
+"$BACKEND_DIR/.venv/bin/pip" install -q -e "$BACKEND_DIR" 2>&1 | tail -2
 
 # Start backend
 echo -e "${GREEN}▸${NC} Starting backend (FastAPI) on :8888"

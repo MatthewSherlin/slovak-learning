@@ -6,11 +6,12 @@ import {
   Zap,
   ArrowLeft,
   Sparkles,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 import ModeCard from '../components/ModeCard';
-import LoadingDots from '../components/LoadingDots';
 import { useUser } from '../components/UserPicker';
-import { createSession, getTopics, getModes, getDashboard } from '../lib/api';
+import { createSession, getTopics, getModes, getDashboard, getUserPreferences, updateUserPreferences } from '../lib/api';
 import type { LearningMode, Difficulty, Topic, Mode, DashboardStats } from '../lib/types';
 
 const modeDescriptions: Record<LearningMode, string> = {
@@ -32,11 +33,11 @@ const defaultQuestionCounts: Record<LearningMode, number> = {
 };
 
 const encouragements = [
-  "Každý deň je nová príležitosť. — Every day is a new opportunity.",
-  "Kto sa pýta, ten sa učiť nechce prestať.",
+  "Kazdy den je nova prilezitost. — Every day is a new opportunity.",
+  "Kto sa pyta, ten sa ucit nechce prestat.",
   "Pomaly, ale isto. — Slowly but surely.",
   "Learning Slovak opens doors to a beautiful culture.",
-  "Chyby sú dôkaz, že sa snažíš. — Mistakes are proof that you're trying.",
+  "Chyby su dokaz, ze sa snazis. — Mistakes are proof that you're trying.",
 ];
 
 export default function Home() {
@@ -51,16 +52,48 @@ export default function Home() {
   const [error, setError] = useState('');
   const [modes, setModes] = useState<Mode[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [modesLoading, setModesLoading] = useState(true);
+  const [backendError, setBackendError] = useState(false);
+  const [focusAreas, setFocusAreas] = useState<string[]>([]);
+  const [focusInput, setFocusInput] = useState('');
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [encouragement] = useState(() =>
     encouragements[Math.floor(Math.random() * encouragements.length)]
   );
 
-  useEffect(() => {
-    getModes().then(setModes).catch(() => {});
+  const loadData = () => {
+    setModesLoading(true);
+    setBackendError(false);
+    getModes()
+      .then((m) => {
+        setModes(m);
+        setModesLoading(false);
+      })
+      .catch(() => {
+        setBackendError(true);
+        setModesLoading(false);
+      });
+
     if (user) {
       getDashboard(user.id).then(setStats).catch(() => {});
     }
+  };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    if (user && step === 'config' && !prefsLoaded) {
+      getUserPreferences(user.id)
+        .then((prefs) => {
+          setFocusAreas(prefs.custom_focus_areas);
+          setPrefsLoaded(true);
+        })
+        .catch(() => setPrefsLoaded(true));
+    }
+  }, [user, step, prefsLoaded]);
 
   const handleModeSelect = async (mode: LearningMode) => {
     setSelectedMode(mode);
@@ -100,22 +133,44 @@ export default function Home() {
   };
 
   if (loading) {
+    const modeLabel = selectedMode ? selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1) : 'Session';
+
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-6">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="text-center max-w-sm"
         >
-          <div className="w-16 h-16 rounded-2xl bg-accent-muted flex items-center justify-center mx-auto mb-6">
-            <Zap size={28} className="text-accent" />
-          </div>
-          <h2 className="text-xl font-semibold text-text-primary mb-3">
-            Preparing your session
+          {/* Animated icon */}
+          <motion.div
+            animate={{ rotate: [0, 8, -8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-18 h-18 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/15 flex items-center justify-center mx-auto mb-8"
+          >
+            <Zap size={32} className="text-accent" />
+          </motion.div>
+
+          <h2 className="text-2xl font-bold text-text-primary mb-2">
+            Building your {modeLabel.toLowerCase()} lesson
           </h2>
-          <LoadingDots text="Your tutor is getting ready" />
-          <p className="text-xs text-text-faint mt-4 max-w-xs mx-auto">
-            This takes a few seconds while we set up a personalized lesson.
+          <p className="text-sm text-text-muted mb-6">
+            Crafting exercises for your level — just a moment.
+          </p>
+
+          {/* Progress bar animation */}
+          <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden mb-4">
+            <motion.div
+              className="h-full bg-gradient-to-r from-accent to-accent/60 rounded-full"
+              initial={{ width: '0%' }}
+              animate={{ width: '85%' }}
+              transition={{ duration: 8, ease: 'easeOut' }}
+            />
+          </div>
+
+          <p className="text-[11px] text-text-faint">
+            This usually takes 5–10 seconds
           </p>
         </motion.div>
       </div>
@@ -190,33 +245,82 @@ export default function Home() {
               )}
             </div>
 
+            {/* Backend error state */}
+            {backendError && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-md mx-auto mb-10 text-center"
+              >
+                <div className="bg-danger/5 border border-danger/20 rounded-2xl p-8">
+                  <div className="w-14 h-14 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-4">
+                    <WifiOff size={24} className="text-danger" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-text-primary mb-2">Backend unavailable</h3>
+                  <p className="text-sm text-text-muted mb-5">
+                    Can't connect to the server. Make sure the backend is running on port 8888.
+                  </p>
+                  <button
+                    onClick={loadData}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+                  >
+                    <RefreshCw size={14} />
+                    Retry
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Loading skeleton */}
+            {modesLoading && !backendError && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                    className="bg-surface-2 border border-border rounded-2xl p-6 h-36 animate-pulse"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-surface-3 mb-4" />
+                    <div className="h-4 w-24 bg-surface-3 rounded mb-2" />
+                    <div className="h-3 w-48 bg-surface-3 rounded" />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
             {/* Mode Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-              {(Object.keys(modeDescriptions) as LearningMode[]).map((mode, i) => (
-                <ModeCard
-                  key={mode}
-                  mode={mode}
-                  label={mode.charAt(0).toUpperCase() + mode.slice(1)}
-                  description={modeDescriptions[mode]}
-                  questionCount={getQuestionCount(mode)}
-                  onClick={() => handleModeSelect(mode)}
-                  index={i}
-                />
-              ))}
-            </div>
+            {!modesLoading && !backendError && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                {(Object.keys(modeDescriptions) as LearningMode[]).map((mode, i) => (
+                  <ModeCard
+                    key={mode}
+                    mode={mode}
+                    label={mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    description={modeDescriptions[mode]}
+                    questionCount={getQuestionCount(mode)}
+                    onClick={() => handleModeSelect(mode)}
+                    index={i}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Quick tip */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="flex flex-col items-center gap-3"
-            >
-              <div className="flex items-center gap-2 text-xs text-text-faint">
-                <Sparkles size={12} />
-                <span>Tip: Check out the Guides page for pronunciation tips and case system overviews</span>
-              </div>
-            </motion.div>
+            {!backendError && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="flex flex-col items-center gap-3"
+              >
+                <div className="flex items-center gap-2 text-xs text-text-faint">
+                  <Sparkles size={12} />
+                  <span>Tip: Check out the Guides page for pronunciation tips and case system overviews</span>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -298,6 +402,57 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Custom Focus Areas */}
+              <div>
+                <label className="block text-[13px] font-medium text-text-secondary mb-2.5">
+                  Your Focus Areas
+                  <span className="text-text-faint ml-1.5 font-normal">optional</span>
+                </label>
+                <p className="text-[11px] text-text-faint mb-2">
+                  Tell the AI what you want to practice — e.g. "restaurant vocabulary", "verb conjugation", "accusative case"
+                </p>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={focusInput}
+                    onChange={(e) => setFocusInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && focusInput.trim()) {
+                        e.preventDefault();
+                        const updated = [...focusAreas, focusInput.trim()];
+                        setFocusAreas(updated);
+                        setFocusInput('');
+                        if (user) updateUserPreferences(user.id, { custom_focus_areas: updated });
+                      }
+                    }}
+                    placeholder="Type and press Enter..."
+                    className="flex-1 px-3 py-2 rounded-lg text-[13px] bg-surface-2 border border-border text-text-primary placeholder:text-text-faint focus:border-accent/50 focus:outline-none"
+                  />
+                </div>
+                {focusAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {focusAreas.map((area, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] bg-accent-muted text-accent border border-accent/20"
+                      >
+                        {area}
+                        <button
+                          onClick={() => {
+                            const updated = focusAreas.filter((_, j) => j !== i);
+                            setFocusAreas(updated);
+                            if (user) updateUserPreferences(user.id, { custom_focus_areas: updated });
+                          }}
+                          className="ml-0.5 text-accent/60 hover:text-accent cursor-pointer bg-transparent border-none text-[11px] leading-none"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Start Button */}
