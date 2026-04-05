@@ -27,6 +27,8 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [streak, setStreak] = useState(0);
   const [shakeInput, setShakeInput] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [shakeCards, setShakeCards] = useState<Set<number>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleStartExercises = async () => {
@@ -55,13 +57,47 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     setSession(updated);
   };
 
+  // Derive currentExercise early so handlers can use it
+  const exerciseIndex = ex.phase === 'exercises'
+    ? ex.currentIndex - (showResult ? 1 : 0)
+    : 0;
+  const currentExercise = ex.exercises[exerciseIndex] ?? null;
+  const isMultipleChoice = !!(currentExercise?.choices && currentExercise.choices.length > 0);
+
+  const handleSelect = async (idx: number) => {
+    if (showResult || !currentExercise?.choices) return;
+    setSelected(idx);
+    const choiceText = currentExercise.choices[idx];
+    const updated = await submitGrammarAnswer(session.id, choiceText);
+    const updatedEx = updated.exercises as GrammarExerciseData;
+    const prevIndex = updatedEx.currentIndex - 1;
+    const wasCorrect = updatedEx.correct[prevIndex] ?? false;
+    setLastCorrect(wasCorrect);
+    setShowResult(true);
+
+    if (wasCorrect) {
+      setStreak(s => s + 1);
+      playCorrect();
+    } else {
+      setStreak(0);
+      setShakeCards(new Set([idx]));
+      playIncorrect();
+    }
+
+    setSession(updated);
+  };
+
   const handleNext = useCallback(() => {
     setInput('');
     setShowResult(false);
     setLastCorrect(null);
     setShakeInput(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
+    setSelected(null);
+    setShakeCards(new Set());
+    if (!isMultipleChoice) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isMultipleChoice]);
 
   // Auto-advance after correct answer
   useEffect(() => {
@@ -275,12 +311,13 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   }
 
   // Exercise phase
-  const exerciseIndex = ex.currentIndex - (showResult ? 1 : 0);
-  const currentExercise = ex.exercises[exerciseIndex];
   if (!currentExercise) return null;
 
   // Split sentence around the blank
   const parts = currentExercise.sentence.split('____');
+  const correctChoiceIndex = isMultipleChoice
+    ? currentExercise.choices!.findIndex(c => c.toLowerCase() === currentExercise.blank.toLowerCase())
+    : -1;
 
   return (
     <div className="flex flex-col h-screen pt-14">
@@ -342,8 +379,107 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                 </div>
               )}
 
-              {showResult ? (
-                /* Result feedback */
+              {isMultipleChoice ? (
+                /* Multiple choice (beginner) */
+                <>
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    {currentExercise.choices!.map((choice, idx) => {
+                      const isThisCorrect = idx === correctChoiceIndex;
+                      const isThisSelected = idx === selected;
+                      const isWrong = showResult && !isThisCorrect;
+                      const isRight = showResult && isThisCorrect;
+
+                      let cardClass = 'bg-surface-2 border-border hover:border-mode-grammar/50 hover:bg-mode-grammar/5';
+                      if (isRight) {
+                        cardClass = 'bg-success/10 border-success/50 ring-2 ring-success/30';
+                      } else if (isThisSelected && !lastCorrect) {
+                        cardClass = 'bg-danger/10 border-danger/50';
+                      } else if (isWrong) {
+                        cardClass = 'bg-surface-2 border-border opacity-40';
+                      }
+
+                      return (
+                        <motion.button
+                          key={idx}
+                          whileTap={showResult ? {} : { scale: 0.95 }}
+                          whileHover={showResult ? {} : { scale: 1.02 }}
+                          animate={
+                            shakeCards.has(idx) && showResult
+                              ? { x: [0, -6, 6, -6, 6, 0] }
+                              : isRight
+                              ? { scale: [1, 1.05, 1] }
+                              : {}
+                          }
+                          transition={
+                            shakeCards.has(idx) && showResult
+                              ? { duration: 0.4 }
+                              : isRight
+                              ? { duration: 0.3 }
+                              : {}
+                          }
+                          onClick={() => handleSelect(idx)}
+                          disabled={showResult}
+                          className={`relative p-4 rounded-xl border-2 text-[14px] font-semibold cursor-pointer transition-all duration-200 disabled:cursor-default ${cardClass}`}
+                        >
+                          {isRight && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-success flex items-center justify-center shadow-md"
+                            >
+                              <Check size={12} className="text-white" />
+                            </motion.div>
+                          )}
+                          {isThisSelected && !lastCorrect && showResult && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-danger flex items-center justify-center shadow-md"
+                            >
+                              <X size={12} className="text-white" />
+                            </motion.div>
+                          )}
+                          <span className={isWrong && !isThisSelected ? 'text-text-faint' : 'text-text-primary'}>
+                            {choice}
+                          </span>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Result feedback for MC */}
+                  {showResult && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`rounded-xl p-4 border mb-5 ${lastCorrect ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {lastCorrect ? <Check size={15} className="text-success" /> : <X size={15} className="text-danger" />}
+                        <span className={`text-[13px] font-semibold ${lastCorrect ? 'text-success' : 'text-danger'}`}>
+                          {lastCorrect
+                            ? streak >= 3 ? `${streak} in a row!` : 'Correct!'
+                            : 'Not quite'}
+                        </span>
+                      </div>
+                      {currentExercise.explanation && (
+                        <p className="text-[12px] text-text-muted ml-[23px] mt-1">{currentExercise.explanation}</p>
+                      )}
+                      {!lastCorrect && (
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleNext}
+                          className="mt-3 ml-[23px] flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+                        >
+                          {ex.currentIndex >= ex.exercises.length ? 'See Results' : 'Next'} <ArrowRight size={12} />
+                        </motion.button>
+                      )}
+                    </motion.div>
+                  )}
+                </>
+              ) : showResult ? (
+                /* Result feedback (fill-in-the-blank) */
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -378,7 +514,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                   )}
                 </motion.div>
               ) : (
-                /* Input */
+                /* Text input (intermediate/advanced) */
                 <div>
                   <div className="flex gap-3 items-end">
                     <input

@@ -275,6 +275,7 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
                 "blank": ex.get("blank", ""),
                 "hint": ex.get("hint"),
                 "explanation": ex.get("explanation", ""),
+                **({"choices": ex["choices"]} if ex.get("choices") else {}),
             }
             for ex in exercise_list
         ],

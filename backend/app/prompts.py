@@ -229,7 +229,8 @@ You MUST respond with ONLY valid JSON in this exact format:
       "sentence": "<sentence with ____ for the blank>",
       "blank": "<the correct word or form>",
       "hint": "<optional short hint about which rule to apply>",
-      "explanation": "<why this form is correct>"
+      "explanation": "<why this form is correct>",
+      "choices": ["<option A>", "<option B>", "<option C>", "<option D>"] // ONLY for beginner level
     }}
   ]
 }}
@@ -250,9 +251,9 @@ Rules:
 Custom focus areas: If the student's message specifies custom focus areas, use example sentences and vocabulary from those areas in your lesson and exercises.
 
 Difficulty adaptation — adjust lesson depth and exercise complexity:
-- Beginner (A1-A2): Teach ONE simple pattern. Use basic vocabulary in exercises. Blanks should be straightforward applications.
-- Intermediate (B1-B2): Cover the concept more broadly. Exercises should require choosing between similar forms.
-- Advanced (C1-C2): Include exceptions, irregular forms, and stylistic nuances. Exercises should test edge cases."""
+- Beginner (A1-A2): Teach ONE simple pattern. Use basic vocabulary in exercises. Blanks should be straightforward applications. IMPORTANT: For beginner level, you MUST include a "choices" array with exactly 4 options (including the correct answer) for EACH exercise. The correct answer (the "blank" value) must be one of the 4 choices. Distractors should be plausible but clearly wrong forms (e.g. wrong case endings, wrong conjugation). Randomize the position of the correct answer across exercises.
+- Intermediate (B1-B2): Cover the concept more broadly. Exercises should require choosing between similar forms. Do NOT include "choices" — the student types the answer.
+- Advanced (C1-C2): Include exceptions, irregular forms, and stylistic nuances. Exercises should test edge cases. Do NOT include "choices" — the student types the answer."""
 
 TRANSLATION_BATCH_PROMPT = f"""{ACCURACY}
 

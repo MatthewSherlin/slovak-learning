@@ -38,7 +38,7 @@ export default function DiacriticsKeyboard({ inputRef, value, onChange }: Diacri
   );
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+    <div className="hidden md:flex items-center gap-1.5 flex-wrap mt-2">
       {/* Shift toggle */}
       <button
         onMouseDown={(e) => e.preventDefault()}

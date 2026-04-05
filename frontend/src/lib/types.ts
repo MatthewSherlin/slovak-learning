@@ -78,6 +78,7 @@ export interface GrammarExercise {
   blank: string;
   hint?: string;
   explanation: string;
+  choices?: string[];
 }
 
 export interface GrammarExerciseData {

@@ -22,8 +22,8 @@ export default function Navbar({ onUserClick }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border-subtle">
-      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border-subtle pt-[env(safe-area-inset-top)]">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5 no-underline group">
           <motion.div
             whileHover={{ rotate: 8 }}
@@ -47,7 +47,7 @@ export default function Navbar({ onUserClick }: NavbarProps) {
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium no-underline transition-all duration-200 ${
+                className={`flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-lg text-[13px] font-medium no-underline transition-all duration-200 ${
                   active
                     ? 'bg-accent-muted text-accent'
                     : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'

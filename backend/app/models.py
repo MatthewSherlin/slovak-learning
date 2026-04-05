@@ -81,6 +81,7 @@ class GrammarExercise(BaseModel):
     blank: str
     hint: str | None = None
     explanation: str
+    choices: list[str] | None = None
 
 
 class GrammarExerciseData(BaseModel):
