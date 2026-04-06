@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate, useAnimate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate, useAnimate } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 import type { PackPurchaseResult } from '../lib/types';
 import { Zap, ChevronLeft, ChevronRight, ShoppingBag, Library, Users, ArrowLeft, Sparkles, X } from 'lucide-react';

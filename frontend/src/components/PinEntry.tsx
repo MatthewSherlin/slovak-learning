@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, X } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import type { User } from '../lib/types';
 import { verifyPin } from '../lib/api';
 
