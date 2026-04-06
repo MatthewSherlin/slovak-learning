@@ -67,6 +67,10 @@ _DEFAULT_USERS = [
     {"id": "matt", "name": "Matt", "avatar": "M", "color": "#5ea4f7"},
     {"id": "zuki", "name": "Zuki", "avatar": "Z", "color": "#f472b6"},
     {"id": "guest", "name": "Guest", "avatar": "G", "color": "#a78bfa"},
+    {"id": "sam", "name": "Sam", "avatar": "S", "color": "#34d399"},
+    {"id": "eva", "name": "Eva", "avatar": "E", "color": "#fb923c"},
+    {"id": "jan", "name": "Jan", "avatar": "J", "color": "#facc15"},
+    {"id": "shannon", "name": "Shannon", "avatar": "S", "color": "#f87171"},
 ]
 
 FARM_ITEM_CATALOG = {

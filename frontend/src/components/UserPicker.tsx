@@ -48,7 +48,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Fallback if backend is unreachable
       setUsers([
         { id: 'matt', name: 'Matt', avatar: 'M', color: '#5ea4f7', has_pin: false },
-        { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f0a8d0', has_pin: false },
+        { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f472b6', has_pin: false },
+        { id: 'guest', name: 'Guest', avatar: 'G', color: '#a78bfa', has_pin: false },
+        { id: 'sam', name: 'Sam', avatar: 'S', color: '#34d399', has_pin: false },
+        { id: 'eva', name: 'Eva', avatar: 'E', color: '#fb923c', has_pin: false },
+        { id: 'jan', name: 'Jan', avatar: 'J', color: '#facc15', has_pin: false },
+        { id: 'shannon', name: 'Shannon', avatar: 'S', color: '#f87171', has_pin: false },
       ]);
     });
   }, []);
