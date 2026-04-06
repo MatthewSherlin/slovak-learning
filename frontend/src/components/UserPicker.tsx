@@ -54,6 +54,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         { id: 'eva', name: 'Eva', avatar: 'E', color: '#fb923c', has_pin: false },
         { id: 'jan', name: 'Jan', avatar: 'J', color: '#facc15', has_pin: false },
         { id: 'shannon', name: 'Shannon', avatar: 'S', color: '#f87171', has_pin: false },
+        { id: 'rick', name: 'Rick', avatar: 'R', color: '#38bdf8', has_pin: false },
       ]);
     });
   }, []);

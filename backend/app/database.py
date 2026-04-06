@@ -71,6 +71,7 @@ _DEFAULT_USERS = [
     {"id": "eva", "name": "Eva", "avatar": "E", "color": "#fb923c"},
     {"id": "jan", "name": "Jan", "avatar": "J", "color": "#facc15"},
     {"id": "shannon", "name": "Shannon", "avatar": "S", "color": "#f87171"},
+    {"id": "rick", "name": "Rick", "avatar": "R", "color": "#38bdf8"},
 ]
 
 FARM_ITEM_CATALOG = {
