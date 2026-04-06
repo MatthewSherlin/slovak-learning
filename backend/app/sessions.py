@@ -13,7 +13,6 @@ from .database import (
     create_session as db_create_session,
     get_session as db_get_session,
     get_user,
-    get_user_preferences,
     get_vocab_progress,
     get_weak_words,
     list_sessions,
@@ -48,14 +47,11 @@ DIFFICULTY_LABELS = {
 
 async def _get_learning_context(
     db: aiosqlite.Connection, user_id: str, mode: str,
-) -> tuple[str, list[str]]:
+) -> str:
     """Build a distilled learning context string to inject into LLM prompts.
 
-    Combines vocabulary progress, recent session history, and custom focus areas.
+    Combines vocabulary progress and recent session history.
     Kept under ~500 tokens to avoid prompt bloat.
-
-    Returns (context_string, focus_areas_list) so callers can explicitly
-    reference focus areas in their instructions.
     """
     sections: list[str] = []
 
@@ -131,16 +127,10 @@ async def _get_learning_context(
 
         sections.append(f"[Recent {mode} session history]\n" + "\n".join(digest_parts))
 
-    # ── 3. Custom focus areas ──
-    prefs = await get_user_preferences(db, user_id)
-    focus_areas = prefs.get("custom_focus_areas", [])
-    if focus_areas:
-        sections.append(f"[Student's custom focus areas]\n{', '.join(focus_areas)}")
-
     if not sections:
-        return "", focus_areas
+        return ""
 
-    return "\n\n".join(sections), focus_areas
+    return "\n\n".join(sections)
 
 
 # ── Session Creation ─────────────────────────────────────────────────
@@ -165,11 +155,8 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
-    # Focus areas from request take priority, then fall back to DB
     focus_areas = req.get("focus_areas", [])
-    learning_context, db_focus_areas = await _get_learning_context(db, req["user_id"], "vocabulary")
-    if not focus_areas:
-        focus_areas = db_focus_areas
+    learning_context = await _get_learning_context(db, req["user_id"], "vocabulary")
 
     # When focus areas exist, use them AS the topic instead of the generic category
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
@@ -208,14 +195,36 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
     data = await ask_json(prompt, VOCAB_BATCH_PROMPT)
     questions = data.get("questions", [])
 
-    # Validate and pad choices
+    # Validate questions
+    seen_words: set[str] = set()
+    valid_questions: list[dict] = []
     for q in questions:
-        if len(q.get("choices", [])) < 4:
-            while len(q["choices"]) < 4:
-                q["choices"].append("---")
-        q["choices"] = q["choices"][:4]
+        word = q.get("word", "").strip().lower()
+
+        # Skip duplicate words across questions
+        if word in seen_words:
+            continue
+        seen_words.add(word)
+
+        # Pad/trim choices to exactly 4
+        choices = q.get("choices", [])
+        if len(choices) < 4:
+            while len(choices) < 4:
+                choices.append("---")
+        q["choices"] = choices[:4]
+
+        # Fix correctIndex bounds
         if q.get("correctIndex", 0) >= len(q["choices"]):
             q["correctIndex"] = 0
+
+        # Deduplicate choices: if any choice appears more than once, skip the question
+        lower_choices = [c.strip().lower() for c in q["choices"]]
+        if len(set(lower_choices)) < len(lower_choices):
+            continue
+
+        valid_questions.append(q)
+
+    questions = valid_questions
 
     exercises = {
         "type": "vocabulary",
@@ -237,9 +246,7 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
     focus_areas = req.get("focus_areas", [])
-    learning_context, db_focus_areas = await _get_learning_context(db, req["user_id"], "grammar")
-    if not focus_areas:
-        focus_areas = db_focus_areas
+    learning_context = await _get_learning_context(db, req["user_id"], "grammar")
 
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
 
@@ -296,9 +303,7 @@ async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> di
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
     focus_areas = req.get("focus_areas", [])
-    learning_context, db_focus_areas = await _get_learning_context(db, req["user_id"], "translation")
-    if not focus_areas:
-        focus_areas = db_focus_areas
+    learning_context = await _get_learning_context(db, req["user_id"], "translation")
 
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
 
@@ -311,8 +316,9 @@ async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> di
     )
     if focus_areas:
         prompt += (
-            f"\n\nCRITICAL: ALL sentences must be themed around {effective_topic}. "
-            "Do not use generic unrelated sentences."
+            f"\n\nCRITICAL: ALL 10 sentences MUST be themed around {effective_topic}. "
+            "Every sentence must use vocabulary and scenarios directly related to this topic. "
+            "Do NOT use generic unrelated sentences like 'Where is the library?' unless it connects to the topic."
         )
 
     data = await ask_json(prompt, TRANSLATION_BATCH_PROMPT)
@@ -345,9 +351,7 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
     focus_areas = req.get("focus_areas", [])
-    learning_context, db_focus_areas = await _get_learning_context(db, req["user_id"], "conversation")
-    if not focus_areas:
-        focus_areas = db_focus_areas
+    learning_context = await _get_learning_context(db, req["user_id"], "conversation")
 
     mode_questions = QUESTIONS.get("conversation", {})
     topic_questions = mode_questions.get(topic, [])

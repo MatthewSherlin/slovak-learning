@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import ModeCard from '../components/ModeCard';
 import { useUser } from '../components/UserPicker';
-import { createSession, getTopics, getModes, getDashboard, getUserPreferences, updateUserPreferences } from '../lib/api';
+import { createSession, getTopics, getModes, getDashboard, updateUserPreferences } from '../lib/api';
 import type { LearningMode, Difficulty, Topic, Mode, DashboardStats } from '../lib/types';
 
 const modeDescriptions: Record<LearningMode, string> = {
@@ -56,7 +56,6 @@ export default function Home() {
   const [backendError, setBackendError] = useState(false);
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [focusInput, setFocusInput] = useState('');
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [encouragement] = useState(() =>
     encouragements[Math.floor(Math.random() * encouragements.length)]
   );
@@ -84,16 +83,8 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  useEffect(() => {
-    if (user && step === 'config' && !prefsLoaded) {
-      getUserPreferences(user.id)
-        .then((prefs) => {
-          setFocusAreas(prefs.custom_focus_areas);
-          setPrefsLoaded(true);
-        })
-        .catch(() => setPrefsLoaded(true));
-    }
-  }, [user, step, prefsLoaded]);
+  // Focus areas are intentionally NOT loaded from DB — they're single-use per session.
+  // Users add them fresh each time on the config screen.
 
   const handleModeSelect = async (mode: LearningMode) => {
     setSelectedMode(mode);
@@ -120,10 +111,6 @@ export default function Home() {
         setFocusAreas(allFocusAreas);
         setFocusInput('');
       }
-      // Persist focus areas and pass them directly to session creation
-      if (allFocusAreas.length > 0) {
-        updateUserPreferences(user.id, { custom_focus_areas: allFocusAreas }).catch(() => {});
-      }
       const session = await createSession({
         user_id: user.id,
         mode: selectedMode,
@@ -131,6 +118,9 @@ export default function Home() {
         topic: selectedTopic || undefined,
         focus_areas: allFocusAreas.length > 0 ? allFocusAreas : undefined,
       });
+      // Clear focus areas from DB after session starts — they're single-use
+      updateUserPreferences(user.id, { custom_focus_areas: [] }).catch(() => {});
+      setFocusAreas([]);
       navigate(`/session/${session.id}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to start session';
@@ -431,20 +421,11 @@ export default function Home() {
                     type="text"
                     value={focusInput}
                     onChange={(e) => setFocusInput(e.target.value)}
-                    onKeyDown={async (e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter' && focusInput.trim()) {
                         e.preventDefault();
-                        const updated = [...focusAreas, focusInput.trim()];
-                        setFocusAreas(updated);
+                        setFocusAreas((prev) => [...prev, focusInput.trim()]);
                         setFocusInput('');
-                        if (user) {
-                          try {
-                            await updateUserPreferences(user.id, { custom_focus_areas: updated });
-                          } catch {
-                            // Revert on failure
-                            setFocusAreas(focusAreas);
-                          }
-                        }
                       }
                     }}
                     placeholder="e.g. skateboarding, food ordering..."
@@ -460,17 +441,8 @@ export default function Home() {
                       >
                         {area}
                         <button
-                          onClick={async () => {
-                            const prev = focusAreas;
-                            const updated = focusAreas.filter((_, j) => j !== i);
-                            setFocusAreas(updated);
-                            if (user) {
-                              try {
-                                await updateUserPreferences(user.id, { custom_focus_areas: updated });
-                              } catch {
-                                setFocusAreas(prev);
-                              }
-                            }
+                          onClick={() => {
+                            setFocusAreas((prev) => prev.filter((_, j) => j !== i));
                           }}
                           className="ml-0.5 text-accent/60 hover:text-accent cursor-pointer bg-transparent border-none text-[11px] leading-none"
                         >

@@ -145,6 +145,15 @@ FEEDBACK_PROMPT = f"""{ACCURACY}
 
 Analyze this Slovak language learning session and provide detailed feedback.
 
+CRITICAL SCORING RULES:
+- Score the student SOLELY on their actual performance in the exercises — their answers, accuracy, and demonstrated knowledge.
+- Do NOT penalize the student for topic coverage, focus area breadth, or what the exercises did or didn't include. The student does not control what questions are generated.
+- If the student answered most questions correctly, the overall score should reflect that success (7+ for mostly correct, 9-10 for all/nearly all correct).
+- Vocabulary mode: If the student got 9/10 or 10/10 correct, overall_score MUST be 8 or higher.
+- Grammar mode: If the student got most blanks correct, overall_score MUST be 7 or higher.
+- Translation mode: Average the per-exercise scores to determine overall_score.
+- Strengths and improvements should reference specific answers the student gave, not meta-commentary about the session design.
+
 You MUST respond with valid JSON in this exact format:
 {{
   "overall_score": <number 1-10>,
@@ -192,6 +201,8 @@ You MUST respond with ONLY valid JSON in this exact format:
 
 Rules:
 - Exactly 4 choices per question, exactly one correct
+- All 4 choices MUST be unique — no duplicate options within a question
+- All 10 words MUST be unique — no repeated words across questions
 - Distractors should be plausible but clearly wrong (same word class, similar theme)
 - correctIndex is 0-based
 - For sk-en: word is Slovak, choices are English. The CORRECT English meaning must be accurate.
@@ -200,6 +211,14 @@ Rules:
 - Include a pronunciation hint in the explanation for Slovak words
 - EVERY Slovak word must have correct diacritics. Verify each one.
 - Only use words you are absolutely certain about. Common, well-known vocabulary only. Do not guess.
+
+SELF-REVIEW (do this before outputting):
+After generating all 10 questions, review each one and verify:
+1. The correct answer at correctIndex actually matches the word's real meaning
+2. No two choices within a question are the same word
+3. No two questions use the same word
+4. All Slovak words have correct diacritics
+If any check fails, fix the question before outputting.
 
 Custom focus areas: If the student's message specifies custom focus areas, ALWAYS prioritize those areas when choosing vocabulary. Use words from their requested domains even if they differ from the default topic categories below. Adapt the difficulty level to their focus area.
 

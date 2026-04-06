@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Flame, BookText, Target, Zap, Crown, BarChart3 } from 'lucide-react';
+import { Trophy, Flame, BookText, Target, Zap, Crown, BarChart3, ChevronDown } from 'lucide-react';
 import LoadingDots from '../components/LoadingDots';
 import { getLeaderboard } from '../lib/api';
 import type { LeaderboardEntry } from '../lib/types';
@@ -8,10 +8,17 @@ import type { LeaderboardEntry } from '../lib/types';
 export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [leftUserId, setLeftUserId] = useState<string | null>(null);
+  const [rightUserId, setRightUserId] = useState<string | null>(null);
 
   useEffect(() => {
     getLeaderboard()
-      .then(setEntries)
+      .then((data) => {
+        setEntries(data);
+        const sorted = [...data].sort((a, b) => b.xp - a.xp);
+        if (sorted[0]) setLeftUserId(sorted[0].user_id);
+        if (sorted[1]) setRightUserId(sorted[1].user_id);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -26,12 +33,20 @@ export default function Leaderboard() {
   // Sort by XP descending
   const sorted = [...entries].sort((a, b) => b.xp - a.xp);
   const leader = sorted[0];
-  const challenger = sorted[1];
 
-  // Calculate max values for relative bars
+  // Head-to-head selected users
+  const leftUser = entries.find((e) => e.user_id === leftUserId);
+  const rightUser = entries.find((e) => e.user_id === rightUserId);
+
+  // Calculate max values for relative bars (across all users for cards)
   const maxXP = Math.max(...sorted.map((e) => e.xp), 1);
   const maxVocab = Math.max(...sorted.map((e) => e.total_vocab), 1);
   const maxSessions = Math.max(...sorted.map((e) => e.completed_sessions), 1);
+
+  // Max values scoped to the two selected users for comparison bars
+  const h2hMaxXP = leftUser && rightUser ? Math.max(leftUser.xp, rightUser.xp, 1) : 1;
+  const h2hMaxVocab = leftUser && rightUser ? Math.max(leftUser.total_vocab, rightUser.total_vocab, 1) : 1;
+  const h2hMaxSessions = leftUser && rightUser ? Math.max(leftUser.completed_sessions, rightUser.completed_sessions, 1) : 1;
 
   return (
     <div className="max-w-4xl mx-auto px-6 pt-32 pb-16">
@@ -175,76 +190,128 @@ export default function Leaderboard() {
           </div>
 
           {/* Comparison Bars */}
-          {leader && challenger && (
+          {sorted.length >= 2 && (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
               className="bg-surface border border-border rounded-2xl p-6"
             >
-              <h3 className="text-[15px] font-semibold text-text-primary mb-6 flex items-center gap-2">
-                <Trophy size={16} className="text-warning" />
-                Head-to-Head
-              </h3>
-
-              <div className="space-y-6">
-                {/* XP Comparison */}
-                <ComparisonBar
-                  label="Total XP"
-                  leftName={sorted[0].name}
-                  leftValue={sorted[0].xp}
-                  leftColor={sorted[0].color}
-                  rightName={sorted[1].name}
-                  rightValue={sorted[1].xp}
-                  rightColor={sorted[1].color}
-                  max={maxXP}
-                  delay={0.7}
-                />
-
-                {/* Vocab Comparison */}
-                <ComparisonBar
-                  label="Words Learned"
-                  leftName={sorted[0].name}
-                  leftValue={sorted[0].total_vocab}
-                  leftColor={sorted[0].color}
-                  rightName={sorted[1].name}
-                  rightValue={sorted[1].total_vocab}
-                  rightColor={sorted[1].color}
-                  max={maxVocab}
-                  delay={0.8}
-                />
-
-                {/* Sessions Comparison */}
-                <ComparisonBar
-                  label="Sessions Completed"
-                  leftName={sorted[0].name}
-                  leftValue={sorted[0].completed_sessions}
-                  leftColor={sorted[0].color}
-                  rightName={sorted[1].name}
-                  rightValue={sorted[1].completed_sessions}
-                  rightColor={sorted[1].color}
-                  max={maxSessions}
-                  delay={0.9}
-                />
-
-                {/* Avg Score Comparison */}
-                <ComparisonBar
-                  label="Average Score"
-                  leftName={sorted[0].name}
-                  leftValue={sorted[0].avg_score ?? 0}
-                  leftColor={sorted[0].color}
-                  rightName={sorted[1].name}
-                  rightValue={sorted[1].avg_score ?? 0}
-                  rightColor={sorted[1].color}
-                  max={10}
-                  delay={1.0}
-                  format={(v) => v.toFixed(1)}
-                />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                <h3 className="text-[15px] font-semibold text-text-primary flex items-center gap-2">
+                  <Trophy size={16} className="text-warning" />
+                  Head-to-Head
+                </h3>
+                <div className="flex items-center gap-2">
+                  <UserSelect
+                    entries={sorted}
+                    value={leftUserId}
+                    onChange={setLeftUserId}
+                    excludeId={rightUserId}
+                  />
+                  <span className="text-[11px] font-bold text-text-faint">VS</span>
+                  <UserSelect
+                    entries={sorted}
+                    value={rightUserId}
+                    onChange={setRightUserId}
+                    excludeId={leftUserId}
+                  />
+                </div>
               </div>
+
+              {leftUser && rightUser ? (
+                <div className="space-y-6">
+                  <ComparisonBar
+                    label="Total XP"
+                    leftName={leftUser.name}
+                    leftValue={leftUser.xp}
+                    leftColor={leftUser.color}
+                    rightName={rightUser.name}
+                    rightValue={rightUser.xp}
+                    rightColor={rightUser.color}
+                    max={h2hMaxXP}
+                    delay={0.7}
+                  />
+                  <ComparisonBar
+                    label="Words Learned"
+                    leftName={leftUser.name}
+                    leftValue={leftUser.total_vocab}
+                    leftColor={leftUser.color}
+                    rightName={rightUser.name}
+                    rightValue={rightUser.total_vocab}
+                    rightColor={rightUser.color}
+                    max={h2hMaxVocab}
+                    delay={0.8}
+                  />
+                  <ComparisonBar
+                    label="Sessions Completed"
+                    leftName={leftUser.name}
+                    leftValue={leftUser.completed_sessions}
+                    leftColor={leftUser.color}
+                    rightName={rightUser.name}
+                    rightValue={rightUser.completed_sessions}
+                    rightColor={rightUser.color}
+                    max={h2hMaxSessions}
+                    delay={0.9}
+                  />
+                  <ComparisonBar
+                    label="Average Score"
+                    leftName={leftUser.name}
+                    leftValue={leftUser.avg_score ?? 0}
+                    leftColor={leftUser.color}
+                    rightName={rightUser.name}
+                    rightValue={rightUser.avg_score ?? 0}
+                    rightColor={rightUser.color}
+                    max={10}
+                    delay={1.0}
+                    format={(v) => v.toFixed(1)}
+                  />
+                </div>
+              ) : (
+                <p className="text-text-muted text-sm text-center py-4">
+                  Select two users to compare.
+                </p>
+              )}
             </motion.div>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function UserSelect({
+  entries,
+  value,
+  onChange,
+  excludeId,
+}: {
+  entries: LeaderboardEntry[];
+  value: string | null;
+  onChange: (id: string) => void;
+  excludeId: string | null;
+}) {
+  const selected = entries.find((e) => e.user_id === value);
+
+  return (
+    <div className="relative">
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none bg-surface-2 border border-border-subtle rounded-lg pl-3 pr-7 py-1.5 text-[13px] font-medium text-text-primary cursor-pointer hover:border-border focus:outline-none focus:ring-1 focus:ring-accent/50"
+        style={selected ? { borderColor: `${selected.color}44` } : undefined}
+      >
+        {entries.map((entry) => (
+          <option
+            key={entry.user_id}
+            value={entry.user_id}
+            disabled={entry.user_id === excludeId}
+          >
+            {entry.avatar} {entry.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-faint pointer-events-none" />
     </div>
   );
 }
