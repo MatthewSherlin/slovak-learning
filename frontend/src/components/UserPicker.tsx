@@ -110,10 +110,10 @@ export default function UserPicker({ open, onClose, onSelect }: UserPickerProps)
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="bg-surface border border-border rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl"
+            className="bg-surface border border-border rounded-2xl max-w-md w-full mx-4 shadow-2xl max-h-[85vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between p-6 pb-4 shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-text-primary tracking-tight">
                   Who's learning today?
@@ -130,31 +130,33 @@ export default function UserPicker({ open, onClose, onSelect }: UserPickerProps)
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {users.map((u, i) => (
-                <motion.button
-                  key={u.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => onSelect(u)}
-                  className="flex flex-col items-center gap-4 p-6 rounded-2xl border border-border bg-surface-2 hover:border-border-focus cursor-pointer transition-all duration-200"
-                  style={{ '--glow-color': u.color } as React.CSSProperties}
-                >
-                  <div
-                    className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-lg"
-                    style={{ background: `linear-gradient(135deg, ${u.color}, ${u.color}88)` }}
+            <div className="overflow-y-auto px-6 pb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {users.map((u, i) => (
+                  <motion.button
+                    key={u.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => onSelect(u)}
+                    className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border bg-surface-2 hover:border-border-focus cursor-pointer transition-all duration-200"
+                    style={{ '--glow-color': u.color } as React.CSSProperties}
                   >
-                    {u.avatar}
-                  </div>
-                  <span className="text-lg font-semibold text-text-primary flex items-center gap-1.5">
-                    {u.name}
-                    {u.has_pin && <Lock size={14} className="text-text-muted" />}
-                  </span>
-                </motion.button>
-              ))}
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold text-white shadow-lg"
+                      style={{ background: `linear-gradient(135deg, ${u.color}, ${u.color}88)` }}
+                    >
+                      {u.avatar}
+                    </div>
+                    <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                      {u.name}
+                      {u.has_pin && <Lock size={12} className="text-text-muted" />}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
             </div>
           </motion.div>
         </motion.div>
