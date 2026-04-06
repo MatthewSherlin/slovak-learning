@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import type { User } from '../lib/types';
 import { getUsers } from '../lib/api';
 
@@ -10,12 +10,14 @@ interface UserContextValue {
   user: User | null;
   setUser: (u: User | null) => void;
   users: User[];
+  refreshUsers: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextValue>({
   user: null,
   setUser: () => {},
   users: [],
+  refreshUsers: async () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -32,12 +34,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   });
   const [users, setUsers] = useState<User[]>([]);
 
+  const refreshUsers = useCallback(async () => {
+    try {
+      const fetched = await getUsers();
+      setUsers(fetched);
+    } catch {
+      // Silently fail — keep existing list
+    }
+  }, []);
+
   useEffect(() => {
     getUsers().then(setUsers).catch(() => {
       // Fallback if backend is unreachable
       setUsers([
-        { id: 'matt', name: 'Matt', avatar: 'M', color: '#5ea4f7' },
-        { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f0a8d0' },
+        { id: 'matt', name: 'Matt', avatar: 'M', color: '#5ea4f7', has_pin: false },
+        { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f0a8d0', has_pin: false },
       ]);
     });
   }, []);
@@ -52,7 +63,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, setUser, users }}>
+    <UserContext.Provider value={{ user, setUser, users, refreshUsers }}>
       {children}
     </UserContext.Provider>
   );
@@ -132,7 +143,10 @@ export default function UserPicker({ open, onClose, onSelect }: UserPickerProps)
                   >
                     {u.avatar}
                   </div>
-                  <span className="text-lg font-semibold text-text-primary">{u.name}</span>
+                  <span className="text-lg font-semibold text-text-primary flex items-center gap-1.5">
+                    {u.name}
+                    {u.has_pin && <Lock size={14} className="text-text-muted" />}
+                  </span>
                 </motion.button>
               ))}
             </div>

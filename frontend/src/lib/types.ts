@@ -6,6 +6,7 @@ export interface User {
   name: string;
   avatar: string;
   color: string;
+  has_pin: boolean;
 }
 
 export interface Mode {
@@ -204,4 +205,79 @@ export interface LeaderboardEntry {
   total_vocab: number;
   streak_days: number;
   xp: number;
+}
+
+// -- Farm / Orchard types --
+export interface FarmItem {
+  id: number;
+  item_type: string;
+  grid_x: number;
+  grid_y: number;
+  xp_cost: number;
+  purchased_at: string;
+}
+
+export interface FarmCatalogItem {
+  name: string;
+  cost: number;
+  category: string;
+}
+
+export interface FarmState {
+  items: FarmItem[];
+  xp_earned: number;
+  xp_spent: number;
+  xp_available: number;
+  catalog: Record<string, FarmCatalogItem>;
+}
+
+// -- Card Collection types --
+export interface CardData {
+  id: number;
+  set_id: string;
+  set_name: string;
+  set_emoji: string;
+  emoji: string;
+  slovak: string;
+  pronunciation: string;
+  english: string;
+  example_sk: string;
+  example_en: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
+  number: number;
+  origin?: string;
+}
+
+export interface CardSet {
+  set_id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  cost: number;
+  total_cards: number;
+}
+
+export interface UserCardCollection {
+  cards: CardData[];
+  total_unique: number;
+  total_possible: number;
+  xp_earned: number;
+  xp_spent: number;
+  xp_available: number;
+}
+
+export interface PackPurchaseResult {
+  cards: CardData[];
+  new_card_ids: number[];
+  duplicate_card_ids: number[];
+  xp_cost: number;
+}
+
+export interface CardSocialEntry {
+  user_id: string;
+  name: string;
+  avatar: string;
+  color: string;
+  total_cards: number;
+  sets_progress: Record<string, number>;
 }

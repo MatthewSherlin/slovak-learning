@@ -38,32 +38,62 @@ export default function DiacriticsKeyboard({ inputRef, value, onChange }: Diacri
   );
 
   return (
-    <div className="hidden md:flex items-center gap-1.5 flex-wrap mt-2">
-      {/* Shift toggle */}
-      <button
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setUpper((u) => !u)}
-        className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border cursor-pointer transition-colors select-none ${
-          upper
-            ? 'bg-accent/15 border-accent/30 text-accent'
-            : 'bg-surface-3 border-border-subtle text-text-faint hover:text-text-muted'
-        }`}
-        title="Toggle uppercase"
-      >
-        ⇧
-      </button>
-
-      {chars.map((ch) => (
-        <motion.button
-          key={ch}
-          whileTap={{ scale: 0.88 }}
+    <>
+      {/* Mobile: compact single-row scrollable strip */}
+      <div className="flex md:hidden items-center gap-1 mt-2 overflow-x-auto flex-nowrap pb-1">
+        <button
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => insert(ch)}
-          className="min-w-[28px] h-[30px] rounded-lg bg-surface-3 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border text-[13px] font-medium cursor-pointer transition-colors select-none"
+          onClick={() => setUpper((u) => !u)}
+          className={`shrink-0 px-2 py-1 rounded-md text-xs font-semibold border cursor-pointer transition-colors select-none ${
+            upper
+              ? 'bg-accent/15 border-accent/30 text-accent'
+              : 'bg-surface-3 border-border-subtle text-text-faint hover:text-text-muted'
+          }`}
+          title="Toggle uppercase"
         >
-          {ch}
-        </motion.button>
-      ))}
-    </div>
+          ⇧
+        </button>
+
+        {chars.map((ch) => (
+          <motion.button
+            key={ch}
+            whileTap={{ scale: 0.88 }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => insert(ch)}
+            className="shrink-0 min-w-[26px] h-[28px] rounded-md bg-surface-3 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border text-xs font-medium cursor-pointer transition-colors select-none"
+          >
+            {ch}
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Desktop: multi-row wrapped layout */}
+      <div className="hidden md:flex items-center gap-1.5 flex-wrap mt-2">
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setUpper((u) => !u)}
+          className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border cursor-pointer transition-colors select-none ${
+            upper
+              ? 'bg-accent/15 border-accent/30 text-accent'
+              : 'bg-surface-3 border-border-subtle text-text-faint hover:text-text-muted'
+          }`}
+          title="Toggle uppercase"
+        >
+          ⇧
+        </button>
+
+        {chars.map((ch) => (
+          <motion.button
+            key={ch}
+            whileTap={{ scale: 0.88 }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => insert(ch)}
+            className="min-w-[28px] h-[30px] rounded-lg bg-surface-3 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border text-[13px] font-medium cursor-pointer transition-colors select-none"
+          >
+            {ch}
+          </motion.button>
+        ))}
+      </div>
+    </>
   );
 }

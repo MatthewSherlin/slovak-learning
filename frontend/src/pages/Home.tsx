@@ -243,7 +243,7 @@ export default function Home() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="flex items-center justify-center gap-6 mt-6 text-xs text-text-muted"
+                  className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mt-6 text-xs text-text-muted"
                 >
                   <span>{stats.completed_sessions} sessions completed</span>
                   <span className="w-1 h-1 rounded-full bg-border" />

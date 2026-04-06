@@ -22,11 +22,30 @@ from .database import (
     update_user_preferences,
     delete_session as db_delete_session,
     get_session as db_get_session,
+    set_user_pin,
+    verify_user_pin,
+    remove_user_pin,
+    user_has_pin,
+    get_user_farm,
+    purchase_farm_item,
+    move_farm_item,
+    remove_farm_item,
+    get_user_cards,
+    purchase_pack,
+    get_all_users_card_counts,
+    _get_user_xp_earned,
+    _get_user_xp_spent,
 )
+from .cards import CARDS, CARD_BY_ID, SETS, CARDS_BY_SET
 from .models import (
     AnswerRequest,
     CreateSessionRequest,
+    FarmMoveRequest,
+    FarmPurchaseRequest,
     GrammarAnswerRequest,
+    PackPurchaseRequest,
+    PinRequest,
+    PinVerifyResponse,
     TranslationAnswerRequest,
     UpdatePreferencesRequest,
     VocabAnswerRequest,
@@ -88,6 +107,35 @@ async def update_preferences(user_id: str, req: UpdatePreferencesRequest):
     async with get_db() as db:
         await update_user_preferences(db, user_id, req.custom_focus_areas)
         return await get_user_preferences(db, user_id)
+
+
+# ── User PIN ─────────────────────────────────────────────────────────
+
+@app.post("/api/users/{user_id}/pin")
+async def set_pin(user_id: str, req: PinRequest):
+    if not req.pin.isdigit() or len(req.pin) != 4:
+        raise HTTPException(400, "PIN must be exactly 4 digits")
+    async with get_db() as db:
+        if not await set_user_pin(db, user_id, req.pin):
+            raise HTTPException(404, "User not found")
+        return {"ok": True}
+
+
+@app.post("/api/users/{user_id}/verify-pin")
+async def verify_pin(user_id: str, req: PinRequest):
+    async with get_db() as db:
+        valid = await verify_user_pin(db, user_id, req.pin)
+        return PinVerifyResponse(valid=valid)
+
+
+@app.delete("/api/users/{user_id}/pin")
+async def delete_pin(user_id: str, req: PinRequest):
+    async with get_db() as db:
+        if not await verify_user_pin(db, user_id, req.pin):
+            raise HTTPException(403, "Invalid PIN")
+        if not await remove_user_pin(db, user_id):
+            raise HTTPException(404, "User not found")
+        return {"ok": True}
 
 
 @app.get("/api/users/{user_id}/vocabulary")
@@ -285,3 +333,123 @@ async def dashboard(user_id: Optional[str] = Query(None)):
 async def leaderboard():
     async with get_db() as db:
         return await get_leaderboard(db)
+
+
+# ── XP Orchard (Farm) ───────────────────────────────────────────────
+
+@app.get("/api/users/{user_id}/farm")
+async def farm_state(user_id: str):
+    async with get_db() as db:
+        return await get_user_farm(db, user_id)
+
+
+@app.post("/api/users/{user_id}/farm/purchase")
+async def farm_purchase(user_id: str, req: FarmPurchaseRequest):
+    async with get_db() as db:
+        item = await purchase_farm_item(db, user_id, req.item_type, req.grid_x, req.grid_y)
+        if not item:
+            raise HTTPException(400, "Purchase failed: invalid item, insufficient XP, or position occupied")
+        return item
+
+
+@app.put("/api/users/{user_id}/farm/move")
+async def farm_move(user_id: str, req: FarmMoveRequest):
+    async with get_db() as db:
+        if not await move_farm_item(db, user_id, req.item_id, req.grid_x, req.grid_y):
+            raise HTTPException(400, "Move failed: invalid position, position occupied, or item not found")
+        return {"ok": True}
+
+
+@app.delete("/api/users/{user_id}/farm/{item_id}")
+async def farm_remove(user_id: str, item_id: int):
+    async with get_db() as db:
+        if not await remove_farm_item(db, user_id, item_id):
+            raise HTTPException(404, "Farm item not found")
+        return {"ok": True}
+
+
+# ── Card Collection ────────────────────────────────────────────────
+
+@app.get("/api/cards/catalog")
+async def card_catalog():
+    """Return all sets and their card counts."""
+    result = []
+    for set_id, info in SETS.items():
+        cards = CARDS_BY_SET.get(set_id, [])
+        result.append({
+            "set_id": set_id,
+            "name": info["name"],
+            "emoji": info["emoji"],
+            "description": info["description"],
+            "cost": info["cost"],
+            "total_cards": len(cards),
+        })
+    return result
+
+
+@app.get("/api/cards/all")
+async def all_cards():
+    """Return full card catalog data."""
+    return {"cards": CARDS, "sets": SETS}
+
+
+@app.get("/api/users/{user_id}/cards")
+async def user_cards(user_id: str):
+    """Get a user's card collection with full card data."""
+    async with get_db() as db:
+        card_ids = await get_user_cards(db, user_id)
+        cards = [CARD_BY_ID[cid] for cid in card_ids if cid in CARD_BY_ID]
+
+        # Calculate XP
+        xp_earned = await _get_user_xp_earned(db, user_id)
+        xp_spent = await _get_user_xp_spent(db, user_id)
+
+        return {
+            "cards": cards,
+            "total_unique": len(set(card_ids)),
+            "total_possible": len(CARDS),
+            "xp_earned": xp_earned,
+            "xp_spent": xp_spent,
+            "xp_available": xp_earned - xp_spent,
+        }
+
+
+@app.post("/api/users/{user_id}/cards/purchase")
+async def purchase_card_pack(user_id: str, req: PackPurchaseRequest):
+    """Purchase a card pack with XP."""
+    async with get_db() as db:
+        result = await purchase_pack(db, user_id, req.set_id)
+        if not result:
+            raise HTTPException(400, "Purchase failed: invalid set or insufficient XP")
+        return result
+
+
+@app.get("/api/cards/social")
+async def cards_social():
+    """Get card collection stats for all users (for social comparison)."""
+    async with get_db() as db:
+        users_list = await get_users(db)
+        counts = await get_all_users_card_counts(db)
+
+        result = []
+        for user in users_list:
+            uid = user["id"]
+            card_ids = await get_user_cards(db, uid)
+            # Group by set
+            set_counts = {}
+            for cid in card_ids:
+                card = CARD_BY_ID.get(cid)
+                if card:
+                    sid = card["set_id"]
+                    set_counts[sid] = set_counts.get(sid, 0) + 1
+
+            result.append({
+                "user_id": uid,
+                "name": user["name"],
+                "avatar": user["avatar"],
+                "color": user["color"],
+                "total_cards": counts.get(uid, 0),
+                "sets_progress": set_counts,
+            })
+
+        return result

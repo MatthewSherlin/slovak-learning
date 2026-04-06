@@ -22,8 +22,13 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
       <div className="max-w-3xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => {
+              if (window.confirm('Leave this session? Progress will be saved.')) {
+                navigate('/');
+              }
+            }}
             className="text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer p-1 transition-colors"
+            title="Leave session"
           >
             <ArrowLeft size={16} />
           </button>

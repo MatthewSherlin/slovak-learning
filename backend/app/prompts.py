@@ -236,6 +236,7 @@ You MUST respond with ONLY valid JSON in this exact format:
 }}
 
 Rules:
+- CRITICAL: The "hint" field must NEVER contain the correct answer, any of the choices, or directly tell the student which word to use. Instead, hints should reference the grammar RULE or pattern (e.g. "This preposition requires locative case" instead of "Use 'na'"). For beginner exercises with choices, the hint should help them think about WHY one option is correct, not WHICH option is correct.
 - CRITICAL: All JSON string values must have internal double quotes escaped as \". Use single quotes or bold (**word**) instead of quoting Slovak words with double quotes inside JSON strings.
 - The lesson explanation should be concise but clear (not a textbook chapter)
 - Generate 8-10 exercises that test the concept taught in the lesson

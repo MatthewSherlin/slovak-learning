@@ -230,3 +230,48 @@ class UserPreferences(BaseModel):
 
 class UpdatePreferencesRequest(BaseModel):
     custom_focus_areas: list[str]
+
+
+# ── PIN models ──────────────────────────────────────────────────────
+
+class PinRequest(BaseModel):
+    pin: str
+
+
+class PinVerifyResponse(BaseModel):
+    valid: bool
+
+
+# ── Farm models ─────────────────────────────────────────────────────
+
+class FarmPurchaseRequest(BaseModel):
+    item_type: str
+    grid_x: int
+    grid_y: int
+
+
+class FarmMoveRequest(BaseModel):
+    item_id: int
+    grid_x: int
+    grid_y: int
+
+
+class PackPurchaseRequest(BaseModel):
+    set_id: str
+
+
+class FarmItem(BaseModel):
+    id: int
+    item_type: str
+    grid_x: int
+    grid_y: int
+    xp_cost: int
+    purchased_at: str
+
+
+class FarmState(BaseModel):
+    items: list[FarmItem]
+    xp_earned: int
+    xp_spent: int
+    xp_available: int
+    catalog: dict

@@ -29,6 +29,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const [shakeInput, setShakeInput] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [shakeCards, setShakeCards] = useState<Set<number>>(new Set());
+  const [showHint, setShowHint] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleStartExercises = async () => {
@@ -94,6 +95,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     setShakeInput(false);
     setSelected(null);
     setShakeCards(new Set());
+    setShowHint(false);
     if (!isMultipleChoice) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -373,10 +375,20 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
 
               {/* Hint */}
               {currentExercise.hint && !showResult && (
-                <div className="flex items-start gap-2 bg-warning-muted border border-warning/15 rounded-xl px-3 py-2.5 mb-4">
-                  <Lightbulb size={13} className="text-warning shrink-0 mt-0.5" />
-                  <span className="text-[12px] text-text-secondary">{currentExercise.hint}</span>
-                </div>
+                isMultipleChoice && !showHint ? (
+                  <button
+                    onClick={() => setShowHint(true)}
+                    className="flex items-center gap-1.5 text-[12px] text-text-faint hover:text-warning cursor-pointer bg-transparent border-none mb-4 transition-colors"
+                  >
+                    <Lightbulb size={13} />
+                    <span>Show hint</span>
+                  </button>
+                ) : (
+                  <div className="flex items-start gap-2 bg-warning-muted border border-warning/15 rounded-xl px-3 py-2.5 mb-4">
+                    <Lightbulb size={13} className="text-warning shrink-0 mt-0.5" />
+                    <span className="text-[12px] text-text-secondary">{currentExercise.hint}</span>
+                  </div>
+                )
               )}
 
               {isMultipleChoice ? (
