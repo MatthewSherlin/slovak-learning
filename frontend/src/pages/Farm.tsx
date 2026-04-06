@@ -945,7 +945,7 @@ export default function Farm() {
   // ── Pack opening overlay ──────────────────────────────────────────
   if (packPhase !== 'idle' && openingSet) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-28 pb-16">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-32 pb-16">
         {/* Back button */}
         {packPhase === 'done' && (
           <motion.button
@@ -1096,7 +1096,7 @@ export default function Farm() {
 
   // ── Main page with tabs ───────────────────────────────────────────
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 pt-28 pb-16">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 pt-32 pb-16">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
