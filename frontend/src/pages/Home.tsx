@@ -191,7 +191,7 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 pt-24 pb-16">
+    <div className="max-w-4xl mx-auto px-6 pt-28 pb-16">
       <AnimatePresence mode="wait">
         {step === 'mode' ? (
           <motion.div

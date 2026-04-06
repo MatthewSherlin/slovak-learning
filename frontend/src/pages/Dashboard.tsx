@@ -41,7 +41,7 @@ export default function Dashboard() {
 
   if (!stats || stats.total_sessions === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-6 pt-24 pb-16 text-center">
+      <div className="max-w-3xl mx-auto px-6 pt-28 pb-16 text-center">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
             <BarChart3 size={24} className="text-text-faint" />
@@ -65,7 +65,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 pt-24 pb-16">
+    <div className="max-w-4xl mx-auto px-6 pt-28 pb-16">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-2.5 mb-2">
           <BarChart3 size={20} className="text-accent" />
