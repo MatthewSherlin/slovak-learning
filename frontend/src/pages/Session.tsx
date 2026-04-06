@@ -95,7 +95,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
   const studentMessages = session.messages.filter((m) => m.role === 'student').length;
 
   return (
-    <div className="flex flex-col h-screen pt-14">
+    <div className="flex flex-col h-screen pt-18">
       <div className="border-b border-border-subtle glass px-6 py-2.5">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">

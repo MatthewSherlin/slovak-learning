@@ -40,7 +40,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
     'text-danger';
 
   return (
-    <div className="min-h-screen pt-14">
+    <div className="min-h-screen pt-18">
       <div className="max-w-2xl mx-auto px-6 py-10">
         {/* Back */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

@@ -152,7 +152,7 @@ export default function ConversationMode({ session, setSession }: ConversationMo
   const showPhrases = !isComplete && !loading && input.length < 10;
 
   return (
-    <div className="flex flex-col h-screen pt-14">
+    <div className="flex flex-col h-screen pt-18">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={studentMessages > 0}>
         <div className="flex items-center gap-3">
           {/* Exchange counter */}

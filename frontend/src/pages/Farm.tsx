@@ -811,6 +811,7 @@ export default function Farm() {
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [newCardIds, setNewCardIds] = useState<number[]>([]);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [confirmSet, setConfirmSet] = useState<CardSet | null>(null);
   const [revealIndex, setRevealIndex] = useState(-1);
   const [justFlippedIds, setJustFlippedIds] = useState<Set<number>>(new Set());
   const apiResultRef = useRef<PackPurchaseResult | null>(null);
@@ -1175,7 +1176,7 @@ export default function Farm() {
                     key={set.set_id}
                     whileHover={canAfford && !complete ? { scale: 1.03, y: -2 } : {}}
                     whileTap={canAfford && !complete ? { scale: 0.97 } : {}}
-                    onClick={() => canAfford && !complete && handleBuyPack(set)}
+                    onClick={() => canAfford && !complete && setConfirmSet(set)}
                     disabled={!canAfford || complete}
                     className={`relative rounded-xl border overflow-hidden text-left cursor-pointer transition-all ${
                       complete
@@ -1262,6 +1263,53 @@ export default function Farm() {
       {/* Inspect modal */}
       <AnimatePresence>
         {inspectCard && <CardInspectModal card={inspectCard} onClose={() => setInspectCard(null)} />}
+      </AnimatePresence>
+
+      {/* Confirm purchase modal */}
+      <AnimatePresence>
+        {confirmSet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={() => setConfirmSet(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-xs rounded-2xl border border-border bg-surface-1 shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 text-center">
+                <div className="text-4xl mb-3">{confirmSet.emoji}</div>
+                <h3 className="text-lg font-bold text-text-primary mb-1">{confirmSet.name}</h3>
+                <p className="text-sm text-text-muted mb-4">Open this pack for {confirmSet.cost} XP?</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setConfirmSet(null)}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-surface-3 text-text-secondary hover:bg-surface-2 border-none cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      const set = confirmSet;
+                      setConfirmSet(null);
+                      handleBuyPack(set);
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-accent to-sky-400 text-white border-none cursor-pointer shadow-md shadow-accent/20"
+                  >
+                    Open Pack
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <style>{cardStyles}</style>

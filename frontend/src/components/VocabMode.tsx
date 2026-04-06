@@ -114,7 +114,7 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
     const pct = Math.round((correctCount / total) * 100);
 
     return (
-      <div className="flex flex-col h-screen pt-14">
+      <div className="flex flex-col h-screen pt-18">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} />
         <div className="flex-1 overflow-y-auto px-6 py-10">
           <div className="max-w-lg mx-auto text-center">
@@ -216,7 +216,7 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
 
   // ── Active quiz ───────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen pt-14">
+    <div className="flex flex-col h-screen pt-18">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={currentInPhase > 0}>
         <div className="flex items-center gap-3">
           {ex.phase === 'retry' && (

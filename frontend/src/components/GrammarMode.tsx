@@ -148,7 +148,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   // Lesson phase
   if (ex.phase === 'lesson') {
     return (
-      <div className="flex flex-col h-screen pt-14">
+      <div className="flex flex-col h-screen pt-18">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={false} />
         <div className="flex-1 overflow-y-auto px-6 py-8">
           <div className="max-w-2xl mx-auto">
@@ -218,7 +218,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     const pct = Math.round((correctCount / total) * 100);
 
     return (
-      <div className="flex flex-col h-screen pt-14">
+      <div className="flex flex-col h-screen pt-18">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} />
         <div className="flex-1 overflow-y-auto px-6 py-10">
           <div className="max-w-lg mx-auto text-center">
@@ -322,7 +322,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     : -1;
 
   return (
-    <div className="flex flex-col h-screen pt-14">
+    <div className="flex flex-col h-screen pt-18">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={ex.currentIndex > 0}>
         {streak >= 3 && (
           <motion.div
