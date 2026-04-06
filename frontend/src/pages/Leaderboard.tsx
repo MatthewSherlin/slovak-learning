@@ -40,8 +40,6 @@ export default function Leaderboard() {
 
   // Calculate max values for relative bars (across all users for cards)
   const maxXP = Math.max(...sorted.map((e) => e.xp), 1);
-  const maxVocab = Math.max(...sorted.map((e) => e.total_vocab), 1);
-  const maxSessions = Math.max(...sorted.map((e) => e.completed_sessions), 1);
 
   // Max values scoped to the two selected users for comparison bars
   const h2hMaxXP = leftUser && rightUser ? Math.max(leftUser.xp, rightUser.xp, 1) : 1;
