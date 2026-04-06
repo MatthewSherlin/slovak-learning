@@ -114,7 +114,7 @@ export default function Guides() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 pt-22 pb-16">
+    <div className="max-w-3xl mx-auto px-6 pt-24 pb-16">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-2.5 mb-2">
           <BookOpen size={20} className="text-accent" />

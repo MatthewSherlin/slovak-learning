@@ -21,16 +21,16 @@ class CardDef(TypedDict):
 
 # Set definitions for pack display
 SETS: dict[str, dict] = {
-    "myty": {"name": "Mýty a Legendy", "emoji": "🐉", "description": "Myths & Legends", "cost": 50},
-    "jedlo": {"name": "Slovenská Kuchyňa", "emoji": "🥟", "description": "Slovak Kitchen", "cost": 50},
-    "pamiatky": {"name": "Pamiatky", "emoji": "🏰", "description": "Landmarks", "cost": 50},
-    "slang": {"name": "Slang & Výrazy", "emoji": "🗣️", "description": "Slang & Expressions", "cost": 50},
-    "rozpravky": {"name": "Rozprávky", "emoji": "🧚", "description": "Fairy Tales", "cost": 50},
-    "futbal": {"name": "Futbal", "emoji": "⚽", "description": "Football", "cost": 50},
-    "zvierata": {"name": "Tatranská Fauna", "emoji": "🐻", "description": "Tatra Wildlife", "cost": 50},
-    "tradicie": {"name": "Tradície", "emoji": "🎭", "description": "Traditions", "cost": 50},
-    "priroda": {"name": "Slovenská Príroda", "emoji": "🏔️", "description": "Slovak Nature", "cost": 50},
-    "hudba": {"name": "Hudba a Umenie", "emoji": "🎵", "description": "Music & Art", "cost": 50},
+    "myty": {"name": "Mýty a Legendy", "emoji": "🐉", "description": "Myths & Legends", "cost": 150},
+    "jedlo": {"name": "Slovenská Kuchyňa", "emoji": "🥟", "description": "Slovak Kitchen", "cost": 150},
+    "pamiatky": {"name": "Pamiatky", "emoji": "🏰", "description": "Landmarks", "cost": 150},
+    "slang": {"name": "Slang & Výrazy", "emoji": "🗣️", "description": "Slang & Expressions", "cost": 150},
+    "rozpravky": {"name": "Rozprávky", "emoji": "🧚", "description": "Fairy Tales", "cost": 150},
+    "futbal": {"name": "Futbal", "emoji": "⚽", "description": "Football", "cost": 150},
+    "zvierata": {"name": "Tatranská Fauna", "emoji": "🐻", "description": "Tatra Wildlife", "cost": 150},
+    "tradicie": {"name": "Tradície", "emoji": "🎭", "description": "Traditions", "cost": 150},
+    "priroda": {"name": "Slovenská Príroda", "emoji": "🏔️", "description": "Slovak Nature", "cost": 150},
+    "hudba": {"name": "Hudba a Umenie", "emoji": "🎵", "description": "Music & Art", "cost": 150},
 }
 
 CARDS: list[CardDef] = [
