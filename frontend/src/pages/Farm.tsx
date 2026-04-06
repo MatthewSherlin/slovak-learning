@@ -250,11 +250,13 @@ function FlippableCard({
   flipped,
   delay = 0,
   onFlip,
+  onInspect,
 }: {
   card: CardData;
   flipped: boolean;
   delay?: number;
   onFlip?: () => void;
+  onInspect?: () => void;
 }) {
   return (
     <motion.div
@@ -263,7 +265,7 @@ function FlippableCard({
       initial={{ opacity: 0, y: -80, scale: 0.3, rotate: 0 }}
       animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
       transition={{ delay, type: 'spring', damping: 18, stiffness: 200 }}
-      onClick={onFlip}
+      onClick={flipped ? onInspect : onFlip}
     >
       <motion.div
         className="card-inner"
@@ -471,6 +473,7 @@ function CardRevealSlot({
   justFlipped,
   entryDelay,
   onFlip,
+  onInspect,
 }: {
   card: CardData;
   flipped: boolean;
@@ -478,6 +481,7 @@ function CardRevealSlot({
   justFlipped: boolean;
   entryDelay: number;
   onFlip: () => void;
+  onInspect: () => void;
 }) {
   const r = RARITY[card.rarity];
   const isRareOrAbove = card.rarity === 'rare' || card.rarity === 'legendary';
@@ -505,6 +509,7 @@ function CardRevealSlot({
           flipped={flipped}
           delay={entryDelay}
           onFlip={onFlip}
+          onInspect={onInspect}
         />
       </motion.div>
 
@@ -998,6 +1003,7 @@ export default function Farm() {
                     isActive={revealIndex === i}
                     justFlipped={justFlippedIds.has(card.id)}
                     entryDelay={i * 0.12}
+                    onInspect={() => setInspectCard(card)}
                     onFlip={() => {
                       if (!flippedCards.has(card.id)) {
                         // Manual flip — trigger the flip and advance reveal
