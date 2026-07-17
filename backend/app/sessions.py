@@ -30,6 +30,7 @@ from .prompts import (
     VOCAB_BATCH_PROMPT,
 )
 from .questions import QUESTIONS, TOPICS
+from .scoring import grade_answer
 from .vocab_extraction import extract_vocab_from_session
 
 log = logging.getLogger(__name__)
@@ -228,6 +229,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
         "questions": questions,
         "currentIndex": 0,
         "answers": [None] * len(questions),
+        "credits": [None] * len(questions),
         "retryQueue": [],
         "phase": "questions",
     }
@@ -286,6 +288,8 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
         "currentIndex": 0,
         "answers": [None] * len(exercise_list),
         "correct": [None] * len(exercise_list),
+        "credits": [None] * len(exercise_list),
+        "tiers": [None] * len(exercise_list),
         "phase": "lesson",
     }
 
@@ -417,6 +421,11 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
         raise ValueError(f"choice_index out of range: {choice_index}")
     is_correct = choice_index == q["correctIndex"]
     ex["answers"][idx] = choice_index
+    credits = ex.setdefault("credits", [None] * len(questions))
+    if ex["phase"] == "questions":
+        credits[idx] = 1.0 if is_correct else 0.0
+    elif ex["phase"] == "retry" and is_correct and credits[idx] == 0.0:
+        credits[idx] = 0.5  # recovered on retry
 
     # Track wrong answers for retry
     if not is_correct and ex["phase"] == "questions":
@@ -490,16 +499,22 @@ async def submit_grammar_answer(db: aiosqlite.Connection, session_id: str, answe
         raise ValueError("No more exercises")
 
     correct_answer = exercises[idx]["blank"]
-    is_correct = answer.strip().lower() == correct_answer.strip().lower()
+    grade = grade_answer(correct_answer, answer)
+    is_correct = grade.tier in ("exact", "accent")
 
     ex["answers"][idx] = answer
     ex["correct"][idx] = is_correct
+    ex.setdefault("credits", [None] * len(exercises))[idx] = grade.credit
+    ex.setdefault("tiers", [None] * len(exercises))[idx] = grade.tier
 
     # Synthetic message
-    session["messages"].append({
-        "role": "student",
-        "content": f"Answer: {answer} ({'correct' if is_correct else f'incorrect, correct: {correct_answer}'})"
-    })
+    if grade.tier == "accent":
+        note = f"Answer: {answer} (almost — watch the diacritics: {correct_answer})"
+    elif is_correct:
+        note = f"Answer: {answer} (correct)"
+    else:
+        note = f"Answer: {answer} (incorrect, correct: {correct_answer})"
+    session["messages"].append({"role": "student", "content": note})
 
     # Advance
     if idx + 1 < len(exercises):

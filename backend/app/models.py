@@ -67,6 +67,7 @@ class VocabExerciseData(BaseModel):
     questions: list[VocabQuestion]
     currentIndex: int = 0
     answers: list[int | None] = []
+    credits: list[float | None] = []
     retryQueue: list[int] = []
     phase: str = "questions"  # "questions" | "retry" | "complete"
 
@@ -95,6 +96,8 @@ class GrammarExerciseData(BaseModel):
     currentIndex: int = 0
     answers: list[str | None] = []
     correct: list[bool | None] = []
+    credits: list[float | None] = []
+    tiers: list[str | None] = []
     phase: str = "lesson"  # "lesson" | "exercises" | "complete"
 
 
