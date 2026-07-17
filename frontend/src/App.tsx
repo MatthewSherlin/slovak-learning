@@ -6,6 +6,7 @@ import UserPicker, { useUser, UserProvider } from './components/UserPicker';
 import SettingsModal from './components/SettingsModal';
 import PinEntry from './components/PinEntry';
 import { ThemeProvider } from './components/ThemeProvider';
+import ErrorBoundary from './components/ErrorBoundary';
 import SlovakiaMap from './components/SlovakiaMap';
 import Home from './pages/Home';
 import Session from './pages/Session';
@@ -91,12 +92,14 @@ function AppShell() {
 
 export default function App() {
   return (
-    <HashRouter>
-      <ThemeProvider>
-        <UserProvider>
-          <AppShell />
-        </UserProvider>
-      </ThemeProvider>
-    </HashRouter>
+    <ErrorBoundary>
+      <HashRouter>
+        <ThemeProvider>
+          <UserProvider>
+            <AppShell />
+          </UserProvider>
+        </ThemeProvider>
+      </HashRouter>
+    </ErrorBoundary>
   );
 }

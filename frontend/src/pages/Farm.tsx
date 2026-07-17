@@ -50,6 +50,16 @@ const RARITY = {
     badge: 'bg-amber-500/20 text-amber-400',
     edgeColor: 'rgba(251, 191, 36, 0.4)',
   },
+  mythic: {
+    label: 'Mythic',
+    borderColor: 'rgba(244, 114, 182, 0.8)',
+    glow: 'card-glow-legendary',
+    bg: 'from-pink-950/60 via-slate-800 to-slate-900',
+    dot: 'bg-pink-400',
+    text: 'text-pink-400',
+    badge: 'bg-pink-500/20 text-pink-400',
+    edgeColor: 'rgba(244, 114, 182, 0.4)',
+  },
 };
 
 // ── Set theme colors ───────────────────────────────────────────────
@@ -1332,8 +1342,8 @@ function CollectionView({ cards, sets, onInspect }: { cards: CardData[]; sets: C
     ? cards.filter(c => c.set_id === filterSet)
     : cards;
 
-  // Sort: legendary first, then rare, uncommon, common
-  const rarityOrder = { legendary: 0, rare: 1, uncommon: 2, common: 3 };
+  // Sort: mythic first, then legendary, rare, uncommon, common
+  const rarityOrder = { mythic: 0, legendary: 1, rare: 2, uncommon: 3, common: 4 };
   const sorted = [...filtered].sort((a, b) =>
     rarityOrder[a.rarity] - rarityOrder[b.rarity] || a.set_id.localeCompare(b.set_id) || a.number - b.number
   );
