@@ -338,6 +338,11 @@ async def get_leaderboard(db: aiosqlite.Connection) -> list[dict]:
     sessions = await list_sessions(db)
     entries = []
 
+    adj_cursor = await db.execute(
+        "SELECT user_id, COALESCE(SUM(amount), 0) AS total FROM xp_adjustments GROUP BY user_id"
+    )
+    adjustments = {r["user_id"]: r["total"] for r in await adj_cursor.fetchall()}
+
     for user in users:
         uid = user["id"]
         user_sessions = [s for s in sessions if s["user_id"] == uid]
@@ -359,7 +364,7 @@ async def get_leaderboard(db: aiosqlite.Connection) -> list[dict]:
             "avg_score": sum(scores) / len(scores) if scores else None,
             "total_vocab": total_vocab,
             "streak_days": _calculate_streak(user_sessions),
-            "xp": _calculate_xp(completed),
+            "xp": _calculate_xp(completed) + adjustments.get(uid, 0),
         })
 
     entries.sort(key=lambda e: e["xp"], reverse=True)
@@ -861,7 +866,7 @@ async def _get_user_xp_spent(db: aiosqlite.Connection, user_id: str) -> int:
 async def get_user_cards(db: aiosqlite.Connection, user_id: str) -> list[int]:
     """Return list of card IDs the user owns."""
     cursor = await db.execute(
-        "SELECT card_id FROM card_collection WHERE user_id = ? ORDER BY obtained_at",
+        "SELECT card_id FROM card_collection WHERE user_id = ? AND copies > 0 ORDER BY obtained_at",
         (user_id,),
     )
     rows = await cursor.fetchall()
@@ -920,6 +925,8 @@ async def trade_in_duplicates(
     if not card_ids:
         return None
 
+    card_ids = list(dict.fromkeys(card_ids))  # deduplicate preserving order
+
     await db.execute("BEGIN IMMEDIATE")
     try:
         copies = await get_user_card_copies(db, user_id)
@@ -967,7 +974,7 @@ async def set_showcase_card(
 
 async def get_all_users_cards(db: aiosqlite.Connection) -> dict[str, list[int]]:
     """Get all card IDs per user in a single query (avoids N+1 in social view)."""
-    cursor = await db.execute("SELECT user_id, card_id FROM card_collection")
+    cursor = await db.execute("SELECT user_id, card_id FROM card_collection WHERE copies > 0")
     rows = await cursor.fetchall()
     result: dict[str, list[int]] = {}
     for r in rows:

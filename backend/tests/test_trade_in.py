@@ -74,3 +74,30 @@ async def test_trade_in_endpoint_rejects_single_copy(client):
     async with client as c:
         resp = await c.post(f"/api/users/{uid}/cards/trade-in", json={"card_ids": [2]})
     assert resp.status_code == 400
+
+
+async def test_duplicate_ids_in_request_counted_once(_init_schema):
+    uid = await _user_with_dupes()
+    async with get_db() as db:
+        result = await trade_in_duplicates(db, uid, [1, 1])
+        assert result == {"traded": [1], "xp_gained": 20}
+        copies = await get_user_card_copies(db, uid)
+        assert copies[1] == 1
+
+
+async def test_leaderboard_includes_trade_in_xp(_init_schema):
+    from app.database import get_leaderboard
+
+    uid = await _user_with_dupes()
+    # Ensure the user exists in the users table so get_leaderboard can find them
+    async with get_db() as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, ?, ?, ?)",
+            (uid, "TradeUser", "T", "#aabbcc"),
+        )
+        await db.commit()
+        await trade_in_duplicates(db, uid, [1])
+        entries = await get_leaderboard(db)
+    entry = next((e for e in entries if e["user_id"] == uid), None)
+    assert entry is not None
+    assert entry["xp"] == 20
