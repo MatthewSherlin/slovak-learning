@@ -1335,10 +1335,10 @@ CARDS: list[CardDef] = [
     },
     {
         "id": 157, "set_id": "zvierata", "set_name": "Tatranská Fauna", "set_emoji": "🐻",
-        "emoji": "🐐", "slovak": "kamzík vrchovský", "pronunciation": "KAM-zeek VRKH-ov-skee",
-        "english": "Tatra chamois",
-        "example_sk": "Kamzík vrchovský tatranský žije iba vo Vysokých Tatrách.",
-        "example_en": "The Tatra chamois lives only in the High Tatras.",
+        "emoji": "🦫", "slovak": "svišť", "pronunciation": "SVISHT",
+        "english": "marmot",
+        "example_sk": "Svišť vrchovský píska na svahoch Tatier, keď zbadá nebezpečenstvo.",
+        "example_en": "The alpine marmot whistles on the Tatra slopes when it spots danger.",
         "rarity": "mythic", "number": 16, "origin": "Slovak",
     },
     {

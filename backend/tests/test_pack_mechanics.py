@@ -16,8 +16,6 @@ from app.database import (
 )
 
 
-pytestmark = pytest.mark.asyncio
-
 RARE_PLUS = {"rare", "legendary", "mythic"}
 
 
@@ -45,6 +43,7 @@ async def _seed_rich_user(sample_vocab_session):
     return uid
 
 
+@pytest.mark.asyncio
 async def test_pack_deals_five_cards(sample_vocab_session, _init_schema):
     uid = await _seed_rich_user(sample_vocab_session)
     async with get_db() as db:
@@ -53,6 +52,7 @@ async def test_pack_deals_five_cards(sample_vocab_session, _init_schema):
     assert len(result["cards"]) == 5
 
 
+@pytest.mark.asyncio
 async def test_pack_guarantees_rare_or_better(sample_vocab_session, _init_schema):
     uid = await _seed_rich_user(sample_vocab_session)
     async with get_db() as db:
@@ -61,6 +61,7 @@ async def test_pack_guarantees_rare_or_better(sample_vocab_session, _init_schema
     assert rarities & RARE_PLUS, f"no rare+ in pack: {rarities}"
 
 
+@pytest.mark.asyncio
 async def test_duplicates_increment_copies(_init_schema):
     uid = f"copy_{uuid.uuid4().hex[:8]}"
     async with get_db() as db:
