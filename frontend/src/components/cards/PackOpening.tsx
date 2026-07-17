@@ -17,6 +17,7 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 import type { CardData, PackPurchaseResult, CardSet } from '../../lib/types';
 import CardFrame from './CardFrame';
 import { RARITY_THEMES } from './rarity';
+import { getSetTheme } from './setThemes';
 
 // ── Exported pure helper (tested directly) ─────────────────────────────
 
@@ -570,24 +571,7 @@ interface PackOpeningProps {
   gradient?: string;
 }
 
-// Set theme for pack visuals (mirrors SET_THEMES in Cards.tsx)
-const SET_PACK_THEMES: Record<string, { accent: string; gradient: string }> = {
-  myty:      { accent: '#a855f7', gradient: 'linear-gradient(165deg, #2a1a4a, #6d28d9 45%, #1e1235 90%)' },
-  jedlo:     { accent: '#ef4444', gradient: 'linear-gradient(165deg, #4a1a1a, #dc2626 45%, #351212 90%)' },
-  pamiatky:  { accent: '#f59e0b', gradient: 'linear-gradient(165deg, #2c1a0e, #d97706 45%, #1a0e05 90%)' },
-  slang:     { accent: '#ec4899', gradient: 'linear-gradient(165deg, #3a1a3a, #be185d 45%, #2a1228 90%)' },
-  rozpravky: { accent: '#6366f1', gradient: 'linear-gradient(165deg, #1a1a4a, #4338ca 45%, #0e0e35 90%)' },
-  futbal:    { accent: '#22c55e', gradient: 'linear-gradient(165deg, #0a3a1a, #15803d 45%, #052512 90%)' },
-  zvierata:  { accent: '#f97316', gradient: 'linear-gradient(165deg, #3a1a0a, #c2410c 45%, #2a0e05 90%)' },
-  tradicie:  { accent: '#06b6d4', gradient: 'linear-gradient(165deg, #0a2a3a, #0e7490 45%, #051825 90%)' },
-  priroda:   { accent: '#14b8a6', gradient: 'linear-gradient(165deg, #0a2a25, #0f766e 45%, #05150f 90%)' },
-  hudba:     { accent: '#3b82f6', gradient: 'linear-gradient(165deg, #1a2c4a, #2563eb 45%, #12203a 90%)' },
-};
-
-const DEFAULT_PACK_THEME = {
-  accent: '#5ea4f7',
-  gradient: 'linear-gradient(165deg, #1a2c4a, #2563eb 45%, #12203a 90%)',
-};
+// Set theme for pack visuals — now sourced from setThemes.ts
 
 export default function PackOpening({
   set,
@@ -603,7 +587,7 @@ export default function PackOpening({
     };
   }, []);
 
-  const packTheme = SET_PACK_THEMES[set.set_id] ?? DEFAULT_PACK_THEME;
+  const packTheme = getSetTheme(set.set_id);
   const accentColor = accentProp ?? packTheme.accent;
   const gradient = gradientProp ?? packTheme.gradient;
 

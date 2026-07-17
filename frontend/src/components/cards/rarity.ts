@@ -2,6 +2,15 @@ import type { CardData } from '../../lib/types';
 
 export type Rarity = CardData['rarity'];
 
+/** XP gained per card traded in, keyed by rarity. Single source of truth. */
+export const RARITY_XP: Record<Rarity, number> = {
+  common:    20,
+  uncommon:  40,
+  rare:      80,
+  legendary: 200,
+  mythic:    500,
+};
+
 /** Ordered from lowest to highest pull weight */
 export const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
 

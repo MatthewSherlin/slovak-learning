@@ -10,29 +10,16 @@ import {
   X,
 } from 'lucide-react';
 import PackOpening from '../components/cards/PackOpening';
+import TradeInSheet from '../components/cards/TradeInSheet';
+import ShowcasePicker from '../components/cards/ShowcasePicker';
 import { useUser } from '../components/UserPicker';
 import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards } from '../lib/api';
 import type { CardData, CardSet, UserCardCollection, CardSocialEntry, PackPurchaseResult } from '../lib/types';
+import { getSetTheme } from '../components/cards/setThemes';
 
-// ── Set theme colors ───────────────────────────────────────────────
-
-const SET_THEMES: Record<string, { accent: string; gradient: string }> = {
-  myty:      { accent: '#a855f7', gradient: 'linear-gradient(165deg, #2a1a4a, #6d28d9 45%, #1e1235 90%)' },
-  jedlo:     { accent: '#ef4444', gradient: 'linear-gradient(165deg, #4a1a1a, #dc2626 45%, #351212 90%)' },
-  pamiatky:  { accent: '#f59e0b', gradient: 'linear-gradient(165deg, #2c1a0e, #d97706 45%, #1a0e05 90%)' },
-  slang:     { accent: '#ec4899', gradient: 'linear-gradient(165deg, #3a1a3a, #be185d 45%, #2a1228 90%)' },
-  rozpravky: { accent: '#6366f1', gradient: 'linear-gradient(165deg, #1a1a4a, #4338ca 45%, #0e0e35 90%)' },
-  futbal:    { accent: '#22c55e', gradient: 'linear-gradient(165deg, #0a3a1a, #15803d 45%, #052512 90%)' },
-  zvierata:  { accent: '#f97316', gradient: 'linear-gradient(165deg, #3a1a0a, #c2410c 45%, #2a0e05 90%)' },
-  tradicie:  { accent: '#06b6d4', gradient: 'linear-gradient(165deg, #0a2a3a, #0e7490 45%, #051825 90%)' },
-  priroda:   { accent: '#14b8a6', gradient: 'linear-gradient(165deg, #0a2a25, #0f766e 45%, #05150f 90%)' },
-  hudba:     { accent: '#3b82f6', gradient: 'linear-gradient(165deg, #1a2c4a, #2563eb 45%, #12203a 90%)' },
-};
-
-const DEFAULT_THEME = { accent: '#5ea4f7', gradient: 'linear-gradient(165deg, #1a2c4a, #2563eb 45%, #12203a 90%)' };
-
+// Local alias so existing call-sites don't change
 function getTheme(setId: string) {
-  return SET_THEMES[setId] ?? DEFAULT_THEME;
+  return getSetTheme(setId);
 }
 
 // ── Rarity config for inline CardFront (inspect modal only) ──
@@ -563,6 +550,10 @@ export default function Cards() {
   // AbortController guard for purchase (prevents double-buy on unmount)
   const purchaseAbortRef = useRef<AbortController | null>(null);
 
+  // Trade-in & showcase state
+  const [tradeInOpen, setTradeInOpen] = useState(false);
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -662,6 +653,16 @@ export default function Cards() {
 
   const xpAvailable = collection?.xp_available ?? 0;
 
+  // Derived: any card with copies >= 2 (for trade-in button visibility)
+  const copies = collection?.copies ?? {};
+  const hasDuplicates =
+    collection != null &&
+    collection.cards.some((c) => (copies[String(c.id)] ?? 1) >= 2);
+
+  // Current user's showcase card id (from social list)
+  const currentUserSocial = social.find((s) => s.user_id === user?.id);
+  const currentShowcaseCardId = currentUserSocial?.showcase_card_id ?? null;
+
   // ── Pack loading (purchase in-flight) ───────────────────────────
   if (isPurchasing && openingSet) {
     return (
@@ -758,11 +759,32 @@ export default function Cards() {
         )}
         {tab === 'binder' && (
           <motion.div key="binder" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+            {hasDuplicates && (
+              <div className="flex justify-end mb-4">
+                <button
+                  data-testid="trade-in-open-btn"
+                  onClick={() => setTradeInOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold bg-surface-1 border border-border hover:border-accent/50 text-text-secondary cursor-pointer transition-colors"
+                >
+                  <Zap size={13} className="text-warning" />
+                  Trade in duplicates
+                </button>
+              </div>
+            )}
             <BinderTab catalog={catalog} collection={collection} onInspect={setInspectCard} />
           </motion.div>
         )}
         {tab === 'friends' && (
           <motion.div key="friends" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+            <div className="flex justify-end mb-4">
+              <button
+                data-testid="showcase-open-btn"
+                onClick={() => setShowcaseOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold bg-surface-1 border border-border hover:border-accent/50 text-text-secondary cursor-pointer transition-colors"
+              >
+                Pin showcase card
+              </button>
+            </div>
             <FriendsTab social={social} catalog={catalog} allCardsMap={allCardsMap} />
           </motion.div>
         )}
@@ -819,6 +841,29 @@ export default function Cards() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Trade-in sheet */}
+      {collection && (
+        <TradeInSheet
+          open={tradeInOpen}
+          collection={collection}
+          userId={user.id}
+          onClose={() => setTradeInOpen(false)}
+          onSuccess={fetchData}
+        />
+      )}
+
+      {/* Showcase picker */}
+      {collection && (
+        <ShowcasePicker
+          open={showcaseOpen}
+          collection={collection}
+          userId={user.id}
+          currentShowcaseCardId={currentShowcaseCardId}
+          onClose={() => setShowcaseOpen(false)}
+          onSuccess={fetchData}
+        />
+      )}
 
       <style>{cardStyles}</style>
     </div>
