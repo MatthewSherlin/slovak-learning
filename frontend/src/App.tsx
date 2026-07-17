@@ -11,7 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SlovakiaMap from './components/SlovakiaMap';
 import Home from './pages/Home';
 import Session from './pages/Session';
-import Dashboard from './pages/Dashboard';
+import Stats from './pages/Stats';
 import Guides from './pages/Guides';
 import Farm from './pages/Farm';
 import type { User } from './lib/types';
@@ -91,7 +91,7 @@ function AppShell() {
         {/* Main tab routes */}
         <Route path="/" element={<Home />} />
         <Route path="/cards" element={<Farm />} />
-        <Route path="/stats" element={<Dashboard />} />
+        <Route path="/stats" element={<Stats />} />
         <Route path="/guides" element={<Guides />} />
 
         {/* Full-screen session — no tab bar */}
