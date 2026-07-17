@@ -263,6 +263,17 @@ select {
   animation: shimmer 2.5s ease-in-out infinite;
 }
 
+/* Skeleton shimmer used by HomeSkeleton (matches design's shimmer-sweep) */
+@keyframes shimmer-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -50% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c;
+  background-size: 250% 100%;
+  animation: shimmer-sweep 1.8s linear infinite;
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }

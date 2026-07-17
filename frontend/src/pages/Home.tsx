@@ -1,487 +1,414 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowRight,
-  Zap,
-  ArrowLeft,
-  Sparkles,
-  WifiOff,
-  RefreshCw,
-} from 'lucide-react';
-import ModeCard from '../components/ModeCard';
+import { motion } from 'framer-motion';
+import { WifiOff, RefreshCw, Play } from 'lucide-react';
+import HomeSkeleton from '../components/HomeSkeleton';
 import { useUser } from '../components/UserPicker';
-import { createSession, getTopics, getModes, getDashboard, updateUserPreferences } from '../lib/api';
-import type { LearningMode, Difficulty, Topic, Mode, DashboardStats } from '../lib/types';
+import {
+  getRecommendations,
+  getDashboard,
+  getLeaderboard,
+  createSession,
+} from '../lib/api';
+import type {
+  LearningMode,
+  Recommendations,
+  DashboardStats,
+} from '../lib/types';
 
-const modeDescriptions: Record<LearningMode, string> = {
-  vocabulary:
-    'Build your Slovak word bank. Learn new words with context, examples, and usage patterns.',
-  grammar:
-    'Master Slovak grammar rules. Cases, conjugation, verb aspects, and sentence structure.',
-  conversation:
-    'Practice real conversations. Greetings, ordering food, asking directions, and more.',
-  translation:
-    'Translate between Slovak and English. Build fluency through active translation practice.',
+// ── Slovak date header ────────────────────────────────────────────────
+
+function getSlovakDate(): string {
+  const fmt = new Intl.DateTimeFormat('sk-SK', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const parts = fmt.formatToParts(new Date());
+  // e.g. "streda · 16. júla"  →  capitalise first letter
+  const raw = parts.map((p) => p.value).join('');
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+// ── Mode metadata ─────────────────────────────────────────────────────
+
+interface ModeConfig {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: React.ReactNode;
+  statFn: (stats: DashboardStats | null) => string;
+}
+
+const VOCAB_ICON = (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
+    <path d="M8 11h8" /><path d="M8 7h6" />
+  </svg>
+);
+
+const GRAMMAR_ICON = (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z" />
+  </svg>
+);
+
+const CONVO_ICON = (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+  </svg>
+);
+
+const TRANSLATION_ICON = (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" />
+    <path d="m22 22-5-10-5 10" /><path d="M14 18h6" />
+  </svg>
+);
+
+const MODES: Record<LearningMode, ModeConfig> = {
+  vocabulary: {
+    label: 'Vocabulary',
+    color: '#5de4a5',
+    bgColor: 'rgba(93,228,165,0.12)',
+    icon: VOCAB_ICON,
+    statFn: (s) => (s ? `${s.vocab_count} words learned` : 'Build your word bank'),
+  },
+  grammar: {
+    label: 'Grammar',
+    color: '#a78bfa',
+    bgColor: 'rgba(167,139,250,0.12)',
+    icon: GRAMMAR_ICON,
+    statFn: (s) => {
+      const avg = s?.scores_by_mode?.['grammar'];
+      return avg != null ? `Avg ${avg.toFixed(1)}` : 'Master the cases';
+    },
+  },
+  conversation: {
+    label: 'Conversation',
+    color: '#f5c45e',
+    bgColor: 'rgba(245,196,94,0.12)',
+    icon: CONVO_ICON,
+    statFn: () => 'Talk with the tutor',
+  },
+  translation: {
+    label: 'Translation',
+    color: '#f0a8d0',
+    bgColor: 'rgba(240,168,208,0.12)',
+    icon: TRANSLATION_ICON,
+    statFn: () => 'SK ⇄ EN',
+  },
 };
 
-const defaultQuestionCounts: Record<LearningMode, number> = {
-  vocabulary: 20,
-  grammar: 20,
-  conversation: 15,
-  translation: 20,
-};
+const MODE_ORDER: LearningMode[] = ['vocabulary', 'grammar', 'conversation', 'translation'];
 
-const encouragements = [
-  "Kazdy den je nova prilezitost. — Every day is a new opportunity.",
-  "Kto sa pyta, ten sa ucit nechce prestat.",
-  "Pomaly, ale isto. — Slowly but surely.",
-  "Learning Slovak opens doors to a beautiful culture.",
-  "Chyby su dokaz, ze sa snazis. — Mistakes are proof that you're trying.",
-];
+// ── Component ─────────────────────────────────────────────────────────
 
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const [step, setStep] = useState<'mode' | 'config'>('mode');
-  const [selectedMode, setSelectedMode] = useState<LearningMode | null>(null);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [selectedTopic, setSelectedTopic] = useState<string>('');
-  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [modes, setModes] = useState<Mode[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [modesLoading, setModesLoading] = useState(true);
-  const [backendError, setBackendError] = useState(false);
-  const [focusAreas, setFocusAreas] = useState<string[]>([]);
-  const [focusInput, setFocusInput] = useState('');
-  const [encouragement] = useState(() =>
-    encouragements[Math.floor(Math.random() * encouragements.length)]
-  );
 
-  const loadData = () => {
-    setModesLoading(true);
-    setBackendError(false);
-    getModes()
-      .then((m) => {
-        setModes(m);
-        setModesLoading(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [recs, setRecs] = useState<Recommendations | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [streak, setStreak] = useState<number>(0);
+  const [startingMode, setStartingMode] = useState<LearningMode | null>(null);
+
+  const loadData = useCallback(() => {
+    if (!user) return;
+    setLoading(true);
+    setError(false);
+
+    Promise.all([
+      getRecommendations(user.id),
+      getDashboard(user.id),
+      getLeaderboard(),
+    ])
+      .then(([recsData, statsData, lb]) => {
+        setRecs(recsData);
+        setStats(statsData);
+        const entry = lb.find((e) => e.user_id === user.id);
+        setStreak(entry?.streak_days ?? 0);
+        setLoading(false);
       })
       .catch(() => {
-        setBackendError(true);
-        setModesLoading(false);
+        setError(true);
+        setLoading(false);
       });
-
-    if (user) {
-      getDashboard(user.id).then(setStats).catch(() => {});
-    }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [loadData]);
 
-  // Focus areas are intentionally NOT loaded from DB — they're single-use per session.
-  // Users add them fresh each time on the config screen.
-
-  const handleModeSelect = async (mode: LearningMode) => {
-    setSelectedMode(mode);
+  const handleModeClick = async (mode: LearningMode) => {
+    if (!user) return;
+    setStartingMode(mode);
     try {
-      const t = await getTopics(mode);
-      setTopics(t);
-    } catch {
-      setTopics([]);
-    }
-    setSelectedTopic('');
-    setStep('config');
-  };
-
-  const handleStart = async () => {
-    if (!selectedMode || !user) return;
-    setLoading(true);
-    setError('');
-    try {
-      // Capture any pending text in the focus input
-      const allFocusAreas = focusInput.trim()
-        ? [...focusAreas, focusInput.trim()]
-        : focusAreas;
-      if (focusInput.trim()) {
-        setFocusAreas(allFocusAreas);
-        setFocusInput('');
-      }
       const session = await createSession({
         user_id: user.id,
-        mode: selectedMode,
-        difficulty,
-        topic: selectedTopic || undefined,
-        focus_areas: allFocusAreas.length > 0 ? allFocusAreas : undefined,
+        mode,
+        difficulty: 'beginner',
       });
-      // Clear focus areas from DB after session starts — they're single-use
-      updateUserPreferences(user.id, { custom_focus_areas: [] }).catch(() => {});
-      setFocusAreas([]);
       navigate(`/session/${session.id}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to start session';
-      console.error('Failed to create session:', err);
-      setError(msg);
-      setLoading(false);
+    } catch {
+      setStartingMode(null);
     }
   };
 
-  const getQuestionCount = (mode: LearningMode) => {
-    const found = modes.find((m) => m.id === mode);
-    return found ? found.question_count : defaultQuestionCounts[mode];
+  const handleContinue = () => {
+    if (recs?.in_progress_session) {
+      navigate(`/session/${recs.in_progress_session.id}`);
+    }
   };
 
+  // ── Skeleton ─────────────────────────────────────────────────────
   if (loading) {
-    const modeLabel = selectedMode ? selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1) : 'Session';
+    return <HomeSkeleton />;
+  }
 
+  // ── Error state ───────────────────────────────────────────────────
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="max-w-lg mx-auto px-5 pt-20 pb-6 flex flex-col items-center text-center">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="text-center max-w-sm"
+          className="bg-danger/5 border border-danger/20 rounded-2xl p-8 w-full"
         >
-          {/* Animated icon */}
-          <motion.div
-            animate={{ rotate: [0, 8, -8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-18 h-18 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/15 flex items-center justify-center mx-auto mb-8"
-          >
-            <Zap size={32} className="text-accent" />
-          </motion.div>
-
-          <h2 className="text-2xl font-bold text-text-primary mb-2">
-            Building your {modeLabel.toLowerCase()} lesson
-          </h2>
-          <p className="text-sm text-text-muted mb-6">
-            Crafting exercises for your level — just a moment.
-          </p>
-
-          {/* Progress bar animation */}
-          <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden mb-4">
-            <motion.div
-              className="h-full bg-gradient-to-r from-accent to-accent/60 rounded-full"
-              initial={{ width: '0%' }}
-              animate={{ width: '85%' }}
-              transition={{ duration: 8, ease: 'easeOut' }}
-            />
+          <div className="w-14 h-14 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-4">
+            <WifiOff size={24} className="text-danger" />
           </div>
-
-          <p className="text-[11px] text-text-faint">
-            This usually takes 5–10 seconds
+          <h3 className="text-lg font-semibold text-text-primary mb-2">
+            Couldn't load your home screen
+          </h3>
+          <p className="text-sm text-text-muted mb-5">
+            Check your connection and try again.
           </p>
+          <button
+            onClick={loadData}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+          >
+            <RefreshCw size={14} />
+            Retry
+          </button>
         </motion.div>
       </div>
     );
   }
 
+  const inProgress = recs?.in_progress_session ?? null;
+
+  // Progress ring for continue card
+  const progressRingProps = inProgress
+    ? (() => {
+        // We don't have answered count from recommendations directly; show a fixed 60% placeholder
+        const circumference = 2 * Math.PI * 24; // r=24
+        const dashOffset = circumference * 0.4; // 60% filled
+        return { circumference, dashOffset };
+      })()
+    : null;
+
   return (
-    <div className="max-w-4xl mx-auto px-6 pt-32 pb-16">
-      <AnimatePresence mode="wait">
-        {step === 'mode' ? (
-          <motion.div
-            key="mode-select"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Hero */}
-            <div className="text-center mb-14">
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                {user && (
-                  <p className="text-text-muted text-sm mb-3 flex items-center justify-center gap-1.5">
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: user.color }}
-                    >
-                      {user.avatar}
-                    </span>
-                    Ahoj, {user.name}!
-                  </p>
-                )}
-
-                <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-4 tracking-tight leading-tight">
-                  Let's learn{' '}
-                  <span className="bg-gradient-to-r from-accent to-sky-400 bg-clip-text text-transparent">
-                    Slovak
-                  </span>
-                </h1>
-
-                <p className="text-text-secondary text-base max-w-lg mx-auto leading-relaxed mb-3">
-                  Practice with an AI tutor that adapts to your level and
-                  gives you honest, actionable feedback.
-                </p>
-
-                <p className="text-text-muted text-sm italic max-w-md mx-auto">
-                  "{encouragement}"
-                </p>
-              </motion.div>
-
-              {/* Quick stats strip */}
-              {stats && stats.completed_sessions > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mt-6 text-xs text-text-muted"
-                >
-                  <span>{stats.completed_sessions} sessions completed</span>
-                  <span className="w-1 h-1 rounded-full bg-border" />
-                  {stats.avg_score !== null && (
-                    <>
-                      <span>Avg score: {stats.avg_score.toFixed(1)}/10</span>
-                      <span className="w-1 h-1 rounded-full bg-border" />
-                    </>
-                  )}
-                  <span>{stats.vocab_count} words learned</span>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Backend error state */}
-            {backendError && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="max-w-md mx-auto mb-10 text-center"
-              >
-                <div className="bg-danger/5 border border-danger/20 rounded-2xl p-8">
-                  <div className="w-14 h-14 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-4">
-                    <WifiOff size={24} className="text-danger" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-text-primary mb-2">Backend unavailable</h3>
-                  <p className="text-sm text-text-muted mb-5">
-                    Can't connect to the server. Make sure the backend is running on port 8888.
-                  </p>
-                  <button
-                    onClick={loadData}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-medium bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
-                  >
-                    <RefreshCw size={14} />
-                    Retry
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Loading skeleton */}
-            {modesLoading && !backendError && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-                {[0, 1, 2, 3].map((i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                    className="bg-surface-2 border border-border rounded-2xl p-6 h-36 animate-pulse"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-surface-3 mb-4" />
-                    <div className="h-4 w-24 bg-surface-3 rounded mb-2" />
-                    <div className="h-3 w-48 bg-surface-3 rounded" />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            {/* Mode Cards */}
-            {!modesLoading && !backendError && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-                {(Object.keys(modeDescriptions) as LearningMode[]).map((mode, i) => (
-                  <ModeCard
-                    key={mode}
-                    mode={mode}
-                    label={mode.charAt(0).toUpperCase() + mode.slice(1)}
-                    description={modeDescriptions[mode]}
-                    questionCount={getQuestionCount(mode)}
-                    onClick={() => handleModeSelect(mode)}
-                    index={i}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Quick tip */}
-            {!backendError && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="flex flex-col items-center gap-3"
-              >
-                <div className="flex items-center gap-2 text-xs text-text-faint">
-                  <Sparkles size={12} />
-                  <span>Tip: Check out the Guides page for pronunciation tips and case system overviews</span>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="config"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Back */}
-            <button
-              onClick={() => setStep('mode')}
-              className="text-text-muted hover:text-text-primary text-[13px] mb-8 flex items-center gap-1.5 cursor-pointer bg-transparent border-none transition-colors"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-lg mx-auto px-5 pt-6 pb-6"
+    >
+      {/* ── Header: date + greeting + streak + avatar ── */}
+      <div className="flex items-center justify-between mb-7">
+        <div>
+          <p className="text-[13px] text-text-muted mb-0.5">{getSlovakDate()}</p>
+          <h1 className="text-[26px] font-extrabold tracking-tight leading-none text-text-primary">
+            Ahoj, {user?.name ?? '…'}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Streak chip */}
+          {streak > 0 && (
+            <div
+              className="flex items-center gap-[5px] px-[11px] py-[7px] rounded-full border"
+              style={{
+                background: 'rgba(245,196,94,0.10)',
+                borderColor: 'rgba(245,196,94,0.18)',
+              }}
             >
-              <ArrowLeft size={14} />
-              Back to modes
-            </button>
-
-            {/* Header */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-text-primary mb-2 tracking-tight">
-                Configure your session
-              </h2>
-              <p className="text-sm text-text-muted">
-                <span className="capitalize">{selectedMode}</span> practice
-              </p>
-            </div>
-
-            <div className="max-w-lg space-y-7">
-              {/* Topic */}
-              {topics.length > 0 && (
-                <div>
-                  <label className="block text-[13px] font-medium text-text-secondary mb-2.5">
-                    Focus Area
-                    <span className="text-text-faint ml-1.5 font-normal">optional</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {topics.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setSelectedTopic(selectedTopic === t.id ? '' : t.id)}
-                        className={`px-3.5 py-2 rounded-lg text-[13px] font-medium border cursor-pointer transition-all duration-200 ${
-                          selectedTopic === t.id
-                            ? 'bg-accent-muted border-accent/30 text-accent shadow-sm shadow-accent/10'
-                            : 'bg-surface-2 border-border text-text-muted hover:text-text-secondary hover:border-border-focus'
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Difficulty */}
-              <div>
-                <label className="block text-[13px] font-medium text-text-secondary mb-2.5">
-                  Difficulty
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { key: 'beginner' as Difficulty, label: 'Beginner', desc: 'Basic phrases & words' },
-                    { key: 'intermediate' as Difficulty, label: 'Intermediate', desc: 'Conversation level' },
-                    { key: 'advanced' as Difficulty, label: 'Advanced', desc: 'Native-like fluency' },
-                  ]).map((d) => (
-                    <button
-                      key={d.key}
-                      onClick={() => setDifficulty(d.key)}
-                      className={`px-4 py-3.5 rounded-xl text-left border cursor-pointer transition-all duration-200 ${
-                        difficulty === d.key
-                          ? 'bg-accent-muted border-accent/30 shadow-sm shadow-accent/10'
-                          : 'bg-surface-2 border-border hover:border-border-focus'
-                      }`}
-                    >
-                      <div className={`text-sm font-medium mb-0.5 ${difficulty === d.key ? 'text-accent' : 'text-text-primary'}`}>
-                        {d.label}
-                      </div>
-                      <div className="text-[11px] text-text-faint">{d.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Focus Areas */}
-              <div>
-                <label className="block text-[13px] font-medium text-text-secondary mb-2.5">
-                  Your Focus Areas
-                  <span className="text-text-faint ml-1.5 font-normal">optional</span>
-                </label>
-                <p className="text-[11px] text-text-faint mb-2">
-                  Tell the AI what you want to practice — e.g. "restaurant vocabulary", "verb conjugation", "accusative case"
-                </p>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={focusInput}
-                    onChange={(e) => setFocusInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && focusInput.trim()) {
-                        e.preventDefault();
-                        setFocusAreas((prev) => [...prev, focusInput.trim()]);
-                        setFocusInput('');
-                      }
-                    }}
-                    placeholder="e.g. skateboarding, food ordering..."
-                    className="flex-1 px-3 py-2 rounded-lg text-[13px] bg-surface-2 border border-border text-text-primary placeholder:text-text-faint focus:border-accent/50 focus:outline-none"
-                  />
-                </div>
-                {focusAreas.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {focusAreas.map((area, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[12px] bg-accent-muted text-accent border border-accent/20"
-                      >
-                        {area}
-                        <button
-                          onClick={() => {
-                            setFocusAreas((prev) => prev.filter((_, j) => j !== i));
-                          }}
-                          className="ml-0.5 text-accent/60 hover:text-accent cursor-pointer bg-transparent border-none text-[11px] leading-none"
-                        >
-                          &times;
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Start Button */}
-              <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleStart}
-                disabled={!user}
-                className="w-full mt-2 flex items-center justify-center gap-2.5 bg-gradient-to-r from-accent to-sky-400 hover:from-accent-hover hover:to-sky-300 text-white font-semibold py-4 px-6 rounded-xl cursor-pointer border-none text-[15px] shadow-lg shadow-accent/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              {/* Flame icon */}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+              </svg>
+              <span
+                className="text-[13px] font-bold tabular-nums"
+                style={{ color: '#f5c45e' }}
               >
-                Begin Learning
-                <ArrowRight size={17} />
-              </motion.button>
+                {streak}
+              </span>
+            </div>
+          )}
+          {/* Avatar */}
+          {user && (
+            <div
+              className="w-10 h-10 rounded-[14px] flex items-center justify-center text-[15px] font-bold text-white flex-shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${user.color}, ${user.color}88)`,
+              }}
+            >
+              {user.avatar}
+            </div>
+          )}
+        </div>
+      </div>
 
-              {error && (
-                <div className="text-center">
-                  <span className="text-[13px] text-danger bg-danger-muted px-4 py-2.5 rounded-lg inline-block">
-                    {error}
-                  </span>
-                </div>
-              )}
+      {/* ── Continue card (only when in_progress_session exists) ── */}
+      {inProgress && progressRingProps && (
+        <motion.button
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          onClick={handleContinue}
+          className="w-full text-left rounded-[22px] p-5 mb-7 border cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-[0.99]"
+          style={{
+            background: 'linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), #151926',
+            borderColor: 'rgba(94,164,247,0.22)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div className="flex items-center gap-4">
+            {/* Progress ring */}
+            <div className="relative w-14 h-14 flex-shrink-0">
+              <svg viewBox="0 0 56 56" className="w-14 h-14" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                <circle
+                  cx="28" cy="28" r="24" fill="none"
+                  stroke="#a78bfa" strokeWidth="5" strokeLinecap="round"
+                  strokeDasharray={progressRingProps.circumference}
+                  strokeDashoffset={progressRingProps.dashOffset}
+                />
+              </svg>
+              <div
+                className="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold tabular-nums"
+                style={{ color: '#a78bfa' }}
+              >
+                {inProgress.mode.charAt(0).toUpperCase()}
+              </div>
+            </div>
 
-              <p className="text-xs text-text-faint text-center">
-                You'll have a natural conversation with an AI tutor.
-                End anytime to get detailed feedback and vocabulary review.
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-[3px]" style={{ color: '#5ea4f7' }}>
+                Continue session
+              </p>
+              <p className="text-[15px] font-bold text-text-primary leading-tight mb-0.5">
+                {inProgress.mode.charAt(0).toUpperCase() + inProgress.mode.slice(1)}
+                {inProgress.topic ? ` · ${inProgress.topic}` : ''}
+              </p>
+              <p className="text-[12px]" style={{ color: '#6b7289' }}>
+                Tap to resume
               </p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+
+            {/* Play button */}
+            <div
+              className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{
+                background: '#5ea4f7',
+                boxShadow: '0 8px 20px rgba(94,164,247,0.35)',
+              }}
+            >
+              <Play size={18} fill="#ffffff" color="#ffffff" />
+            </div>
+          </div>
+        </motion.button>
+      )}
+
+      {/* ── Practice header ── */}
+      <div className="flex items-baseline justify-between mb-[14px]">
+        <h2 className="text-[17px] font-bold tracking-[-0.01em] text-text-primary">Practice</h2>
+        <span className="text-[12px] text-text-muted">Pick a mode</span>
+      </div>
+
+      {/* ── Mode grid 2×2 ── */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {MODE_ORDER.map((mode) => {
+          const cfg = MODES[mode];
+          const isStarting = startingMode === mode;
+          return (
+            <motion.button
+              key={mode}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleModeClick(mode)}
+              disabled={isStarting || !user}
+              className="text-left rounded-[20px] p-4 border cursor-pointer transition-all duration-200 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: '#151926',
+                borderColor: 'rgba(255,255,255,0.06)',
+                minHeight: '118px',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Mode icon */}
+              <div
+                className="w-10 h-10 rounded-[13px] flex items-center justify-center mb-3"
+                style={{ background: cfg.bgColor, color: cfg.color }}
+              >
+                {cfg.icon}
+              </div>
+              <p className="text-[15px] font-bold text-text-primary mb-0.5">{cfg.label}</p>
+              <p className="text-[12px]" style={{ color: '#6b7289' }}>
+                {isStarting ? 'Starting…' : cfg.statFn(stats)}
+              </p>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* ── Recommended chips (review_vocab / practice_concept) ── */}
+      {recs && recs.recommended.filter((r) => r.kind !== 'continue').length > 0 && (
+        <div className="mb-6">
+          <p className="text-[12px] text-text-muted mb-2">Recommended</p>
+          <div className="flex flex-wrap gap-2">
+            {recs.recommended
+              .filter((r) => r.kind !== 'continue')
+              .map((rec, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleModeClick(rec.mode)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold border cursor-pointer transition-all duration-200 hover:brightness-110"
+                  style={{
+                    background: 'rgba(94,164,247,0.08)',
+                    borderColor: 'rgba(94,164,247,0.18)',
+                    color: '#5ea4f7',
+                  }}
+                >
+                  {/* Sparkle icon */}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                  </svg>
+                  {rec.label}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Encouragement strip ── */}
+      <div
+        className="rounded-[18px] px-4 py-3.5 flex items-center gap-[10px] border"
+        style={{
+          background: 'rgba(245,196,94,0.06)',
+          borderColor: 'rgba(245,196,94,0.12)',
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+        </svg>
+        <p className="text-[12.5px] leading-relaxed" style={{ color: '#a3aabe', margin: 0 }}>
+          <em>"Pomaly, ale isto."</em> — Slowly but surely.
+        </p>
+      </div>
+    </motion.div>
   );
 }
