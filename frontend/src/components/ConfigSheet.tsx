@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getTopics, createSession } from '../lib/api';
 import type { Difficulty, LearningMode, Topic } from '../lib/types';
+import BrandedLoader from './BrandedLoader';
 
 // ── Mode metadata ──────────────────────────────────────────────────────
 
@@ -160,6 +161,18 @@ export default function ConfigSheet({
       setStarting(false);
     }
   }, [userId, mode, difficulty, selectedTopic, focusText, navigate]);
+
+  // Show full-screen branded loader while creating the session (LLM call)
+  if (starting) {
+    const subCopy = mode === 'vocabulary'
+      ? 'Building vocabulary exercises for your level'
+      : mode === 'grammar'
+      ? 'Preparing grammar lesson and exercises'
+      : mode === 'translation'
+      ? 'Selecting translation sentences for your level'
+      : 'Setting up your conversation scenario';
+    return <BrandedLoader subCopy={subCopy} />;
+  }
 
   return (
     <AnimatePresence>

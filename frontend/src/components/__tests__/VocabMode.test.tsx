@@ -111,7 +111,7 @@ describe('VocabMode', () => {
       exercises: grammarExercises,
     };
     const { container } = render(
-      <VocabMode session={session} setSession={noop} onEnd={noop} />
+      <VocabMode session={session} setSession={noop} />
     );
     expect(container.firstChild).toBeNull();
   });
@@ -130,7 +130,7 @@ describe('VocabMode', () => {
       exercises: undefined,
     };
     const { container } = render(
-      <VocabMode session={session} setSession={noop} onEnd={noop} />
+      <VocabMode session={session} setSession={noop} />
     );
     expect(container.firstChild).toBeNull();
   });
@@ -138,13 +138,13 @@ describe('VocabMode', () => {
   // --- Active quiz renders ---
   it('renders the current word in the quiz', () => {
     const session = makeVocabSession({ currentIndex: 0 });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     expect(screen.getByText('ďakujem')).toBeTruthy();
   });
 
   it('renders all 4 choice buttons', () => {
     const session = makeVocabSession({ currentIndex: 0 });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     expect(screen.getByText('thank you')).toBeTruthy();
     expect(screen.getByText('please')).toBeTruthy();
     expect(screen.getByText('goodbye')).toBeTruthy();
@@ -153,7 +153,7 @@ describe('VocabMode', () => {
 
   it('renders direction label for sk-en question', () => {
     const session = makeVocabSession({ currentIndex: 0 });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     expect(screen.getByText(/what does this mean in english/i)).toBeTruthy();
   });
 
@@ -168,7 +168,7 @@ describe('VocabMode', () => {
       currentIndex: 1,
       answers: [0, 3, 2], // all answers are integers — no nulls during retry
     });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     expect(screen.getByText(/retry round/i)).toBeTruthy();
   });
 
@@ -181,7 +181,7 @@ describe('VocabMode', () => {
       currentIndex: 1,
       answers: [0, 3, 2],
     });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     // Should show "Retry round · 2 left"
     expect(screen.getByText(/retry round\s*·\s*2\s*left/i)).toBeTruthy();
   });
@@ -195,7 +195,7 @@ describe('VocabMode', () => {
       currentIndex: 1,
       answers: [0, 3, 2],
     });
-    const { container } = render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    const { container } = render(<VocabMode session={session} setSession={noop} />);
     // jsdom converts hex to rgb; look for segments with green fill (rgb(93, 228, 165))
     const filled = Array.from(container.querySelectorAll('div')).filter(
       el => el.getAttribute('style')?.includes('rgb(93, 228, 165)')
@@ -212,7 +212,7 @@ describe('VocabMode', () => {
       currentIndex: 2,
       answers: [0, 1, 2],
     });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     expect(screen.getByText(/retry round\s*·\s*1\s*left/i)).toBeTruthy();
   });
 
@@ -224,7 +224,7 @@ describe('VocabMode', () => {
       currentIndex: 2,
       answers: [0, 1, 2],
     });
-    const { container } = render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    const { container } = render(<VocabMode session={session} setSession={noop} />);
     // jsdom converts hex to rgb; look for segments with green fill (rgb(93, 228, 165))
     const filled = Array.from(container.querySelectorAll('div')).filter(
       el => el.getAttribute('style')?.includes('rgb(93, 228, 165)')
@@ -235,7 +235,7 @@ describe('VocabMode', () => {
   // --- progress dots in questions phase ---
   it('shows progress label for questions phase', () => {
     const session = makeVocabSession({ currentIndex: 1, answers: [0, null, null] });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     // Progress should show 1/3 (questions phase: currentIndex is 1, total is 3)
     expect(screen.getByText(/1\s*\/\s*3/)).toBeTruthy();
   });
@@ -252,7 +252,7 @@ describe('VocabMode', () => {
       currentIndex: 0,
       answers: [null, null, null],
     });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     // The fabricated pronunciation (e.g. "V-O-D-A" or any Volume2 icon pill) should not be present
     const pills = document.querySelectorAll('svg[data-lucide="volume-2"], [data-testid="pronunciation-pill"]');
     expect(pills.length).toBe(0);
@@ -270,7 +270,7 @@ describe('VocabMode', () => {
       currentIndex: 0,
       answers: [null, null, null],
     });
-    render(<VocabMode session={session} setSession={noop} onEnd={noop} />);
+    render(<VocabMode session={session} setSession={noop} />);
     // The pill should show "/VOH-dah/"
     expect(screen.getByText('/VOH-dah/')).toBeTruthy();
   });

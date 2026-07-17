@@ -5,10 +5,9 @@ import type { Message } from '../lib/types';
 
 interface ChatMessageProps {
   message: Message;
-  index: number;
 }
 
-export default function ChatMessage({ message, index }: ChatMessageProps) {
+export default function ChatMessage({ message }: ChatMessageProps) {
   const isTutor = message.role === 'tutor';
   const isSystem = message.role === 'system';
 
@@ -29,8 +28,6 @@ export default function ChatMessage({ message, index }: ChatMessageProps) {
       </motion.div>
     );
   }
-
-  void index;
 
   return (
     <motion.div

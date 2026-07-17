@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, X } from 'lucide-react';
+import { Lock, X, WifiOff, RefreshCw } from 'lucide-react';
 import type { User } from '../lib/types';
 import { getUsers } from '../lib/api';
 
@@ -45,17 +45,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     getUsers().then(setUsers).catch(() => {
-      // Fallback if backend is unreachable
-      setUsers([
-        { id: 'matt', name: 'Matt', avatar: 'M', color: '#5ea4f7', has_pin: false },
-        { id: 'zuki', name: 'Zuki', avatar: 'Z', color: '#f472b6', has_pin: false },
-        { id: 'guest', name: 'Guest', avatar: 'G', color: '#a78bfa', has_pin: false },
-        { id: 'sam', name: 'Sam', avatar: 'S', color: '#34d399', has_pin: false },
-        { id: 'eva', name: 'Eva', avatar: 'E', color: '#fb923c', has_pin: false },
-        { id: 'jan', name: 'Jan', avatar: 'J', color: '#facc15', has_pin: false },
-        { id: 'shannon', name: 'Shannon', avatar: 'S', color: '#f87171', has_pin: false },
-        { id: 'rick', name: 'Rick', avatar: 'R', color: '#38bdf8', has_pin: false },
-      ]);
+      // Leave users empty — UserPicker will show "Server unreachable" state
+      setUsers([]);
     });
   }, []);
 
@@ -86,14 +77,26 @@ interface UserPickerProps {
 }
 
 export default function UserPicker({ open, onClose, onSelect }: UserPickerProps) {
-  const { users } = useUser();
+  const { users, refreshUsers } = useUser();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) setMounted(true);
   }, [open]);
 
+  const handleRetry = async () => {
+    setLoading(true);
+    try {
+      await refreshUsers();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!mounted) return null;
+
+  const serverUnreachable = users.length === 0;
 
   return (
     <AnimatePresence onExitComplete={() => setMounted(false)}>
@@ -131,32 +134,56 @@ export default function UserPicker({ open, onClose, onSelect }: UserPickerProps)
             </div>
 
             <div className="overflow-y-auto px-6 pb-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {users.map((u, i) => (
-                  <motion.button
-                    key={u.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => onSelect(u)}
-                    className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border bg-surface-2 hover:border-border-focus cursor-pointer transition-all duration-200"
-                    style={{ '--glow-color': u.color } as React.CSSProperties}
+              {serverUnreachable ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center gap-4 py-10 text-center"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center">
+                    <WifiOff size={22} className="text-text-faint" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary mb-1">Server unreachable</p>
+                    <p className="text-xs text-text-muted">Could not load user profiles. Check your connection.</p>
+                  </div>
+                  <button
+                    onClick={handleRetry}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium border-none cursor-pointer hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold text-white shadow-lg"
-                      style={{ background: `linear-gradient(135deg, ${u.color}, ${u.color}88)` }}
+                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                    {loading ? 'Retrying…' : 'Retry'}
+                  </button>
+                </motion.div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {users.map((u, i) => (
+                    <motion.button
+                      key={u.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => onSelect(u)}
+                      className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border bg-surface-2 hover:border-border-focus cursor-pointer transition-all duration-200"
+                      style={{ '--glow-color': u.color } as React.CSSProperties}
                     >
-                      {u.avatar}
-                    </div>
-                    <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
-                      {u.name}
-                      {u.has_pin && <Lock size={12} className="text-text-muted" />}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
+                      <div
+                        className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold text-white shadow-lg"
+                        style={{ background: `linear-gradient(135deg, ${u.color}, ${u.color}88)` }}
+                      >
+                        {u.avatar}
+                      </div>
+                      <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                        {u.name}
+                        {u.has_pin && <Lock size={12} className="text-text-muted" />}
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>

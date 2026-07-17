@@ -14,7 +14,6 @@ import type { Session, SessionFeedback } from '../lib/types';
 interface GrammarModeProps {
   session: Session;
   setSession: (s: Session) => void;
-  onEnd: () => void;
 }
 
 /** Render a sentence string that contains "____" as JSX — no innerHTML. */

@@ -216,13 +216,11 @@ const stubFeedback: SessionFeedback = {
 /** Wrapper that holds session in state so setSession updates it properly */
 function GrammarWrapper({
   initialSession,
-  onEnd = () => {},
 }: {
   initialSession: Session;
-  onEnd?: () => void;
 }) {
   const [session, setSession] = React.useState(initialSession);
-  return <GrammarMode session={session} setSession={setSession} onEnd={onEnd} />;
+  return <GrammarMode session={session} setSession={setSession} />;
 }
 
 describe('GrammarMode', () => {
@@ -256,7 +254,7 @@ describe('GrammarMode', () => {
       feedback: null,
       exercises: vocabExercises,
     };
-    const { container } = render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    const { container } = render(<GrammarMode session={session} setSession={noop} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -273,21 +271,21 @@ describe('GrammarMode', () => {
       feedback: null,
       exercises: undefined,
     };
-    const { container } = render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    const { container } = render(<GrammarMode session={session} setSession={noop} />);
     expect(container.firstChild).toBeNull();
   });
 
   // ── Lesson phase ────────────────────────────────────────────────────────
   it('renders the lesson concept and explanation in lesson phase', () => {
     const session = makeGrammarLessonSession({ phase: 'lesson' });
-    render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    render(<GrammarMode session={session} setSession={noop} />);
     expect(screen.getByText('Noun Cases')).toBeTruthy();
     expect(screen.getByText(/In Slovak, nouns change/)).toBeTruthy();
   });
 
   it('renders the Start Exercises button in lesson phase', () => {
     const session = makeGrammarLessonSession({ phase: 'lesson' });
-    render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    render(<GrammarMode session={session} setSession={noop} />);
     expect(screen.getByText(/Start Exercises \(2 questions\)/)).toBeTruthy();
   });
 
@@ -310,7 +308,7 @@ describe('GrammarMode', () => {
       correct: [null],
     });
 
-    const { container } = render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    const { container } = render(<GrammarMode session={session} setSession={noop} />);
 
     // No <img> element should be injected into the DOM
     const imgs = container.querySelectorAll('img');
@@ -355,7 +353,7 @@ describe('GrammarMode', () => {
       correct: [null],
     });
 
-    const { container } = render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    const { container } = render(<GrammarMode session={session} setSession={noop} />);
 
     // No <script> element injected
     const scripts = container.querySelectorAll('script');
@@ -440,7 +438,7 @@ describe('GrammarMode', () => {
 
     const user = userEvent.setup();
     const session = makeGrammarLessonSession({ phase: 'lesson' });
-    render(<GrammarMode session={session} setSession={noop} onEnd={noop} />);
+    render(<GrammarMode session={session} setSession={noop} />);
 
     const startBtn = screen.getByText(/Start Exercises/);
     await user.click(startBtn);
@@ -458,7 +456,7 @@ describe('GrammarMode', () => {
       ...session,
       feedback: stubFeedback,
     };
-    render(<GrammarMode session={sessionWithFeedback} setSession={noop} onEnd={noop} />);
+    render(<GrammarMode session={sessionWithFeedback} setSession={noop} />);
     expect(screen.getByTestId('feedback-view')).toBeTruthy();
   });
 

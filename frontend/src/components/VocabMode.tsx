@@ -11,10 +11,9 @@ import FeedbackView from './FeedbackView';
 interface VocabModeProps {
   session: Session;
   setSession: (s: Session) => void;
-  onEnd: () => void;
 }
 
-export default function VocabMode({ session, setSession, onEnd: _onEnd }: VocabModeProps) {
+export default function VocabMode({ session, setSession }: VocabModeProps) {
   // Bug fix #8: use discriminant narrowing instead of bare `as` cast
   if (session.exercises?.type !== 'vocabulary') return null;
   const ex = session.exercises;
