@@ -280,6 +280,7 @@ export interface PackPurchaseResult {
   cards: CardData[];
   new_card_ids: number[];
   duplicate_card_ids: number[];
+  copies?: Record<string, number>;
   xp_cost: number;
 }
 

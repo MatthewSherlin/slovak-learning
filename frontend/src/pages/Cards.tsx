@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, animate, useAnimate } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap,
   ShoppingBag,
@@ -7,10 +7,9 @@ import {
   Users,
   RefreshCw,
   AlertCircle,
-  ArrowLeft,
-  Sparkles,
   X,
 } from 'lucide-react';
+import PackOpening from '../components/cards/PackOpening';
 import { useUser } from '../components/UserPicker';
 import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards } from '../lib/api';
 import type { CardData, CardSet, UserCardCollection, CardSocialEntry, PackPurchaseResult } from '../lib/types';
@@ -36,7 +35,7 @@ function getTheme(setId: string) {
   return SET_THEMES[setId] ?? DEFAULT_THEME;
 }
 
-// ── Rarity config for the old inline CardFront (pack opening only) ──
+// ── Rarity config for inline CardFront (inspect modal only) ──
 
 const RARITY = {
   common:    { label: 'Common',    borderColor: 'rgba(148, 163, 184, 0.4)', glow: '', bg: 'from-slate-800/95 via-slate-800 to-slate-900', dot: 'bg-gray-400',   text: 'text-gray-400',   edgeColor: 'rgba(148,163,184,0.2)' },
@@ -166,19 +165,6 @@ function CardFront({
   );
 }
 
-function CardBack() {
-  return (
-    <div className="card-face card-back w-full h-full rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-slate-800 via-accent/10 to-slate-900 flex items-center justify-center overflow-hidden relative">
-      <div className="card-back-pattern" />
-      <div className="card-back-foil" />
-      <div className="relative z-10 text-center">
-        <div className="text-5xl mb-2 opacity-80">🇸🇰</div>
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-accent/60">SlovakPrep</p>
-      </div>
-    </div>
-  );
-}
-
 function CardInspectModal({ card, onClose }: { card: CardData; onClose: () => void }) {
   const r = RARITY[card.rarity];
   return (
@@ -226,150 +212,6 @@ function CardInspectModal({ card, onClose }: { card: CardData; onClose: () => vo
         </div>
       </motion.div>
     </motion.div>
-  );
-}
-
-// ── Pack opening animations ─────────────────────────────────────────
-
-const RARITY_TIMING: Record<string, { preDelay: number; postDelay: number }> = {
-  common:    { preDelay: 300,  postDelay: 200 },
-  uncommon:  { preDelay: 500,  postDelay: 300 },
-  rare:      { preDelay: 600,  postDelay: 600 },
-  legendary: { preDelay: 800,  postDelay: 1000 },
-};
-
-function makeBurstParticles(count: number, minDist: number, maxDist: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-    const distance = minDist + Math.random() * (maxDist - minDist);
-    return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance, size: 3 + Math.random() * 5, delay: Math.random() * 0.08 };
-  });
-}
-
-const BURST_PARTICLES = makeBurstParticles(10, 100, 180);
-const LEGENDARY_PARTICLES = makeBurstParticles(14, 60, 140);
-
-function FlippableCard({ card, flipped, delay = 0, onFlip, onInspect }: { card: CardData; flipped: boolean; delay?: number; onFlip?: () => void; onInspect?: () => void }) {
-  return (
-    <motion.div
-      className="card-container cursor-pointer"
-      style={{ perspective: 1200 }}
-      initial={{ opacity: 0, y: -80, scale: 0.3, rotate: 0 }}
-      animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-      transition={{ delay, type: 'spring', damping: 18, stiffness: 200 }}
-      onClick={flipped ? onInspect : onFlip}
-    >
-      <motion.div
-        className="card-inner"
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.6, type: 'spring', damping: 25, stiffness: 200 }}
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        <CardBack />
-        <CardFront card={card} flipMode />
-      </motion.div>
-    </motion.div>
-  );
-}
-
-function ShakingPack({ set, onComplete }: { set: CardSet; onComplete: () => void }) {
-  const [scope, animateEl] = useAnimate();
-  const glowOpacity = useMotionValue(0.15);
-  const [showCracks, setShowCracks] = useState(false);
-  const completeRef = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      try {
-        animate(glowOpacity, 1.0, { duration: 2, ease: 'easeIn' });
-        await animateEl(scope.current, { rotate: [0, -2, 2, -2, 2, -1, 1, 0], scale: [1, 1.01, 1.01, 1.01, 1.01, 1.0, 1.0, 1] }, { duration: 0.7, ease: 'easeInOut' });
-        if (cancelled) return;
-        await animateEl(scope.current, { rotate: [0, -5, 5, -6, 6, -5, 5, -3, 3, 0], scale: [1, 1.02, 1.03, 1.04, 1.04, 1.03, 1.03, 1.02, 1.01, 1] }, { duration: 0.7, ease: 'easeInOut' });
-        if (cancelled) return;
-        setShowCracks(true);
-        await animateEl(scope.current, { rotate: [0, -8, 8, -10, 10, -12, 12, -8, 8, -4, 0], scale: [1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10, 1.08, 1.06, 1.04, 1.02] }, { duration: 0.6, ease: 'easeInOut' });
-        if (cancelled) return;
-        if (!completeRef.current) { completeRef.current = true; onComplete(); }
-      } catch { /* unmounted */ }
-    };
-    run();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <motion.div className="flex justify-center py-8 relative" exit={{ opacity: 0, scale: 1.3, y: -20 }} transition={{ duration: 0.25 }}>
-      <div className="relative" ref={scope}>
-        <motion.div className="absolute -inset-8 rounded-3xl blur-2xl" style={{ opacity: glowOpacity, background: 'radial-gradient(circle, rgba(94,164,247,0.6) 0%, rgba(147,51,234,0.3) 50%, transparent 70%)' }} />
-        <AnimatePresence>
-          {showCracks && [0, 1, 2, 3].map(i => (
-            <motion.div key={i} className="absolute bg-white/80 rounded-full" style={{ width: 20 + i * 8, height: 2, top: '50%', left: '50%', transformOrigin: 'left center', rotate: i * 90 + 15 }} initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0.7] }} transition={{ duration: 0.3, delay: i * 0.05 }} />
-          ))}
-        </AnimatePresence>
-        <div className="relative w-36 h-48 sm:w-44 sm:h-56 rounded-xl border-2 border-accent/40 bg-gradient-to-br from-slate-700 via-accent/10 to-slate-800 flex flex-col items-center justify-center gap-2 overflow-hidden shadow-xl">
-          <div className="absolute inset-0 opacity-10"><div className="card-back-pattern" /></div>
-          <div className="relative z-10 text-center">
-            <div className="text-4xl mb-2">{set.emoji}</div>
-            <h3 className="text-sm font-black text-white tracking-tight">{set.name}</h3>
-            <p className="text-[10px] text-text-faint mt-0.5">{set.description}</p>
-            <div className="flex items-center justify-center gap-1 mt-2 px-2.5 py-1 rounded-full bg-accent/20 border border-accent/30">
-              <Zap size={10} className="text-warning" />
-              <span className="text-[10px] font-bold text-warning">{set.cost} XP</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function BurstEffect({ onComplete }: { onComplete: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 500);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <motion.div className="flex justify-center py-8 relative" initial={{ opacity: 1 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-      <motion.div className="fixed inset-0 z-50 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(147,197,253,0.4) 40%, transparent 70%)', willChange: 'opacity' }} initial={{ opacity: 0 }} animate={{ opacity: [0, 0.7, 0] }} transition={{ duration: 0.5, ease: 'easeOut' }} />
-      <motion.div className="absolute w-36 h-36 sm:w-44 sm:h-44 rounded-full border-2 border-accent/60" style={{ top: '50%', left: '50%', x: '-50%', y: '-50%' }} initial={{ scale: 0.5, opacity: 0.8 }} animate={{ scale: 3, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} />
-      {BURST_PARTICLES.map((p, i) => (
-        <motion.div key={i} className="absolute rounded-full" style={{ width: p.size, height: p.size, top: '50%', left: '50%', background: i % 2 === 0 ? 'rgba(147,197,253,0.9)' : 'rgba(255,255,255,0.9)' }} initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} animate={{ x: p.x, y: p.y, opacity: 0, scale: 0.3 }} transition={{ duration: 0.5, ease: 'easeOut', delay: p.delay }} />
-      ))}
-    </motion.div>
-  );
-}
-
-function CardRevealSlot({ card, flipped, isActive, justFlipped, entryDelay, onFlip, onInspect }: { card: CardData; flipped: boolean; isActive: boolean; justFlipped: boolean; entryDelay: number; onFlip: () => void; onInspect: () => void }) {
-  const r = RARITY[card.rarity];
-  const isRareOrAbove = card.rarity === 'rare' || card.rarity === 'legendary';
-  const isLegendary = card.rarity === 'legendary';
-
-  return (
-    <div className="relative">
-      {isActive && !flipped && isRareOrAbove && (
-        <motion.div className={`absolute -inset-5 rounded-2xl blur-xl z-0 ${isLegendary ? 'aura-pulse-gold' : 'aura-pulse-blue'}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} />
-      )}
-      <motion.div animate={isActive && !flipped && isLegendary ? { scale: [1, 1.02, 1] } : { scale: 1 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}>
-        <FlippableCard card={card} flipped={flipped} delay={entryDelay} onFlip={onFlip} onInspect={onInspect} />
-      </motion.div>
-      {justFlipped && card.rarity !== 'common' && (
-        <motion.div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ border: `2px solid ${r.borderColor}` }} initial={{ scale: 0.9, opacity: 0.8 }} animate={{ scale: isLegendary ? 2.0 : 1.6, opacity: 0 }} transition={{ duration: 0.6, ease: 'easeOut' }} />
-      )}
-      {justFlipped && card.rarity === 'rare' && (
-        <motion.div className="absolute -inset-4 rounded-2xl blur-xl pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(96, 165, 250, 0.5), transparent 70%)' }} initial={{ opacity: 0.8, scale: 0.9 }} animate={{ opacity: 0, scale: 1.3 }} transition={{ duration: 0.7 }} />
-      )}
-      {justFlipped && isLegendary && (
-        <>
-          <motion.div className="fixed inset-0 z-50 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(251, 191, 36, 0.4), transparent 70%)', willChange: 'opacity' }} initial={{ opacity: 0 }} animate={{ opacity: [0, 0.6, 0] }} transition={{ duration: 0.7 }} />
-          {LEGENDARY_PARTICLES.map((p, i) => (
-            <motion.div key={i} className="absolute rounded-full pointer-events-none z-10" style={{ width: p.size, height: p.size, top: '50%', left: '50%', background: i % 3 === 0 ? 'rgba(251, 191, 36, 0.9)' : i % 3 === 1 ? 'rgba(255, 255, 255, 0.8)' : 'rgba(239, 68, 68, 0.7)' }} initial={{ x: 0, y: 0, opacity: 1, scale: 1 }} animate={{ x: p.x, y: p.y, opacity: 0, scale: 0 }} transition={{ duration: 0.8, ease: 'easeOut', delay: p.delay }} />
-          ))}
-        </>
-      )}
-    </div>
   );
 }
 
@@ -698,7 +540,6 @@ function hexToRgb(hex: string): string {
 // ── Main Cards page ────────────────────────────────────────────────
 
 type Tab = 'shop' | 'binder' | 'friends';
-type PackPhase = 'idle' | 'shaking' | 'bursting' | 'revealing' | 'done';
 
 export default function Cards() {
   const { user } = useUser();
@@ -714,17 +555,11 @@ export default function Cards() {
   const [error, setError] = useState<string | null>(null);
 
   // Pack opening state
-  const [packPhase, setPackPhase] = useState<PackPhase>('idle');
   const [openingSet, setOpeningSet] = useState<CardSet | null>(null);
-  const [revealedCards, setRevealedCards] = useState<CardData[]>([]);
-  const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
-  const [newCardIds, setNewCardIds] = useState<number[]>([]);
+  const [purchaseResult, setPurchaseResult] = useState<PackPurchaseResult | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [confirmSet, setConfirmSet] = useState<CardSet | null>(null);
-  const [revealIndex, setRevealIndex] = useState(-1);
-  const [justFlippedIds, setJustFlippedIds] = useState<Set<number>>(new Set());
-  const apiResultRef = useRef<PackPurchaseResult | null>(null);
-  const shakeCompleteRef = useRef(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
   // AbortController guard for purchase (prevents double-buy on unmount)
   const purchaseAbortRef = useRef<AbortController | null>(null);
 
@@ -757,7 +592,7 @@ export default function Cards() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleBuyPack = useCallback(async (set: CardSet) => {
-    if (!user || packPhase !== 'idle') return;
+    if (!user || isPurchasing) return;
 
     // Cancel any in-flight purchase
     purchaseAbortRef.current?.abort();
@@ -765,84 +600,36 @@ export default function Cards() {
     purchaseAbortRef.current = abortCtrl;
 
     setPurchaseError(null);
+    setIsPurchasing(true);
     setOpeningSet(set);
-    setPackPhase('shaking');
-    setRevealedCards([]);
-    setFlippedCards(new Set());
-    setNewCardIds([]);
-    setRevealIndex(-1);
-    setJustFlippedIds(new Set());
-    apiResultRef.current = null;
-    shakeCompleteRef.current = false;
+    setPurchaseResult(null);
 
     try {
       const result = await purchasePack(user.id, set.set_id);
       if (abortCtrl.signal.aborted) return;
-
-      apiResultRef.current = result;
-      setRevealedCards(result.cards);
-      setNewCardIds(result.new_card_ids);
 
       // Refresh collection in background
       getUserCards(user.id).then((col) => {
         if (!abortCtrl.signal.aborted) setCollection(col);
       }).catch(() => {});
 
-      if (shakeCompleteRef.current) {
-        setPackPhase('bursting');
-      }
+      setPurchaseResult(result);
     } catch {
       if (!abortCtrl.signal.aborted) {
         setPurchaseError('Not enough XP or purchase failed!');
-        setPackPhase('idle');
         setOpeningSet(null);
+        setPurchaseResult(null);
+      }
+    } finally {
+      if (!abortCtrl.signal.aborted) {
+        setIsPurchasing(false);
       }
     }
-  }, [user, packPhase]);
+  }, [user, isPurchasing]);
 
-  const handleShakeComplete = useCallback(() => {
-    shakeCompleteRef.current = true;
-    if (apiResultRef.current) {
-      setPackPhase('bursting');
-    }
-  }, []);
-
-  const handleBurstComplete = useCallback(() => {
-    setPackPhase('revealing');
-    setTimeout(() => setRevealIndex(0), 600);
-  }, []);
-
-  useEffect(() => {
-    if (packPhase !== 'revealing' || revealIndex < 0) return;
-    if (revealIndex >= revealedCards.length) {
-      const timer = setTimeout(() => setPackPhase('done'), 500);
-      return () => clearTimeout(timer);
-    }
-
-    const card = revealedCards[revealIndex];
-    const timing = RARITY_TIMING[card.rarity] ?? RARITY_TIMING.common;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-
-    const preTimer = setTimeout(() => {
-      setFlippedCards((prev) => new Set([...prev, card.id]));
-      setJustFlippedIds((prev) => new Set([...prev, card.id]));
-      timers.push(setTimeout(() => {
-        setJustFlippedIds((prev) => { const next = new Set(prev); next.delete(card.id); return next; });
-      }, 1000));
-      timers.push(setTimeout(() => { setRevealIndex((prev) => prev + 1); }, 600 + timing.postDelay));
-    }, timing.preDelay);
-    timers.push(preTimer);
-
-    return () => timers.forEach((t) => clearTimeout(t));
-  }, [revealIndex, packPhase, revealedCards]);
-
-  const handleClosePack = useCallback(async () => {
-    setPackPhase('idle');
+  const handlePackDone = useCallback(async () => {
     setOpeningSet(null);
-    setRevealedCards([]);
-    setFlippedCards(new Set());
-    setRevealIndex(-1);
-    setJustFlippedIds(new Set());
+    setPurchaseResult(null);
     await fetchData();
   }, [fetchData]);
 
@@ -875,95 +662,39 @@ export default function Cards() {
 
   const xpAvailable = collection?.xp_available ?? 0;
 
-  // ── Pack opening overlay ─────────────────────────────────────────
-  if (packPhase !== 'idle' && openingSet) {
+  // ── Pack loading (purchase in-flight) ───────────────────────────
+  if (isPurchasing && openingSet) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-32 pb-16">
-        {packPhase === 'done' && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={handleClosePack}
-            className="flex items-center gap-2 text-text-muted hover:text-text-primary text-sm mb-6 bg-transparent border-none cursor-pointer transition-colors"
-          >
-            <ArrowLeft size={16} />
-            Back to shop
-          </motion.button>
-        )}
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-text-primary tracking-tight mb-1">
-            {openingSet.emoji} {openingSet.name} Pack
-          </h1>
-          <p className="text-text-muted text-sm">{openingSet.description}</p>
+      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-32 pb-16 flex flex-col items-center gap-6">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="text-5xl mb-4">{openingSet.emoji}</div>
+          <h2 className="text-lg font-bold text-text-primary">{openingSet.name}</h2>
+          <p className="text-sm text-text-muted mt-1">Opening pack…</p>
         </motion.div>
+        <motion.div
+          className="w-10 h-10 rounded-full border-2 border-accent/30 border-t-accent"
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+          style={{ animationDelay: '0s' }}
+        />
+        <style>{cardStyles}</style>
+      </div>
+    );
+  }
 
-        <AnimatePresence mode="wait">
-          {packPhase === 'shaking' && <ShakingPack key="shaking" set={openingSet} onComplete={handleShakeComplete} />}
-          {packPhase === 'bursting' && <BurstEffect key="bursting" onComplete={handleBurstComplete} />}
-          {(packPhase === 'revealing' || packPhase === 'done') && (
-            <motion.div key="cards-reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-                {revealedCards.map((card, i) => (
-                  <CardRevealSlot
-                    key={card.id}
-                    card={card}
-                    flipped={flippedCards.has(card.id)}
-                    isActive={revealIndex === i}
-                    justFlipped={justFlippedIds.has(card.id)}
-                    entryDelay={i * 0.12}
-                    onInspect={() => setInspectCard(card)}
-                    onFlip={() => {
-                      if (!flippedCards.has(card.id)) {
-                        setFlippedCards((prev) => new Set([...prev, card.id]));
-                        setJustFlippedIds((prev) => new Set([...prev, card.id]));
-                        setTimeout(() => {
-                          setJustFlippedIds((prev) => { const next = new Set(prev); next.delete(card.id); return next; });
-                        }, 1000);
-                        if (i <= revealIndex || revealIndex === -1) {
-                          setTimeout(() => setRevealIndex((prev) => Math.max(prev, i + 1)), 800);
-                        }
-                      }
-                    }}
-                  />
-                ))}
-              </div>
-              <AnimatePresence>
-                {packPhase === 'done' && (
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, type: 'spring', damping: 20, stiffness: 200 }} className="text-center mt-8 space-y-3">
-                    {newCardIds.length > 0 && (
-                      <motion.div className="flex items-center justify-center gap-2" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 15, stiffness: 200 }}>
-                        <Sparkles size={16} className="text-warning" />
-                        <p className="text-text-secondary text-sm font-medium">
-                          <span className="text-warning font-bold">{newCardIds.length}</span> new {newCardIds.length === 1 ? 'card' : 'cards'} added!
-                        </p>
-                      </motion.div>
-                    )}
-                    {newCardIds.length === 0 && <p className="text-text-faint text-sm">All duplicates — you already had these!</p>}
-                    {newCardIds.length === revealedCards.length && revealedCards.length > 0 && (
-                      <motion.p className="text-xs font-bold text-warning uppercase tracking-widest" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: [0.5, 1.1, 1] }} transition={{ delay: 0.4, duration: 0.5 }}>
-                        Perfect Pull!
-                      </motion.p>
-                    )}
-                    <motion.div className="flex items-center justify-center gap-3 mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                      <button onClick={handleClosePack} className="px-5 py-2.5 rounded-xl bg-surface-2 text-text-secondary font-medium text-sm cursor-pointer border border-border hover:bg-surface-3 transition-colors">
-                        Back to Shop
-                      </button>
-                      {xpAvailable >= openingSet.cost && (
-                        <button onClick={() => { setPackPhase('idle'); setTimeout(() => handleBuyPack(openingSet), 50); }} className="px-5 py-2.5 rounded-xl bg-accent text-white font-medium text-sm cursor-pointer border-none hover:bg-accent-hover transition-colors">
-                          Open Another
-                        </button>
-                      )}
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {inspectCard && <CardInspectModal card={inspectCard} onClose={() => setInspectCard(null)} />}
-        </AnimatePresence>
+  // ── Pack opening overlay ─────────────────────────────────────────
+  if (openingSet && purchaseResult) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-28 pb-16">
+        <PackOpening
+          set={openingSet}
+          result={purchaseResult}
+          onDone={handlePackDone}
+        />
         <style>{cardStyles}</style>
       </div>
     );
