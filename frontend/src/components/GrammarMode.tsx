@@ -185,12 +185,14 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     }
   }, [feedback, session.id, setSession]);
 
-  // Auto-end when exercises complete
+  // Auto-end when exercises complete — but only after the user has advanced past
+  // the final answer feedback (showResult cleared by handleNext). This prevents
+  // handleEnd from firing while the tier feedback panel is still visible.
   useEffect(() => {
-    if (ex.phase === 'complete' && !endingRef.current && !feedback) {
+    if (ex.phase === 'complete' && !showResult && !endingRef.current && !feedback) {
       handleEnd();
     }
-  }, [ex.phase, feedback, handleEnd]);
+  }, [ex.phase, showResult, feedback, handleEnd]);
 
   if (feedback) {
     return <FeedbackView session={session} feedback={feedback} />;
@@ -269,7 +271,10 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   }
 
   // ── Complete phase ────────────────────────────────────────────────────────
-  if (ex.phase === 'complete') {
+  // Skip the complete-phase UI if showResult is still true (user is viewing
+  // the final answer's tier feedback). Fall through to the exercise phase so
+  // TierFeedback renders. Once handleNext clears showResult, this branch fires.
+  if (ex.phase === 'complete' && !showResult) {
     const correctCount = ex.correct.filter(Boolean).length;
     const total = ex.exercises.length;
     const pct = Math.round((correctCount / total) * 100);

@@ -163,6 +163,46 @@ function makeResponseSession(overrides: {
   };
 }
 
+/**
+ * Build a response session for the LAST exercise (index n-1) answered, where
+ * the backend flips phase to 'complete'. This is the scenario that triggers the
+ * auto-end bug: handleEnd fires immediately while showResult is still true, so
+ * the user never sees the tier feedback for the final answer.
+ */
+function makeLastExerciseCompleteSession(overrides: {
+  wasCorrect: boolean;
+  tier: string;
+  userAnswer: string;
+}): Session {
+  return {
+    id: 'grammar-session-last',
+    user_id: 'user-1',
+    mode: 'grammar',
+    topic: 'verbs',
+    difficulty: 'intermediate',
+    messages: [],
+    completed: false,
+    created_at: new Date().toISOString(),
+    feedback: null,
+    exercises: {
+      type: 'grammar',
+      lesson: { concept: 'Verbs', explanation: 'e', examples: [] },
+      exercises: [
+        {
+          sentence: 'Ja ____ slovensky.',
+          blank: 'hovorím',
+          explanation: 'hovorím = I speak',
+        },
+      ],
+      currentIndex: 1, // past the only exercise (index 0)
+      answers: [overrides.userAnswer],
+      correct: [overrides.wasCorrect],
+      tiers: [overrides.tier],
+      phase: 'complete', // backend flips to complete on last answer
+    },
+  };
+}
+
 const stubFeedback: SessionFeedback = {
   overall_score: 8,
   scores: [],
@@ -420,5 +460,61 @@ describe('GrammarMode', () => {
     };
     render(<GrammarMode session={sessionWithFeedback} setSession={noop} onEnd={noop} />);
     expect(screen.getByTestId('feedback-view')).toBeTruthy();
+  });
+
+  // ── Bug fix: auto-end must not fire while showResult is true ─────────────
+  it('shows final answer tier feedback before ending session when last exercise is answered', async () => {
+    const { submitGrammarAnswer, endSession, getSession } = await import('../../lib/api');
+    const mockSubmit = vi.mocked(submitGrammarAnswer);
+    const mockEnd = vi.mocked(endSession);
+    const mockGet = vi.mocked(getSession);
+
+    // Build a single-exercise session so the FIRST submit is also the LAST.
+    // The mock backend response flips phase to 'complete' and sets tier 'accent'
+    // (the amber "Takmer!" case — a wrong-diacritics but correct answer).
+    const initialSession: Session = {
+      id: 'grammar-session-last',
+      user_id: 'user-1',
+      mode: 'grammar',
+      topic: 'verbs',
+      difficulty: 'intermediate',
+      messages: [],
+      completed: false,
+      created_at: new Date().toISOString(),
+      feedback: null,
+      exercises: {
+        type: 'grammar',
+        lesson: { concept: 'Verbs', explanation: 'e', examples: [] },
+        exercises: [
+          { sentence: 'Ja ____ slovensky.', blank: 'hovorím', explanation: '' },
+        ],
+        currentIndex: 0,
+        answers: [null],
+        correct: [null],
+        phase: 'exercises',
+      },
+    };
+
+    mockSubmit.mockResolvedValueOnce(
+      makeLastExerciseCompleteSession({ wasCorrect: true, tier: 'accent', userAnswer: 'hovorim' })
+    );
+
+    const user = userEvent.setup();
+    render(<GrammarWrapper initialSession={initialSession} />);
+
+    const input = screen.getByPlaceholderText('Type the missing word...');
+    await user.type(input, 'hovorim');
+    await user.keyboard('{Enter}');
+
+    // After submitting the last exercise, the tier feedback ("Takmer!") MUST be
+    // visible — the session should NOT have auto-ended yet.
+    await waitFor(() => {
+      expect(screen.getByText('Takmer!')).toBeTruthy();
+    });
+
+    // endSession and getSession must NOT have been called at this point:
+    // showResult is still true, so the guard should hold the auto-end back.
+    expect(mockEnd).not.toHaveBeenCalled();
+    expect(mockGet).not.toHaveBeenCalled();
   });
 });
