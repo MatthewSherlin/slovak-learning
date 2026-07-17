@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Home from '../Home';
-import type { Recommendations, DashboardStats, LeaderboardEntry } from '../../lib/types';
+import type { Recommendations, DashboardStats, LeaderboardEntry, Session } from '../../lib/types';
 
 // ── Mock the API module ───────────────────────────────────────────────
 
@@ -11,6 +11,7 @@ vi.mock('../../lib/api', () => ({
   getDashboard: vi.fn(),
   getLeaderboard: vi.fn(),
   createSession: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 // ── Mock useUser ──────────────────────────────────────────────────────
@@ -22,6 +23,39 @@ vi.mock('../../components/UserPicker', () => ({
 }));
 
 import * as api from '../../lib/api';
+
+// ── Vocab session fixture (3 of 10 answered) ─────────────────────────
+
+function makeVocabSession(answeredCount: number, total: number): Session {
+  const answers = Array.from({ length: total }, (_, i) =>
+    i < answeredCount ? i % 4 : null
+  ) as (number | null)[];
+  return {
+    id: 'sess-vocab-1',
+    user_id: 'user-1',
+    mode: 'vocabulary',
+    topic: 'Animals',
+    difficulty: 'beginner',
+    messages: [],
+    completed: false,
+    created_at: new Date().toISOString(),
+    feedback: null,
+    exercises: {
+      type: 'vocabulary',
+      questions: Array.from({ length: total }, (_, i) => ({
+        word: `word${i}`,
+        direction: 'sk-en' as const,
+        choices: ['a', 'b', 'c', 'd'],
+        correctIndex: 0,
+        explanation: '',
+      })),
+      currentIndex: answeredCount,
+      answers,
+      retryQueue: [],
+      phase: 'questions' as const,
+    },
+  };
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -75,6 +109,8 @@ describe('Home', () => {
   beforeEach(() => {
     vi.mocked(api.getDashboard).mockResolvedValue(mockStats);
     vi.mocked(api.getLeaderboard).mockResolvedValue(mockLeaderboard);
+    // Default: getSession resolves to a vocab session with no progress
+    vi.mocked(api.getSession).mockResolvedValue(makeVocabSession(0, 10));
   });
 
   it('renders the Continue card when in_progress_session exists', async () => {
@@ -164,5 +200,51 @@ describe('Home', () => {
     await waitFor(() => {
       expect(screen.queryByText('Review 5 due words')).not.toBeNull();
     });
+  });
+
+  it('shows real "3/10" progress fraction in Continue card when getSession returns 3 of 10 answered', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-vocab-1',
+          mode: 'vocabulary',
+          topic: 'Animals',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+    vi.mocked(api.getSession).mockResolvedValue(makeVocabSession(3, 10));
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('3/10')).not.toBeNull();
+    });
+  });
+
+  it('renders Continue card without the progress ring when getSession rejects (graceful fallback)', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-error',
+          mode: 'vocabulary',
+          topic: 'Animals',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+    vi.mocked(api.getSession).mockRejectedValue(new Error('Network error'));
+
+    renderHome();
+
+    // Card still shows "Continue session" label
+    await waitFor(() => {
+      expect(screen.queryByText(/continue session/i)).not.toBeNull();
+    });
+
+    // But the progress fraction must NOT appear (no ring rendered)
+    expect(screen.queryByText(/\d+\/\d+/)).toBeNull();
   });
 });

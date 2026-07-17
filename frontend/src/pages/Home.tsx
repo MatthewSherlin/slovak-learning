@@ -9,11 +9,14 @@ import {
   getDashboard,
   getLeaderboard,
   createSession,
+  getSession,
 } from '../lib/api';
 import type {
+  ExerciseData,
   LearningMode,
   Recommendations,
   DashboardStats,
+  Session,
 } from '../lib/types';
 
 // ── Slovak date header ────────────────────────────────────────────────
@@ -102,6 +105,40 @@ const MODES: Record<LearningMode, ModeConfig> = {
 
 const MODE_ORDER: LearningMode[] = ['vocabulary', 'grammar', 'conversation', 'translation'];
 
+// ── Progress computation ───────────────────────────────────────────────
+
+interface SessionProgress {
+  answered: number;
+  total: number;
+}
+
+function computeProgress(exercises: ExerciseData): SessionProgress | null {
+  switch (exercises.type) {
+    case 'vocabulary': {
+      const answered = exercises.answers.filter((a) => a !== null && a !== undefined).length;
+      const total = (exercises.questions ?? exercises.answers).length;
+      return total > 0 ? { answered, total } : null;
+    }
+    case 'grammar': {
+      const answered = exercises.answers.filter((a) => a !== null && a !== undefined).length;
+      const total = exercises.exercises.length;
+      return total > 0 ? { answered, total } : null;
+    }
+    case 'translation': {
+      const answered = exercises.answers.filter((a) => a !== null && a !== undefined).length;
+      const total = exercises.exercises.length;
+      return total > 0 ? { answered, total } : null;
+    }
+    case 'conversation': {
+      return exercises.maxExchanges > 0
+        ? { answered: exercises.exchangeCount, total: exercises.maxExchanges }
+        : null;
+    }
+    default:
+      return null;
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -114,6 +151,7 @@ export default function Home() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [streak, setStreak] = useState<number>(0);
   const [startingMode, setStartingMode] = useState<LearningMode | null>(null);
+  const [inProgressSession, setInProgressSession] = useState<Session | null>(null);
 
   const loadData = useCallback(() => {
     if (!user) return;
@@ -131,6 +169,16 @@ export default function Home() {
         const entry = lb.find((e) => e.user_id === user.id);
         setStreak(entry?.streak_days ?? 0);
         setLoading(false);
+
+        // Fetch the full in-progress session for real progress data.
+        // Errors fall back gracefully — the card renders without the ring.
+        if (recsData.in_progress_session) {
+          getSession(recsData.in_progress_session.id)
+            .then((sess) => setInProgressSession(sess))
+            .catch(() => setInProgressSession(null));
+        } else {
+          setInProgressSession(null);
+        }
       })
       .catch(() => {
         setError(true);
@@ -200,13 +248,19 @@ export default function Home() {
 
   const inProgress = recs?.in_progress_session ?? null;
 
-  // Progress ring for continue card
-  const progressRingProps = inProgress
+  // Compute real progress from the fetched session (null = no ring shown)
+  const sessionProgress: SessionProgress | null =
+    inProgressSession?.exercises != null
+      ? computeProgress(inProgressSession.exercises)
+      : null;
+
+  // Progress ring geometry
+  const circumference = 2 * Math.PI * 24; // r=24
+  const progressRingProps = sessionProgress
     ? (() => {
-        // We don't have answered count from recommendations directly; show a fixed 60% placeholder
-        const circumference = 2 * Math.PI * 24; // r=24
-        const dashOffset = circumference * 0.4; // 60% filled
-        return { circumference, dashOffset };
+        const ratio = sessionProgress.total > 0 ? sessionProgress.answered / sessionProgress.total : 0;
+        const dashOffset = circumference * (1 - ratio);
+        return { circumference, dashOffset, label: `${sessionProgress.answered}/${sessionProgress.total}` };
       })()
     : null;
 
@@ -262,7 +316,7 @@ export default function Home() {
       </div>
 
       {/* ── Continue card (only when in_progress_session exists) ── */}
-      {inProgress && progressRingProps && (
+      {inProgress && (
         <motion.button
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -277,24 +331,26 @@ export default function Home() {
           }}
         >
           <div className="flex items-center gap-4">
-            {/* Progress ring */}
-            <div className="relative w-14 h-14 flex-shrink-0">
-              <svg viewBox="0 0 56 56" className="w-14 h-14" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
-                <circle
-                  cx="28" cy="28" r="24" fill="none"
-                  stroke="#a78bfa" strokeWidth="5" strokeLinecap="round"
-                  strokeDasharray={progressRingProps.circumference}
-                  strokeDashoffset={progressRingProps.dashOffset}
-                />
-              </svg>
-              <div
-                className="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold tabular-nums"
-                style={{ color: '#a78bfa' }}
-              >
-                {inProgress.mode.charAt(0).toUpperCase()}
+            {/* Progress ring — only shown when real progress data is available */}
+            {progressRingProps && (
+              <div className="relative w-14 h-14 flex-shrink-0">
+                <svg viewBox="0 0 56 56" className="w-14 h-14" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                  <circle
+                    cx="28" cy="28" r="24" fill="none"
+                    stroke="#a78bfa" strokeWidth="5" strokeLinecap="round"
+                    strokeDasharray={progressRingProps.circumference}
+                    strokeDashoffset={progressRingProps.dashOffset}
+                  />
+                </svg>
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tabular-nums"
+                  style={{ color: '#a78bfa', fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  {progressRingProps.label}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Text */}
             <div className="flex-1 min-w-0">
@@ -306,7 +362,9 @@ export default function Home() {
                 {inProgress.topic ? ` · ${inProgress.topic}` : ''}
               </p>
               <p className="text-[12px]" style={{ color: '#6b7289' }}>
-                Tap to resume
+                {sessionProgress
+                  ? `${sessionProgress.total - sessionProgress.answered} exercise${sessionProgress.total - sessionProgress.answered !== 1 ? 's' : ''} left`
+                  : 'Tap to resume'}
               </p>
             </div>
 
