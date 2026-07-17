@@ -3,6 +3,7 @@
  */
 
 import type {
+  AllCardsResponse,
   CardSocialEntry,
   CardSet,
   DashboardStats,
@@ -197,6 +198,9 @@ export const removeFarmItem = (
 
 export const getCardCatalog = (): Promise<CardSet[]> =>
   apiFetch('/api/cards/catalog');
+
+export const getAllCards = (): Promise<AllCardsResponse> =>
+  apiFetch('/api/cards/all');
 
 export const getUserCards = (userId: string): Promise<UserCardCollection> =>
   apiFetch(`/api/users/${userId}/cards`);

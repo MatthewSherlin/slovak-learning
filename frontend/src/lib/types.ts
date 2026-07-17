@@ -268,6 +268,12 @@ export interface UserCardCollection {
   xp_earned: number;
   xp_spent: number;
   xp_available: number;
+  copies?: Record<string, number>;
+}
+
+export interface AllCardsResponse {
+  cards: CardData[];
+  sets: Record<string, unknown>;
 }
 
 export interface PackPurchaseResult {

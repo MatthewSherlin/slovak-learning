@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getRecommendations, tradeInCards, setShowcase } from '../api';
+import { getRecommendations, tradeInCards, setShowcase, getAllCards } from '../api';
 
 describe('getRecommendations', () => {
   beforeEach(() => {
@@ -94,5 +94,51 @@ describe('setShowcase', () => {
 
     const [, opts] = vi.mocked(fetch).mock.calls[0];
     expect(JSON.parse(opts?.body as string)).toEqual({ card_id: null });
+  });
+});
+
+describe('getAllCards', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('GETs /api/cards/all and returns { cards, sets }', async () => {
+    const mockPayload = {
+      cards: [
+        {
+          id: 1,
+          set_id: 'myty',
+          set_name: 'Mýty a Legendy',
+          set_emoji: '🐉',
+          emoji: '🐲',
+          slovak: 'drak',
+          pronunciation: '/drak/',
+          english: 'dragon',
+          example_sk: 'Drak žije.',
+          example_en: 'Dragon lives.',
+          rarity: 'rare',
+          number: 1,
+        },
+      ],
+      sets: { myty: { set_id: 'myty', name: 'Mýty a Legendy' } },
+    };
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockPayload),
+    } as Response);
+
+    const result = await getAllCards();
+
+    expect(fetch).toHaveBeenCalledOnce();
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain('/api/cards/all');
+    expect(result).toEqual(mockPayload);
+    expect(result.cards).toHaveLength(1);
+    expect(result.cards[0].id).toBe(1);
   });
 });

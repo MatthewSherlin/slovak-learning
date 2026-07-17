@@ -12,7 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { useUser } from '../components/UserPicker';
-import { getUserCards, getCardCatalog, purchasePack, getCardsSocial } from '../lib/api';
+import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards } from '../lib/api';
 import type { CardData, CardSet, UserCardCollection, CardSocialEntry, PackPurchaseResult } from '../lib/types';
 
 // ── Set theme colors ───────────────────────────────────────────────
@@ -487,6 +487,7 @@ function BinderTab({
   onInspect: (card: CardData) => void;
 }) {
   const ownedCards = collection?.cards ?? [];
+  const copies = collection?.copies ?? {};
 
   return (
     <div className="space-y-10">
@@ -526,7 +527,7 @@ function BinderTab({
             </div>
 
             {/* Card grid */}
-            <div className="grid grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-3">
               {Array.from({ length: set.total_cards }, (_, i) => {
                 const num = i + 1;
                 const owned = ownedIds.has(num);
@@ -534,6 +535,7 @@ function BinderTab({
 
                 if (owned && card) {
                   const r = RARITY[card.rarity];
+                  const copyCount = copies[String(card.id)] ?? 1;
                   return (
                     <motion.button
                       key={num}
@@ -549,6 +551,14 @@ function BinderTab({
                         <span className={`text-[7px] font-bold uppercase mt-1 ${r.text}`}>{card.rarity.charAt(0)}</span>
                         <span className="text-[7px] font-mono text-white/40">{String(num).padStart(3, '0')}</span>
                       </div>
+                      {copyCount >= 2 && (
+                        <span
+                          data-testid={`copies-badge-${card.id}`}
+                          className="absolute top-1 right-1 text-[8px] font-bold text-white bg-black/60 rounded-full px-1 leading-tight"
+                        >
+                          ×{copyCount}
+                        </span>
+                      )}
                     </motion.button>
                   );
                 }
@@ -591,9 +601,11 @@ function getRarityMiniGradient(rarity: CardData['rarity']): string {
 function FriendsTab({
   social,
   catalog,
+  allCardsMap,
 }: {
   social: CardSocialEntry[];
   catalog: CardSet[];
+  allCardsMap: Record<number, CardData>;
 }) {
   const totalPossible = catalog.reduce((sum, s) => sum + s.total_cards, 0) || 1;
 
@@ -602,7 +614,9 @@ function FriendsTab({
       {social.length === 0 && (
         <div className="text-center py-16 text-text-muted text-sm">No friends data yet.</div>
       )}
-      {social.map((entry) => (
+      {social.map((entry) => {
+        const showcaseCard = entry.showcase_card_id != null ? allCardsMap[entry.showcase_card_id] : null;
+        return (
         <motion.div
           key={entry.user_id}
           initial={{ opacity: 0, y: 10 }}
@@ -621,6 +635,16 @@ function FriendsTab({
               <p className="text-sm font-semibold text-text-primary">{entry.name}</p>
               <p className="text-xs text-text-muted">{entry.total_cards} cards collected</p>
             </div>
+            {showcaseCard && (
+              <div
+                data-testid={`showcase-thumb-${entry.user_id}`}
+                className="w-10 h-14 rounded-lg overflow-hidden shrink-0 flex flex-col items-center justify-center border border-white/10"
+                style={{ background: getRarityMiniGradient(showcaseCard.rarity) }}
+                title={`${showcaseCard.slovak} — ${showcaseCard.english}`}
+              >
+                <span className="text-lg leading-none">{showcaseCard.emoji}</span>
+              </div>
+            )}
             <div className="text-right">
               <span className="text-sm font-bold text-accent tabular-nums">
                 {Math.round((entry.total_cards / totalPossible) * 100)}%
@@ -657,7 +681,8 @@ function FriendsTab({
             })}
           </div>
         </motion.div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -684,6 +709,7 @@ export default function Cards() {
   const [collection, setCollection] = useState<UserCardCollection | null>(null);
   const [catalog, setCatalog] = useState<CardSet[]>([]);
   const [social, setSocial] = useState<CardSocialEntry[]>([]);
+  const [allCardsMap, setAllCardsMap] = useState<Record<number, CardData>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -707,14 +733,20 @@ export default function Cards() {
     setLoading(true);
     setError(null);
     try {
-      const [col, cat, soc] = await Promise.all([
+      const [col, cat, soc, allCardsRes] = await Promise.all([
         getUserCards(user.id),
         getCardCatalog(),
         getCardsSocial(),
+        getAllCards(),
       ]);
       setCollection(col);
       setCatalog(cat);
       setSocial(soc);
+      const map: Record<number, CardData> = {};
+      for (const card of allCardsRes.cards) {
+        map[card.id] = card;
+      }
+      setAllCardsMap(map);
     } catch {
       setError('Failed to load card data. Check your connection.');
     } finally {
@@ -1000,7 +1032,7 @@ export default function Cards() {
         )}
         {tab === 'friends' && (
           <motion.div key="friends" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
-            <FriendsTab social={social} catalog={catalog} />
+            <FriendsTab social={social} catalog={catalog} allCardsMap={allCardsMap} />
           </motion.div>
         )}
       </AnimatePresence>
