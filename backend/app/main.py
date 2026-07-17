@@ -37,6 +37,7 @@ from .database import (
     purchase_pack,
     get_all_users_cards,
     trade_in_duplicates,
+    set_showcase_card,
     _get_user_xp_earned,
     _get_user_xp_spent,
 )
@@ -50,6 +51,7 @@ from .models import (
     PackPurchaseRequest,
     PinRequest,
     PinVerifyResponse,
+    ShowcaseRequest,
     TradeInRequest,
     TranslationAnswerRequest,
     UpdatePreferencesRequest,
@@ -506,6 +508,15 @@ async def trade_in_cards(user_id: str, req: TradeInRequest):
         return result
 
 
+@app.put("/api/users/{user_id}/showcase")
+async def set_showcase(user_id: str, req: ShowcaseRequest):
+    """Pin a card to the user's profile (null clears)."""
+    async with get_db() as db:
+        if not await set_showcase_card(db, user_id, req.card_id):
+            raise HTTPException(400, "Showcase failed: card not owned")
+        return {"ok": True}
+
+
 @app.get("/api/cards/social")
 async def cards_social():
     """Get card collection stats for all users (for social comparison)."""
@@ -532,6 +543,7 @@ async def cards_social():
                 "color": user["color"],
                 "total_cards": len(card_ids),
                 "sets_progress": set_counts,
+                "showcase_card_id": user.get("showcase_card_id"),
             })
 
         return result

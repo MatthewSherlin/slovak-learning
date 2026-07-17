@@ -106,6 +106,12 @@ async def init_db() -> None:
         except Exception:
             pass  # Column already exists
 
+        # Migration: add showcase_card_id column to users table
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN showcase_card_id INTEGER")
+        except Exception:
+            pass  # Column already exists
+
         # Migration: SRS columns on vocabulary_progress
         for ddl in (
             "ALTER TABLE vocabulary_progress ADD COLUMN due_at TEXT",
@@ -207,7 +213,7 @@ async def get_db() -> AsyncIterator[aiosqlite.Connection]:
 # ── User operations ──────────────────────────────────────────────────
 
 async def get_users(db: aiosqlite.Connection) -> list[dict]:
-    cursor = await db.execute("SELECT id, name, avatar, color, pin_hash FROM users")
+    cursor = await db.execute("SELECT id, name, avatar, color, pin_hash, showcase_card_id FROM users")
     rows = await cursor.fetchall()
     users = []
     for r in rows:
@@ -939,6 +945,24 @@ async def trade_in_duplicates(
         await db.rollback()
         raise
     return {"traded": card_ids, "xp_gained": total_xp}
+
+
+async def set_showcase_card(
+    db: aiosqlite.Connection, user_id: str, card_id: int | None
+) -> bool:
+    """Pin a card to the user's profile. None clears. Must own the card."""
+    if card_id is not None:
+        cursor = await db.execute(
+            "SELECT 1 FROM card_collection WHERE user_id = ? AND card_id = ?",
+            (user_id, card_id),
+        )
+        if not await cursor.fetchone():
+            return False
+    cursor = await db.execute(
+        "UPDATE users SET showcase_card_id = ? WHERE id = ?", (card_id, user_id)
+    )
+    await db.commit()
+    return cursor.rowcount > 0
 
 
 async def get_all_users_cards(db: aiosqlite.Connection) -> dict[str, list[int]]:

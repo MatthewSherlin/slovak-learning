@@ -271,6 +271,10 @@ class TradeInRequest(BaseModel):
     card_ids: Annotated[list[int], Field(min_length=1, max_length=50)]
 
 
+class ShowcaseRequest(BaseModel):
+    card_id: int | None = None
+
+
 class FarmItem(BaseModel):
     id: int
     item_type: str
