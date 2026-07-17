@@ -34,6 +34,7 @@ from .database import (
     move_farm_item,
     remove_farm_item,
     get_user_cards,
+    get_user_card_copies,
     purchase_pack,
     get_all_users_cards,
     trade_in_duplicates,
@@ -473,6 +474,7 @@ async def user_cards(user_id: str):
     async with get_db() as db:
         card_ids = await get_user_cards(db, user_id)
         cards = [CARD_BY_ID[cid] for cid in card_ids if cid in CARD_BY_ID]
+        copies = await get_user_card_copies(db, user_id)
 
         # Calculate XP
         xp_earned = await _get_user_xp_earned(db, user_id)
@@ -480,6 +482,7 @@ async def user_cards(user_id: str):
 
         return {
             "cards": cards,
+            "copies": {cid: n for cid, n in copies.items() if n > 0},
             "total_unique": len(set(card_ids)),
             "total_possible": len(CARDS),
             "xp_earned": xp_earned,

@@ -66,3 +66,16 @@ async def test_showcase_endpoint_rejects_unowned(client):
     async with client as c:
         resp = await c.put(f"/api/users/{uid}/showcase", json={"card_id": 5})
     assert resp.status_code == 400
+
+
+class TestUserCardsCopies:
+    async def test_user_cards_endpoint_includes_copies_map(self, client):
+        uid = await _user_with_card(1)
+        async with get_db() as db:
+            await add_user_cards(db, uid, [1])  # duplicate → copies 2
+            await db.commit()
+        async with client as c:
+            resp = await c.get(f"/api/users/{uid}/cards")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["copies"] == {"1": 2}
