@@ -14,7 +14,7 @@ class CardDef(TypedDict):
     english: str
     example_sk: str
     example_en: str
-    rarity: str  # "common" | "uncommon" | "rare" | "legendary"
+    rarity: str  # "common" | "uncommon" | "rare" | "legendary" | "mythic"
     number: int
     origin: str  # "Slovak" | "Pan-Slavic" | "West Slavic" | "East Slavic" | "Czech/Slovak" | "International" | "Hungarian influence"
 
@@ -1282,6 +1282,88 @@ CARDS: list[CardDef] = [
         "example_sk": "Lúčnica je svetoznámy slovenský folklórny súbor, ktorý vystupuje po celom svete.",
         "example_en": "Lucnica is a world-famous Slovak folk ensemble that performs all around the world.",
         "rarity": "legendary", "number": 15, "origin": "Slovak",
+    },
+
+    # ── Mythic cards (1 per set, ~1% pull rate) ──────────────────────
+    {
+        "id": 151, "set_id": "myty", "set_name": "Mýty a Legendy", "set_emoji": "🐉",
+        "emoji": "👑", "slovak": "šarkan kráľ", "pronunciation": "SHAR-kahn krahl",
+        "english": "dragon king",
+        "example_sk": "Sedemhlavý šarkan vládol všetkým drakom pod Tatrami.",
+        "example_en": "The seven-headed dragon ruled all dragons beneath the Tatras.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 152, "set_id": "jedlo", "set_name": "Slovenská Kuchyňa", "set_emoji": "🥟",
+        "emoji": "🥛", "slovak": "žinčica", "pronunciation": "ZHIN-chih-tsah",
+        "english": "sheep whey drink",
+        "example_sk": "Bača nám na salaši ponúkol čerstvú žinčicu.",
+        "example_en": "The shepherd offered us fresh sheep whey at the mountain hut.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 153, "set_id": "pamiatky", "set_name": "Pamiatky", "set_emoji": "🏰",
+        "emoji": "🏯", "slovak": "Trenčiansky hrad", "pronunciation": "TREN-chyahn-skee HRAHD",
+        "english": "Trencin Castle",
+        "example_sk": "Trenčiansky hrad je jeden z najväčších a najvýznamnejších hradov na Slovensku.",
+        "example_en": "Trencin Castle is one of the largest and most significant castles in Slovakia.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 154, "set_id": "slang", "set_name": "Slang & Výrazy", "set_emoji": "🗣️",
+        "emoji": "😱", "slovak": "nekecaj", "pronunciation": "NYEH-keh-tsai",
+        "english": "no way! / you're kidding!",
+        "example_sk": "Nekecaj, to si vyhral naozaj ty?",
+        "example_en": "No way, did you really win that?",
+        "rarity": "mythic", "number": 16, "origin": "Czech/Slovak",
+    },
+    {
+        "id": 155, "set_id": "rozpravky", "set_name": "Rozprávky", "set_emoji": "🧚",
+        "emoji": "🦸", "slovak": "Popolvár", "pronunciation": "POH-pol-vaar",
+        "english": "Popolvar (fairy-tale hero)",
+        "example_sk": "Popolvár, najväčší na svete, premohol drakov a zachránil princezné.",
+        "example_en": "Popolvar, the greatest in the world, defeated dragons and saved princesses.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 156, "set_id": "futbal", "set_name": "Futbal", "set_emoji": "⚽",
+        "emoji": "🐐", "slovak": "Róbert Vittek", "pronunciation": "ROH-bert VIT-tek",
+        "english": "Robert Vittek (football legend)",
+        "example_sk": "Róbert Vittek strelil dva góly proti Taliansku na MS 2010.",
+        "example_en": "Robert Vittek scored two goals against Italy at the 2010 World Cup.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 157, "set_id": "zvierata", "set_name": "Tatranská Fauna", "set_emoji": "🐻",
+        "emoji": "🐐", "slovak": "kamzík vrchovský", "pronunciation": "KAM-zeek VRKH-ov-skee",
+        "english": "Tatra chamois",
+        "example_sk": "Kamzík vrchovský tatranský žije iba vo Vysokých Tatrách.",
+        "example_en": "The Tatra chamois lives only in the High Tatras.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 158, "set_id": "tradicie", "set_name": "Tradície", "set_emoji": "🎭",
+        "emoji": "🪶", "slovak": "páranie peria", "pronunciation": "PAH-rah-nyeh PEH-ryah",
+        "english": "feather-plucking gathering",
+        "example_sk": "Páranie peria bolo tradičné stretnutie žien, kde si navzájom pomáhali a spievali.",
+        "example_en": "Feather-plucking gatherings were traditional women's meetings where they helped each other and sang.",
+        "rarity": "mythic", "number": 16, "origin": "Pan-Slavic",
+    },
+    {
+        "id": 159, "set_id": "priroda", "set_name": "Slovenská Príroda", "set_emoji": "🏔️",
+        "emoji": "💎", "slovak": "Štrbské pleso", "pronunciation": "SHTRB-skeh PLEH-soh",
+        "english": "Strbske Pleso (iconic Tatra lake)",
+        "example_sk": "Štrbské pleso v zime zamŕza a stáva sa dejiscom medzinárodných pretekov.",
+        "example_en": "Strbske Pleso freezes in winter and becomes the venue for international races.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
+    },
+    {
+        "id": 160, "set_id": "hudba", "set_name": "Hudba a Umenie", "set_emoji": "🎵",
+        "emoji": "📯", "slovak": "trombita", "pronunciation": "TROM-bih-tah",
+        "english": "trombita (long shepherd horn)",
+        "example_sk": "Trombita je dlhý pastiersky roh, ktorý sa kedysi používal na dorozumievanie v horách.",
+        "example_en": "The trombita is a long shepherd's horn once used for communication in the mountains.",
+        "rarity": "mythic", "number": 16, "origin": "Slovak",
     },
 ]
 

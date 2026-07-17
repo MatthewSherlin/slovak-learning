@@ -155,6 +155,12 @@ async def init_db() -> None:
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_packs_user ON pack_purchases(user_id)")
 
+        # Migration: add copies column to card_collection
+        try:
+            await db.execute("ALTER TABLE card_collection ADD COLUMN copies INTEGER NOT NULL DEFAULT 1")
+        except Exception:
+            pass  # Column already exists
+
         await db.execute("""
             CREATE TABLE IF NOT EXISTS concept_progress (
                 user_id TEXT NOT NULL REFERENCES users(id),
@@ -840,19 +846,39 @@ async def get_user_cards(db: aiosqlite.Connection, user_id: str) -> list[int]:
 
 
 async def add_user_cards(db: aiosqlite.Connection, user_id: str, card_ids: list[int]) -> list[int]:
-    """Add cards to user collection. Returns list of NEW card IDs (skips duplicates)."""
+    """Add cards to the collection. Duplicates increment `copies`.
+
+    Returns only the card IDs that are NEW to the user (first copy).
+    NOTE: does not commit — callers own the transaction.
+    """
     new_ids = []
     for cid in card_ids:
-        try:
+        cursor = await db.execute(
+            "SELECT copies FROM card_collection WHERE user_id = ? AND card_id = ?",
+            (user_id, cid),
+        )
+        row = await cursor.fetchone()
+        if row:
+            await db.execute(
+                "UPDATE card_collection SET copies = copies + 1 WHERE user_id = ? AND card_id = ?",
+                (user_id, cid),
+            )
+        else:
             await db.execute(
                 "INSERT INTO card_collection (user_id, card_id) VALUES (?, ?)",
                 (user_id, cid),
             )
             new_ids.append(cid)
-        except Exception:
-            pass  # Duplicate - user already has this card
-    await db.commit()
     return new_ids
+
+
+async def get_user_card_copies(db: aiosqlite.Connection, user_id: str) -> dict[int, int]:
+    """card_id -> copies owned."""
+    cursor = await db.execute(
+        "SELECT card_id, copies FROM card_collection WHERE user_id = ?", (user_id,)
+    )
+    rows = await cursor.fetchall()
+    return {r["card_id"]: r["copies"] for r in rows}
 
 
 async def get_all_users_cards(db: aiosqlite.Connection) -> dict[str, list[int]]:
@@ -895,37 +921,34 @@ async def purchase_pack(
         # Get user's existing cards
         owned = set(await get_user_cards(db, user_id))
 
-        # Pick 3 cards with rarity weighting
-        # Weight: common=50, uncommon=30, rare=15, legendary=5
-        weights = {"common": 50, "uncommon": 30, "rare": 15, "legendary": 5}
+        # Deal PACK_SIZE cards with rarity weighting and a rare+ guarantee
+        PACK_SIZE = 5
+        weights = {"common": 50, "uncommon": 30, "rare": 15, "legendary": 4, "mythic": 1}
+        rare_plus = {"rare", "legendary", "mythic"}
 
-        # Prefer cards the user doesn't own yet (but allow duplicates if they have all)
         unowned = [c for c in set_cards if c["id"] not in owned]
-        pool = unowned if unowned else set_cards
+        pool = unowned if len(unowned) >= PACK_SIZE else set_cards
 
-        card_weights = [weights.get(c["rarity"], 50) for c in pool]
+        def _weighted_unique(source: list, k: int, exclude: set[int]) -> list:
+            picked: list = []
+            candidates = [c for c in source if c["id"] not in exclude]
+            while candidates and len(picked) < k:
+                ws = [weights.get(c["rarity"], 50) for c in candidates]
+                choice = random.choices(candidates, weights=ws, k=1)[0]
+                picked.append(choice)
+                candidates = [c for c in candidates if c["id"] != choice["id"]]
+            return picked
 
-        # Pick 3 (or fewer if pool is small)
-        pick_count = min(3, len(pool))
-        selected = random.choices(pool, weights=card_weights, k=pick_count)
+        unique_selected = _weighted_unique(pool, PACK_SIZE, set())
 
-        # Deduplicate within the pack
-        seen_ids: set[int] = set()
-        unique_selected = []
-        for c in selected:
-            if c["id"] not in seen_ids:
-                seen_ids.add(c["id"])
-                unique_selected.append(c)
-
-        # If we got fewer than 3 due to dedup, try to fill from remaining pool
-        remaining = [c for c in pool if c["id"] not in seen_ids]
-        while len(unique_selected) < pick_count and remaining:
-            extra_weights = [weights.get(c["rarity"], 50) for c in remaining]
-            extra = random.choices(remaining, weights=extra_weights, k=1)[0]
-            if extra["id"] not in seen_ids:
-                seen_ids.add(extra["id"])
-                unique_selected.append(extra)
-                remaining = [c for c in remaining if c["id"] not in seen_ids]
+        # Guarantee at least one rare-or-better
+        if not any(c["rarity"] in rare_plus for c in unique_selected):
+            rare_pool = [c for c in set_cards if c["rarity"] in rare_plus]
+            if rare_pool:
+                ws = [weights.get(c["rarity"], 1) for c in rare_pool]
+                replacement = random.choices(rare_pool, weights=ws, k=1)[0]
+                if replacement["id"] not in {c["id"] for c in unique_selected[:-1]}:
+                    unique_selected[-1] = replacement
 
         selected_ids = [c["id"] for c in unique_selected]
 
@@ -935,8 +958,9 @@ async def purchase_pack(
             (user_id, set_id, cost, json.dumps(selected_ids)),
         )
 
-        # Add cards to collection (commits the whole transaction at the end)
+        # Add cards to collection (caller owns the transaction)
         new_ids = await add_user_cards(db, user_id, selected_ids)
+        copies_map = await get_user_card_copies(db, user_id)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -947,4 +971,5 @@ async def purchase_pack(
         "new_card_ids": new_ids,
         "duplicate_card_ids": [cid for cid in selected_ids if cid not in new_ids],
         "xp_cost": cost,
+        "copies": {cid: copies_map.get(cid, 1) for cid in selected_ids},
     }
