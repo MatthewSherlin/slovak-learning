@@ -30,7 +30,7 @@ from .prompts import (
     VOCAB_BATCH_PROMPT,
 )
 from .questions import QUESTIONS, TOPICS
-from .scoring import grade_answer
+from .scoring import compute_category_scores, compute_session_score, grade_answer
 from .vocab_extraction import extract_vocab_from_session
 
 log = logging.getLogger(__name__)
@@ -711,12 +711,23 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
 
     data = await ask_json(prompt, FEEDBACK_PROMPT)
 
-    feedback = {
-        "overall_score": data.get("overall_score", 5),
-        "scores": [
+    computed_score = compute_session_score(session.get("exercises"))
+    computed_categories = compute_category_scores(session.get("exercises"))
+
+    if computed_score is not None:
+        overall = computed_score
+        scores = computed_categories
+    else:
+        # Conversation (and legacy/unscorable): LLM decides
+        overall = data.get("overall_score", 5)
+        scores = [
             {"category": s.get("category", ""), "score": s.get("score", 5), "comment": s.get("comment", "")}
             for s in data.get("scores", [])
-        ],
+        ]
+
+    feedback = {
+        "overall_score": overall,
+        "scores": scores,
         "strengths": data.get("strengths", []),
         "improvements": data.get("improvements", []),
         "sample_answer": data.get("sample_answer"),

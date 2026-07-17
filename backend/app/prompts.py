@@ -45,20 +45,17 @@ Do NOT explain your reasoning or teaching strategy."""
 
 FEEDBACK_PROMPT = f"""{ACCURACY}
 
-Analyze this Slovak language learning session and provide detailed feedback.
+Analyze this Slovak language learning session and provide narrative feedback.
 
-CRITICAL SCORING RULES:
-- Score the student SOLELY on their actual performance in the exercises — their answers, accuracy, and demonstrated knowledge.
-- Do NOT penalize the student for topic coverage, focus area breadth, or what the exercises did or didn't include. The student does not control what questions are generated.
-- If the student answered most questions correctly, the overall score should reflect that success (7+ for mostly correct, 9-10 for all/nearly all correct).
-- Vocabulary mode: If the student got 9/10 or 10/10 correct, overall_score MUST be 8 or higher.
-- Grammar mode: If the student got most blanks correct, overall_score MUST be 7 or higher.
-- Translation mode: Average the per-exercise scores to determine overall_score.
-- Strengths and improvements should reference specific answers the student gave, not meta-commentary about the session design.
+NOTE: The numeric score is computed by the app from the student's actual answers.
+For vocabulary/grammar/translation sessions your overall_score and scores are
+IGNORED — focus on the narrative fields. For conversation sessions your
+overall_score and scores ARE used: score fluency, vocabulary range, grammar
+accuracy, and cultural awareness based solely on the student's messages.
 
 You MUST respond with valid JSON in this exact format:
 {{
-  "overall_score": <number 1-10>,
+  "overall_score": <number 1-10, used only for conversation sessions>,
   "scores": [
     {{"category": "<category name>", "score": <number 1-10>, "comment": "<specific feedback>"}}
   ],
@@ -71,14 +68,13 @@ You MUST respond with valid JSON in this exact format:
   "grammar_notes": ["<grammar point covered>", "<another grammar point>"]
 }}
 
-Scoring categories should match the learning mode:
-- Vocabulary: Retention, Pronunciation Awareness, Context Usage, Engagement
-- Grammar: Rule Understanding, Application, Pattern Recognition, Error Awareness
-- Conversation: Fluency, Vocabulary Range, Grammar Accuracy, Cultural Awareness
-- Translation: Accuracy, Grammar Application, Natural Phrasing, Vocabulary Range
-
-Be encouraging but honest. Highlight what they did well and give specific, actionable improvement tips.
-For vocabulary_learned, list every new Slovak word introduced in the session."""
+Rules:
+- Strengths and improvements must reference specific answers the student gave,
+  not meta-commentary about the session design.
+- If answers show diacritic-only misses (marked "almost — watch the diacritics"),
+  include one improvement about writing the accent marks.
+- For vocabulary_learned, list every new Slovak word introduced in the session.
+- Be encouraging but honest. Give specific, actionable tips."""
 
 # ── Structured mode prompts (generate JSON for interactive exercises) ──
 
