@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { WifiOff, RefreshCw, Play } from 'lucide-react';
 import HomeSkeleton from '../components/HomeSkeleton';
+import ConfigSheet from '../components/ConfigSheet';
 import { useUser } from '../components/UserPicker';
 import {
   getRecommendations,
   getDashboard,
   getLeaderboard,
-  createSession,
   getSession,
 } from '../lib/api';
 import type {
@@ -17,6 +17,7 @@ import type {
   Recommendations,
   DashboardStats,
   Session,
+  RecommendedAction,
 } from '../lib/types';
 
 // ── Slovak date header ────────────────────────────────────────────────
@@ -150,8 +151,11 @@ export default function Home() {
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [streak, setStreak] = useState<number>(0);
-  const [startingMode, setStartingMode] = useState<LearningMode | null>(null);
   const [inProgressSession, setInProgressSession] = useState<Session | null>(null);
+
+  // Config sheet state
+  const [sheetMode, setSheetMode] = useState<LearningMode | null>(null);
+  const [sheetRecommendedTopic, setSheetRecommendedTopic] = useState<string | undefined>(undefined);
 
   const loadData = useCallback(() => {
     if (!user) return;
@@ -190,19 +194,18 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
-  const handleModeClick = async (mode: LearningMode) => {
+  const handleModeClick = (mode: LearningMode) => {
     if (!user) return;
-    setStartingMode(mode);
-    try {
-      const session = await createSession({
-        user_id: user.id,
-        mode,
-        difficulty: 'beginner',
-      });
-      navigate(`/session/${session.id}`);
-    } catch {
-      setStartingMode(null);
-    }
+    setSheetRecommendedTopic(undefined);
+    setSheetMode(mode);
+  };
+
+  const handleRecClick = (rec: RecommendedAction) => {
+    if (!user) return;
+    // For practice_concept recommendations, pass along any topic context
+    const topic = rec.kind === 'practice_concept' ? undefined : undefined;
+    setSheetRecommendedTopic(topic);
+    setSheetMode(rec.mode);
   };
 
   const handleContinue = () => {
@@ -392,13 +395,12 @@ export default function Home() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         {MODE_ORDER.map((mode) => {
           const cfg = MODES[mode];
-          const isStarting = startingMode === mode;
           return (
             <motion.button
               key={mode}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleModeClick(mode)}
-              disabled={isStarting || !user}
+              disabled={!user}
               className="text-left rounded-[20px] p-4 border cursor-pointer transition-all duration-200 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
                 background: '#151926',
@@ -416,7 +418,7 @@ export default function Home() {
               </div>
               <p className="text-[15px] font-bold text-text-primary mb-0.5">{cfg.label}</p>
               <p className="text-[12px]" style={{ color: '#6b7289' }}>
-                {isStarting ? 'Starting…' : cfg.statFn(stats)}
+                {cfg.statFn(stats)}
               </p>
             </motion.button>
           );
@@ -433,7 +435,7 @@ export default function Home() {
               .map((rec, i) => (
                 <button
                   key={i}
-                  onClick={() => handleModeClick(rec.mode)}
+                  onClick={() => handleRecClick(rec)}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold border cursor-pointer transition-all duration-200 hover:brightness-110"
                   style={{
                     background: 'rgba(94,164,247,0.08)',
@@ -467,6 +469,17 @@ export default function Home() {
           <em>"Pomaly, ale isto."</em> — Slowly but surely.
         </p>
       </div>
+
+      {/* ── Session config bottom sheet ── */}
+      {user && sheetMode && (
+        <ConfigSheet
+          open={sheetMode !== null}
+          mode={sheetMode}
+          userId={user.id}
+          recommendedTopic={sheetRecommendedTopic}
+          onClose={() => setSheetMode(null)}
+        />
+      )}
     </motion.div>
   );
 }
