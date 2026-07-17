@@ -202,9 +202,7 @@ export default function Home() {
 
   const handleRecClick = (rec: RecommendedAction) => {
     if (!user) return;
-    // For practice_concept recommendations, pass along any topic context
-    const topic = rec.kind === 'practice_concept' ? undefined : undefined;
-    setSheetRecommendedTopic(topic);
+    setSheetRecommendedTopic(undefined);
     setSheetMode(rec.mode);
   };
 
@@ -473,7 +471,7 @@ export default function Home() {
       {/* ── Session config bottom sheet ── */}
       {user && sheetMode && (
         <ConfigSheet
-          open={sheetMode !== null}
+          open={true}
           mode={sheetMode}
           userId={user.id}
           recommendedTopic={sheetRecommendedTopic}

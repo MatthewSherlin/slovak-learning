@@ -70,8 +70,14 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'advanced', label: 'Advanced' },
 ];
 
-// Maximum focus area text length enforced by backend
+// Limits enforced by backend
 const MAX_FOCUS_CHARS = 100;
+const MAX_FOCUS_AREAS = 10;
+
+/** Parse the textarea into trimmed, non-empty items. */
+function parseFocusAreas(text: string): string[] {
+  return text.split(',').map((s) => s.trim()).filter(Boolean);
+}
 
 // ── Props ──────────────────────────────────────────────────────────────
 
@@ -123,11 +129,21 @@ export default function ConfigSheet({
   }, [open, mode, recommendedTopic]);
 
   const handleStart = useCallback(async () => {
-    // Validate focus area length
-    if (focusText.length > MAX_FOCUS_CHARS) {
-      setFocusError(`Focus area must be ${MAX_FOCUS_CHARS} characters or fewer.`);
+    const focusAreas = parseFocusAreas(focusText);
+
+    // Validate: max 10 items
+    if (focusAreas.length > MAX_FOCUS_AREAS) {
+      setFocusError(`Max ${MAX_FOCUS_AREAS} focus areas.`);
       return;
     }
+
+    // Validate: each item ≤ 100 chars
+    const tooLong = focusAreas.find((item) => item.length > MAX_FOCUS_CHARS);
+    if (tooLong) {
+      setFocusError(`Each focus area must be ${MAX_FOCUS_CHARS} characters or fewer.`);
+      return;
+    }
+
     setFocusError(null);
     setStarting(true);
 
@@ -137,7 +153,7 @@ export default function ConfigSheet({
         mode,
         difficulty,
         topic: selectedTopic ?? undefined,
-        focus_areas: focusText.trim() ? [focusText.trim()] : undefined,
+        focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
       });
       navigate(`/session/${session.id}`);
     } catch {
@@ -345,6 +361,20 @@ export default function ConfigSheet({
                 fontFamily: 'Inter, sans-serif',
               }}
             />
+            {/* N/10 counter — only shown when 2+ items are entered */}
+            {(() => {
+              const count = parseFocusAreas(focusText).length;
+              return count >= 2 ? (
+                <p style={{
+                  fontSize: '11px',
+                  color: count > MAX_FOCUS_AREAS ? '#ef4444' : '#6b7289',
+                  margin: focusError ? '0 0 4px 0' : '-16px 0 8px 0',
+                  textAlign: 'right',
+                }}>
+                  {count}/{MAX_FOCUS_AREAS}
+                </p>
+              ) : null;
+            })()}
             {focusError && (
               <p style={{
                 fontSize: '12px',

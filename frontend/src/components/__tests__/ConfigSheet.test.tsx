@@ -152,6 +152,57 @@ describe('ConfigSheet', () => {
     });
   });
 
+  it('parses comma-separated focus areas into an array', async () => {
+    renderSheet();
+    const textarea = screen.getByPlaceholderText(/restaurant vocabulary/i);
+    fireEvent.change(textarea, { target: { value: 'a, b, c' } });
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    await waitFor(() => {
+      expect(api.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          focus_areas: ['a', 'b', 'c'],
+        })
+      );
+    });
+  });
+
+  it('shows max-10 error and blocks submit when more than 10 comma-separated items are entered', async () => {
+    renderSheet();
+    const textarea = screen.getByPlaceholderText(/restaurant vocabulary/i);
+    const elevenItems = Array.from({ length: 11 }, (_, i) => `item${i + 1}`).join(', ');
+    fireEvent.change(textarea, { target: { value: elevenItems } });
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/max 10 focus areas/i)).not.toBeNull();
+    });
+    expect(api.createSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects any individual focus area item longer than 100 characters', async () => {
+    renderSheet();
+    const textarea = screen.getByPlaceholderText(/restaurant vocabulary/i);
+    const longItem = 'a'.repeat(101);
+    fireEvent.change(textarea, { target: { value: `short, ${longItem}` } });
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/100 characters/i)).not.toBeNull();
+    });
+    expect(api.createSession).not.toHaveBeenCalled();
+  });
+
+  it('shows N/10 counter when 2 or more comma-separated items are present', async () => {
+    renderSheet();
+    const textarea = screen.getByPlaceholderText(/restaurant vocabulary/i);
+    fireEvent.change(textarea, { target: { value: 'food, drinks' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/2\/10/)).not.toBeNull();
+    });
+  });
+
   it('calls onClose when the close / backdrop is tapped', async () => {
     const onClose = vi.fn();
     renderSheet({ onClose });
