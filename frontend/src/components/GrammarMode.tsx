@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, X, ArrowRight, Trophy, BookOpen, Lightbulb, Sparkles } from 'lucide-react';
+import { Check, X, ArrowRight, Trophy, BookOpen, Lightbulb, Sparkles, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import SessionHeader from './SessionHeader';
 import ProgressBar from './ProgressBar';
@@ -9,7 +9,7 @@ import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { advanceGrammarPhase, submitGrammarAnswer, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
-import type { Session, SessionFeedback, GrammarExerciseData } from '../lib/types';
+import type { Session, SessionFeedback } from '../lib/types';
 
 interface GrammarModeProps {
   session: Session;
@@ -17,13 +17,43 @@ interface GrammarModeProps {
   onEnd: () => void;
 }
 
+/** Render a sentence string that contains "____" as JSX — no innerHTML. */
+function SentenceWithBlank({
+  sentence,
+  blankContent,
+  blankClassName,
+}: {
+  sentence: string;
+  blankContent: React.ReactNode;
+  blankClassName?: string;
+}) {
+  const parts = sentence.split('____');
+  return (
+    <p className="text-[16px] text-text-primary leading-relaxed">
+      {parts[0]}
+      <span
+        className={`inline-block mx-1 px-3 py-1 rounded-lg border-2 border-dashed min-w-[80px] font-semibold ${blankClassName ?? 'border-mode-grammar/40 bg-mode-grammar/5 text-mode-grammar'}`}
+      >
+        {blankContent}
+      </span>
+      {parts[1] ?? ''}
+    </p>
+  );
+}
+
 export default function GrammarMode({ session, setSession }: GrammarModeProps) {
-  const ex = session.exercises as GrammarExerciseData;
+  // Discriminant narrowing — no bare `as` cast
+  if (session.exercises?.type !== 'grammar') return null;
+  const ex = session.exercises;
+
   const [input, setInput] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
+  // Tier from latest answer: "exact" | "accent" | "wrong" | null
+  const [lastTier, setLastTier] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
+  const [startError, setStartError] = useState('');
   const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [streak, setStreak] = useState(0);
   const [shakeInput, setShakeInput] = useState(false);
@@ -31,19 +61,36 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const [shakeCards, setShakeCards] = useState<Set<number>>(new Set());
   const [showHint, setShowHint] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Sync ref guard so end-session can't double-fire
+  const endingRef = useRef(false);
+
+  // Derive currentExercise early so handlers can use it
+  const exerciseIndex = ex.phase === 'exercises'
+    ? ex.currentIndex - (showResult ? 1 : 0)
+    : 0;
+  const currentExercise = ex.exercises[exerciseIndex] ?? null;
+  const isMultipleChoice = !!(currentExercise?.choices && currentExercise.choices.length > 0);
 
   const handleStartExercises = async () => {
-    const updated = await advanceGrammarPhase(session.id);
-    setSession(updated);
+    setStartError('');
+    try {
+      const updated = await advanceGrammarPhase(session.id);
+      setSession(updated);
+    } catch {
+      setStartError('Failed to load exercises. Please try again.');
+    }
   };
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
     const updated = await submitGrammarAnswer(session.id, input.trim());
-    const updatedEx = updated.exercises as GrammarExerciseData;
+    if (updated.exercises?.type !== 'grammar') return;
+    const updatedEx = updated.exercises;
     const prevIndex = updatedEx.currentIndex - 1;
     const wasCorrect = updatedEx.correct[prevIndex] ?? false;
+    const tier = updatedEx.tiers?.[prevIndex] ?? null;
     setLastCorrect(wasCorrect);
+    setLastTier(tier);
     setShowResult(true);
 
     if (wasCorrect) {
@@ -58,40 +105,42 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     setSession(updated);
   };
 
-  // Derive currentExercise early so handlers can use it
-  const exerciseIndex = ex.phase === 'exercises'
-    ? ex.currentIndex - (showResult ? 1 : 0)
-    : 0;
-  const currentExercise = ex.exercises[exerciseIndex] ?? null;
-  const isMultipleChoice = !!(currentExercise?.choices && currentExercise.choices.length > 0);
-
   const handleSelect = async (idx: number) => {
     if (showResult || !currentExercise?.choices) return;
     setSelected(idx);
-    const choiceText = currentExercise.choices[idx];
-    const updated = await submitGrammarAnswer(session.id, choiceText);
-    const updatedEx = updated.exercises as GrammarExerciseData;
-    const prevIndex = updatedEx.currentIndex - 1;
-    const wasCorrect = updatedEx.correct[prevIndex] ?? false;
-    setLastCorrect(wasCorrect);
-    setShowResult(true);
+    try {
+      const choiceText = currentExercise.choices[idx];
+      const updated = await submitGrammarAnswer(session.id, choiceText);
+      if (updated.exercises?.type !== 'grammar') return;
+      const updatedEx = updated.exercises;
+      const prevIndex = updatedEx.currentIndex - 1;
+      const wasCorrect = updatedEx.correct[prevIndex] ?? false;
+      const tier = updatedEx.tiers?.[prevIndex] ?? null;
+      setLastCorrect(wasCorrect);
+      setLastTier(tier);
+      setShowResult(true);
 
-    if (wasCorrect) {
-      setStreak(s => s + 1);
-      playCorrect();
-    } else {
-      setStreak(0);
-      setShakeCards(new Set([idx]));
-      playIncorrect();
+      if (wasCorrect) {
+        setStreak(s => s + 1);
+        playCorrect();
+      } else {
+        setStreak(0);
+        setShakeCards(new Set([idx]));
+        playIncorrect();
+      }
+
+      setSession(updated);
+    } catch {
+      // Reset selection on error so user can retry
+      setSelected(null);
     }
-
-    setSession(updated);
   };
 
   const handleNext = useCallback(() => {
     setInput('');
     setShowResult(false);
     setLastCorrect(null);
+    setLastTier(null);
     setShakeInput(false);
     setSelected(null);
     setShakeCards(new Set());
@@ -120,7 +169,8 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   };
 
   const handleEnd = useCallback(async () => {
-    if (ending || feedback) return;
+    if (endingRef.current || feedback) return;
+    endingRef.current = true;
     setEnding(true);
     setEndError('');
     try {
@@ -130,22 +180,23 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
       setSession(updated);
     } catch {
       setEnding(false);
+      endingRef.current = false;
       setEndError('Failed to get feedback. Please try again.');
     }
-  }, [ending, feedback, session.id, setSession]);
+  }, [feedback, session.id, setSession]);
 
   // Auto-end when exercises complete
   useEffect(() => {
-    if (ex.phase === 'complete' && !ending && !feedback) {
+    if (ex.phase === 'complete' && !endingRef.current && !feedback) {
       handleEnd();
     }
-  }, [ex.phase, ending, feedback, handleEnd]);
+  }, [ex.phase, feedback, handleEnd]);
 
   if (feedback) {
     return <FeedbackView session={session} feedback={feedback} />;
   }
 
-  // Lesson phase
+  // ── Lesson phase ─────────────────────────────────────────────────────────
   if (ex.phase === 'lesson') {
     return (
       <div className="flex flex-col h-screen pt-18">
@@ -194,6 +245,12 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
 
               {/* Start exercises */}
               <div className="px-6 py-4 border-t border-border-subtle">
+                {startError && (
+                  <div className="flex items-center gap-2 text-[12px] text-danger mb-3">
+                    <AlertCircle size={13} />
+                    <span>{startError}</span>
+                  </div>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
@@ -211,7 +268,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     );
   }
 
-  // Complete phase
+  // ── Complete phase ────────────────────────────────────────────────────────
   if (ex.phase === 'complete') {
     const correctCount = ex.correct.filter(Boolean).length;
     const total = ex.exercises.length;
@@ -267,29 +324,36 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                    'Review the lesson and try again!'}
                 </p>
 
-                {/* Exercise review */}
+                {/* Exercise review — XSS safe: sentence rendered via JSX split */}
                 <div className="text-left space-y-2 mb-8">
-                  {ex.exercises.map((exercise, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.05 * i }}
-                      className={`p-3 rounded-xl border ${ex.correct[i] ? 'bg-success/5 border-success/15' : 'bg-danger/5 border-danger/15'}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${ex.correct[i] ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
-                          {ex.correct[i] ? <Check size={11} /> : <X size={11} />}
+                  {ex.exercises.map((exercise, i) => {
+                    const parts = exercise.sentence.split('____');
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.05 * i }}
+                        className={`p-3 rounded-xl border ${ex.correct[i] ? 'bg-success/5 border-success/15' : 'bg-danger/5 border-danger/15'}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${ex.correct[i] ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
+                            {ex.correct[i] ? <Check size={11} /> : <X size={11} />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[13px] text-text-primary">
+                              {parts[0]}
+                              <strong className="text-mode-grammar">{exercise.blank}</strong>
+                              {parts[1] ?? ''}
+                            </p>
+                            {!ex.correct[i] && ex.answers[i] && (
+                              <p className="text-[12px] text-danger mt-1">Your answer: {ex.answers[i]}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[13px] text-text-primary" dangerouslySetInnerHTML={{ __html: exercise.sentence.replace('____', `<strong class="text-mode-grammar">${exercise.blank}</strong>`) }} />
-                          {!ex.correct[i] && ex.answers[i] && (
-                            <p className="text-[12px] text-danger mt-1">Your answer: {ex.answers[i]}</p>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
 
                 {endError && (
@@ -312,14 +376,21 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
     );
   }
 
-  // Exercise phase
+  // ── Exercise phase ────────────────────────────────────────────────────────
   if (!currentExercise) return null;
 
-  // Split sentence around the blank
-  const parts = currentExercise.sentence.split('____');
   const correctChoiceIndex = isMultipleChoice
     ? currentExercise.choices!.findIndex(c => c.toLowerCase() === currentExercise.blank.toLowerCase())
     : -1;
+
+  // Determine blank display state for the sentence card
+  const blankDisplayClass = showResult
+    ? lastTier === 'accent'
+      ? 'border-warning/40 bg-warning/5 text-warning'
+      : lastCorrect
+      ? 'border-success/40 bg-success/5 text-success'
+      : 'border-danger/40 bg-danger/5 text-danger'
+    : 'border-mode-grammar/40 bg-mode-grammar/5 text-mode-grammar';
 
   return (
     <div className="flex flex-col h-screen pt-18">
@@ -352,25 +423,17 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
             >
-              {/* Sentence with blank */}
+              {/* Sentence with blank — XSS safe: JSX split, no dangerouslySetInnerHTML */}
               <motion.div
                 className="bg-surface-2 border border-border rounded-2xl px-6 py-8 text-center mb-5"
                 animate={shakeInput && showResult ? { x: [0, -6, 6, -6, 6, 0] } : {}}
                 transition={shakeInput && showResult ? { duration: 0.4 } : {}}
               >
-                <p className="text-[16px] text-text-primary leading-relaxed">
-                  {parts[0]}
-                  <span className={`inline-block mx-1 px-3 py-1 rounded-lg border-2 border-dashed min-w-[80px] font-semibold ${
-                    showResult && lastCorrect
-                      ? 'border-success/40 bg-success/5 text-success'
-                      : showResult && !lastCorrect
-                      ? 'border-danger/40 bg-danger/5 text-danger'
-                      : 'border-mode-grammar/40 bg-mode-grammar/5 text-mode-grammar'
-                  }`}>
-                    {showResult ? currentExercise.blank : '____'}
-                  </span>
-                  {parts[1]}
-                </p>
+                <SentenceWithBlank
+                  sentence={currentExercise.sentence}
+                  blankContent={showResult ? currentExercise.blank : '____'}
+                  blankClassName={blankDisplayClass}
+                />
               </motion.div>
 
               {/* Hint */}
@@ -403,7 +466,9 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
 
                       let cardClass = 'bg-surface-2 border-border hover:border-mode-grammar/50 hover:bg-mode-grammar/5';
                       if (isRight) {
-                        cardClass = 'bg-success/10 border-success/50 ring-2 ring-success/30';
+                        cardClass = lastTier === 'accent'
+                          ? 'bg-warning/10 border-warning/50 ring-2 ring-warning/30'
+                          : 'bg-success/10 border-success/50 ring-2 ring-success/30';
                       } else if (isThisSelected && !lastCorrect) {
                         cardClass = 'bg-danger/10 border-danger/50';
                       } else if (isWrong) {
@@ -437,7 +502,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
-                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-success flex items-center justify-center shadow-md"
+                              className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${lastTier === 'accent' ? 'bg-warning' : 'bg-success'}`}
                             >
                               <Check size={12} className="text-white" />
                             </motion.div>
@@ -461,70 +526,28 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
 
                   {/* Result feedback for MC */}
                   {showResult && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`rounded-xl p-4 border mb-5 ${lastCorrect ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        {lastCorrect ? <Check size={15} className="text-success" /> : <X size={15} className="text-danger" />}
-                        <span className={`text-[13px] font-semibold ${lastCorrect ? 'text-success' : 'text-danger'}`}>
-                          {lastCorrect
-                            ? streak >= 3 ? `${streak} in a row!` : 'Correct!'
-                            : 'Not quite'}
-                        </span>
-                      </div>
-                      {currentExercise.explanation && (
-                        <p className="text-[12px] text-text-muted ml-[23px] mt-1">{currentExercise.explanation}</p>
-                      )}
-                      {!lastCorrect && (
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={handleNext}
-                          className="mt-3 ml-[23px] flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
-                        >
-                          {ex.currentIndex >= ex.exercises.length ? 'See Results' : 'Next'} <ArrowRight size={12} />
-                        </motion.button>
-                      )}
-                    </motion.div>
+                    <TierFeedback
+                      tier={lastTier}
+                      wasCorrect={lastCorrect}
+                      streak={streak}
+                      correctAnswer={currentExercise.blank}
+                      explanation={currentExercise.explanation}
+                      onNext={handleNext}
+                      isLast={ex.currentIndex >= ex.exercises.length}
+                    />
                   )}
                 </>
               ) : showResult ? (
                 /* Result feedback (fill-in-the-blank) */
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`rounded-xl p-4 border mb-5 ${lastCorrect ? 'bg-success/5 border-success/20' : 'bg-danger/5 border-danger/20'}`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {lastCorrect ? <Check size={15} className="text-success" /> : <X size={15} className="text-danger" />}
-                    <span className={`text-[13px] font-semibold ${lastCorrect ? 'text-success' : 'text-danger'}`}>
-                      {lastCorrect
-                        ? streak >= 3 ? `${streak} in a row!` : 'Correct!'
-                        : 'Not quite'}
-                    </span>
-                  </div>
-                  {!lastCorrect && (
-                    <p className="text-[12px] text-text-secondary ml-[23px]">
-                      The correct answer is <strong className="text-success">{currentExercise.blank}</strong>
-                    </p>
-                  )}
-                  {currentExercise.explanation && (
-                    <p className="text-[12px] text-text-muted ml-[23px] mt-1">{currentExercise.explanation}</p>
-                  )}
-
-                  {!lastCorrect && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleNext}
-                      className="mt-3 ml-[23px] flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
-                    >
-                      {ex.currentIndex >= ex.exercises.length ? 'See Results' : 'Next'} <ArrowRight size={12} />
-                    </motion.button>
-                  )}
-                </motion.div>
+                <TierFeedback
+                  tier={lastTier}
+                  wasCorrect={lastCorrect}
+                  streak={streak}
+                  correctAnswer={currentExercise.blank}
+                  explanation={currentExercise.explanation}
+                  onNext={handleNext}
+                  isLast={ex.currentIndex >= ex.exercises.length}
+                />
               ) : (
                 /* Text input (intermediate/advanced) */
                 <div>
@@ -556,5 +579,101 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Tier-aware result feedback panel. */
+function TierFeedback({
+  tier,
+  wasCorrect,
+  streak,
+  correctAnswer,
+  explanation,
+  onNext,
+  isLast,
+}: {
+  tier: string | null;
+  wasCorrect: boolean | null;
+  streak: number;
+  correctAnswer: string;
+  explanation?: string;
+  onNext: () => void;
+  isLast: boolean;
+}) {
+  const isAccent = tier === 'accent';
+  const isExact = tier === 'exact' || (wasCorrect && tier == null);
+  const isWrong = !wasCorrect;
+
+  // accent = correct (counted as correct) but diacritics note
+  const panelClass = isWrong
+    ? 'bg-danger/5 border-danger/20'
+    : isAccent
+    ? 'bg-warning/5 border-warning/20'
+    : 'bg-success/5 border-success/20';
+
+  const iconClass = isWrong ? 'text-danger' : isAccent ? 'text-warning' : 'text-success';
+  const labelClass = isWrong ? 'text-danger' : isAccent ? 'text-warning' : 'text-success';
+
+  const label = isWrong
+    ? 'Not quite'
+    : isAccent
+    ? 'Takmer!'
+    : streak >= 3
+    ? `${streak} in a row!`
+    : 'Correct!';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`rounded-xl p-4 border mb-5 ${panelClass}`}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        {isWrong
+          ? <X size={15} className={iconClass} />
+          : <Check size={15} className={iconClass} />}
+        <span className={`text-[13px] font-semibold ${labelClass}`}>{label}</span>
+      </div>
+
+      {isAccent && (
+        <p className="text-[12px] text-text-secondary ml-[23px]">
+          Watch the diacritics: <strong className="text-warning">{correctAnswer}</strong>
+        </p>
+      )}
+
+      {isExact && !isAccent && explanation && (
+        <p className="text-[12px] text-text-muted ml-[23px] mt-1">{explanation}</p>
+      )}
+
+      {isWrong && (
+        <>
+          <p className="text-[12px] text-text-secondary ml-[23px]">
+            The correct answer is <strong className="text-success">{correctAnswer}</strong>
+          </p>
+          {explanation && (
+            <p className="text-[12px] text-text-muted ml-[23px] mt-1">{explanation}</p>
+          )}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onNext}
+            className="mt-3 ml-[23px] flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+          >
+            {isLast ? 'See Results' : 'Next'} <ArrowRight size={12} />
+          </motion.button>
+        </>
+      )}
+
+      {isAccent && (
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onNext}
+          className="mt-3 ml-[23px] flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          {isLast ? 'See Results' : 'Next'} <ArrowRight size={12} />
+        </motion.button>
+      )}
+    </motion.div>
   );
 }
