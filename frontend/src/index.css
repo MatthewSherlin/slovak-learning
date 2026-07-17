@@ -122,6 +122,35 @@
   --accent-hover: #3a7fd4;
 }
 
+/* -- Card frame keyframes ---------------- */
+
+@keyframes shimmer-sweep {
+  0%   { background-position: 130% 0; }
+  100% { background-position: -130% 0; }
+}
+
+@keyframes holo-shift {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes mythic-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes legendary-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(247,217,119,0.25), 0 8px 24px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 44px rgba(247,217,119,0.45), 0 8px 24px rgba(0,0,0,0.5); }
+}
+
+@keyframes mythic-glow {
+  0%, 100% { filter: drop-shadow(0 0 14px rgba(244,114,182,0.35)); }
+  50%       { filter: drop-shadow(0 0 26px rgba(34,211,238,0.35)); }
+}
+
 /* -- Base -------------------------------- */
 
 * {
