@@ -155,6 +155,18 @@ async def init_db() -> None:
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_packs_user ON pack_purchases(user_id)")
 
+        # Create xp_adjustments table
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS xp_adjustments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                amount INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_xpadj_user ON xp_adjustments(user_id)")
+
         # Migration: add copies column to card_collection
         try:
             await db.execute("ALTER TABLE card_collection ADD COLUMN copies INTEGER NOT NULL DEFAULT 1")
@@ -692,10 +704,15 @@ async def user_has_pin(db: aiosqlite.Connection, user_id: str) -> bool:
 
 
 async def _get_user_xp_earned(db: aiosqlite.Connection, user_id: str) -> int:
-    """Calculate total XP earned by a user from completed sessions."""
+    """Total XP earned: completed sessions + adjustments (e.g. card trade-ins)."""
     sessions = await list_sessions(db, user_id)
     completed = [s for s in sessions if s["completed"] and s.get("feedback")]
-    return _calculate_xp(completed)
+    cursor = await db.execute(
+        "SELECT COALESCE(SUM(amount), 0) AS total FROM xp_adjustments WHERE user_id = ?",
+        (user_id,),
+    )
+    row = await cursor.fetchone()
+    return _calculate_xp(completed) + row["total"]
 
 
 async def get_user_farm(db: aiosqlite.Connection, user_id: str) -> dict:
@@ -879,6 +896,49 @@ async def get_user_card_copies(db: aiosqlite.Connection, user_id: str) -> dict[i
     )
     rows = await cursor.fetchall()
     return {r["card_id"]: r["copies"] for r in rows}
+
+
+TRADE_IN_XP = {"common": 20, "uncommon": 40, "rare": 80, "legendary": 200, "mythic": 500}
+
+
+async def trade_in_duplicates(
+    db: aiosqlite.Connection, user_id: str, card_ids: list[int]
+) -> dict | None:
+    """Trade ONE extra copy of each listed card for XP.
+
+    Every card must be owned with copies >= 2. Returns None if any card
+    fails validation (all-or-nothing).
+    """
+    from .cards import CARD_BY_ID
+
+    if not card_ids:
+        return None
+
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        copies = await get_user_card_copies(db, user_id)
+        total_xp = 0
+        for cid in card_ids:
+            card = CARD_BY_ID.get(cid)
+            if not card or copies.get(cid, 0) < 2:
+                await db.rollback()
+                return None
+            total_xp += TRADE_IN_XP.get(card["rarity"], 20)
+
+        for cid in card_ids:
+            await db.execute(
+                "UPDATE card_collection SET copies = copies - 1 WHERE user_id = ? AND card_id = ?",
+                (user_id, cid),
+            )
+        await db.execute(
+            "INSERT INTO xp_adjustments (user_id, amount, reason) VALUES (?, ?, ?)",
+            (user_id, total_xp, f"trade-in: {len(card_ids)} card(s)"),
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return {"traded": card_ids, "xp_gained": total_xp}
 
 
 async def get_all_users_cards(db: aiosqlite.Connection) -> dict[str, list[int]]:

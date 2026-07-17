@@ -267,6 +267,10 @@ class PackPurchaseRequest(BaseModel):
     set_id: str
 
 
+class TradeInRequest(BaseModel):
+    card_ids: Annotated[list[int], Field(min_length=1, max_length=50)]
+
+
 class FarmItem(BaseModel):
     id: int
     item_type: str

@@ -36,6 +36,7 @@ from .database import (
     get_user_cards,
     purchase_pack,
     get_all_users_cards,
+    trade_in_duplicates,
     _get_user_xp_earned,
     _get_user_xp_spent,
 )
@@ -49,6 +50,7 @@ from .models import (
     PackPurchaseRequest,
     PinRequest,
     PinVerifyResponse,
+    TradeInRequest,
     TranslationAnswerRequest,
     UpdatePreferencesRequest,
     VocabAnswerRequest,
@@ -491,6 +493,16 @@ async def purchase_card_pack(user_id: str, req: PackPurchaseRequest):
         result = await purchase_pack(db, user_id, req.set_id)
         if not result:
             raise HTTPException(400, "Purchase failed: invalid set or insufficient XP")
+        return result
+
+
+@app.post("/api/users/{user_id}/cards/trade-in")
+async def trade_in_cards(user_id: str, req: TradeInRequest):
+    """Trade duplicate cards back into XP."""
+    async with get_db() as db:
+        result = await trade_in_duplicates(db, user_id, req.card_ids)
+        if not result:
+            raise HTTPException(400, "Trade-in failed: card not owned in duplicate")
         return result
 
 
