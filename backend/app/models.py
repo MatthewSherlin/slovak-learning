@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
+
+# Focus areas are interpolated into LLM prompts — keep them short and few.
+FocusArea = Annotated[str, StringConstraints(max_length=100)]
+FocusAreaList = Annotated[list[FocusArea], Field(max_length=10)]
 
 
 class PracticeMode(str, Enum):
@@ -203,7 +207,7 @@ class CreateSessionRequest(BaseModel):
     mode: PracticeMode
     topic: str = "general"
     difficulty: Difficulty = Difficulty.beginner
-    focus_areas: list[str] = []
+    focus_areas: FocusAreaList = []
 
 
 class AnswerRequest(BaseModel):
@@ -229,7 +233,7 @@ class UserPreferences(BaseModel):
 
 
 class UpdatePreferencesRequest(BaseModel):
-    custom_focus_areas: list[str]
+    custom_focus_areas: FocusAreaList
 
 
 # ── PIN models ──────────────────────────────────────────────────────

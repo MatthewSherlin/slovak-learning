@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import random
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import AsyncIterator
@@ -95,6 +96,7 @@ FARM_ITEM_CATALOG = {
 
 async def init_db() -> None:
     """Create tables and seed default users."""
+    settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(str(settings.db_path)) as db:
         await db.executescript(_SCHEMA)
 
@@ -128,6 +130,7 @@ async def init_db() -> None:
             )
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_cards_user ON card_collection(user_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_farm_user ON farm_items(user_id)")
 
         # Create pack_purchases table
         await db.execute("""
@@ -140,6 +143,7 @@ async def init_db() -> None:
                 purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_packs_user ON pack_purchases(user_id)")
 
         for user in _DEFAULT_USERS:
             await db.execute(
@@ -506,8 +510,26 @@ async def update_user_preferences(
 # ── User PIN ────────────────────────────────────────────────────────
 
 
-def _hash_pin(pin: str) -> str:
-    return hashlib.sha256(pin.encode()).hexdigest()
+_PBKDF2_ITERATIONS = 100_000
+
+
+def _hash_pin(pin: str, salt: bytes | None = None) -> str:
+    """Salted PBKDF2 hash, stored as 'salt_hex$hash_hex'."""
+    if salt is None:
+        salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", pin.encode(), salt, _PBKDF2_ITERATIONS)
+    return f"{salt.hex()}${digest.hex()}"
+
+
+def _check_pin(pin: str, stored: str) -> bool:
+    """Verify a PIN against a stored hash (salted or legacy bare SHA-256)."""
+    if "$" in stored:
+        salt_hex, _ = stored.split("$", 1)
+        candidate = _hash_pin(pin, bytes.fromhex(salt_hex))
+        return secrets.compare_digest(candidate, stored)
+    # Legacy unsalted SHA-256 (pre-migration)
+    legacy = hashlib.sha256(pin.encode()).hexdigest()
+    return secrets.compare_digest(legacy, stored)
 
 
 async def set_user_pin(db: aiosqlite.Connection, user_id: str, pin: str) -> bool:
@@ -521,12 +543,22 @@ async def set_user_pin(db: aiosqlite.Connection, user_id: str, pin: str) -> bool
 
 
 async def verify_user_pin(db: aiosqlite.Connection, user_id: str, pin: str) -> bool:
-    """Verify a PIN against the stored hash. Return True if match."""
+    """Verify a PIN against the stored hash. Return True if match.
+
+    Legacy bare-SHA256 hashes are transparently upgraded to salted
+    PBKDF2 on the first successful verification.
+    """
     cursor = await db.execute("SELECT pin_hash FROM users WHERE id = ?", (user_id,))
     row = await cursor.fetchone()
     if not row or not row["pin_hash"]:
         return False
-    return row["pin_hash"] == _hash_pin(pin)
+    stored = row["pin_hash"]
+    if not _check_pin(pin, stored):
+        return False
+    if "$" not in stored:
+        # Upgrade legacy hash now that we know the plaintext PIN
+        await set_user_pin(db, user_id, pin)
+    return True
 
 
 async def remove_user_pin(db: aiosqlite.Connection, user_id: str) -> bool:
@@ -590,31 +622,35 @@ async def purchase_farm_item(
     if not (0 <= grid_x <= 7 and 0 <= grid_y <= 7):
         return None
 
-    # Check XP budget
-    xp_earned = await _get_user_xp_earned(db, user_id)
-    spent_cursor = await db.execute(
-        "SELECT COALESCE(SUM(xp_cost), 0) as total FROM farm_items WHERE user_id = ?",
-        (user_id,),
-    )
-    spent_row = await spent_cursor.fetchone()
-    xp_spent = spent_row["total"]
-    if xp_earned - xp_spent < cost:
-        return None
+    # Acquire the write lock up front so the XP check and the insert are atomic
+    # across connections — otherwise two concurrent requests can double-spend.
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        # Check XP budget
+        xp_earned = await _get_user_xp_earned(db, user_id)
+        xp_spent = await _get_user_xp_spent(db, user_id)
+        if xp_earned - xp_spent < cost:
+            await db.rollback()
+            return None
 
-    # Check grid position not occupied
-    collision_cursor = await db.execute(
-        "SELECT id FROM farm_items WHERE user_id = ? AND grid_x = ? AND grid_y = ?",
-        (user_id, grid_x, grid_y),
-    )
-    if await collision_cursor.fetchone():
-        return None
+        # Check grid position not occupied
+        collision_cursor = await db.execute(
+            "SELECT id FROM farm_items WHERE user_id = ? AND grid_x = ? AND grid_y = ?",
+            (user_id, grid_x, grid_y),
+        )
+        if await collision_cursor.fetchone():
+            await db.rollback()
+            return None
 
-    # Insert
-    cursor = await db.execute(
-        "INSERT INTO farm_items (user_id, item_type, grid_x, grid_y, xp_cost) VALUES (?, ?, ?, ?, ?)",
-        (user_id, item_type, grid_x, grid_y, cost),
-    )
-    await db.commit()
+        # Insert
+        cursor = await db.execute(
+            "INSERT INTO farm_items (user_id, item_type, grid_x, grid_y, xp_cost) VALUES (?, ?, ?, ?, ?)",
+            (user_id, item_type, grid_x, grid_y, cost),
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     # Fetch the inserted row
     new_cursor = await db.execute(
@@ -714,13 +750,14 @@ async def add_user_cards(db: aiosqlite.Connection, user_id: str, card_ids: list[
     return new_ids
 
 
-async def get_all_users_card_counts(db: aiosqlite.Connection) -> dict[str, int]:
-    """Get card count per user for social display."""
-    cursor = await db.execute(
-        "SELECT user_id, COUNT(*) as count FROM card_collection GROUP BY user_id"
-    )
+async def get_all_users_cards(db: aiosqlite.Connection) -> dict[str, list[int]]:
+    """Get all card IDs per user in a single query (avoids N+1 in social view)."""
+    cursor = await db.execute("SELECT user_id, card_id FROM card_collection")
     rows = await cursor.fetchall()
-    return {r["user_id"]: r["count"] for r in rows}
+    result: dict[str, list[int]] = {}
+    for r in rows:
+        result.setdefault(r["user_id"], []).append(r["card_id"])
+    return result
 
 
 async def purchase_pack(
@@ -734,62 +771,71 @@ async def purchase_pack(
 
     cost = SETS[set_id]["cost"]
 
-    # Check XP budget
-    xp_earned = await _get_user_xp_earned(db, user_id)
-    xp_spent = await _get_user_xp_spent(db, user_id)
-    if xp_earned - xp_spent < cost:
-        return None
-
     # Get cards in this set
     set_cards = CARDS_BY_SET.get(set_id, [])
     if not set_cards:
         return None
 
-    # Get user's existing cards
-    owned = set(await get_user_cards(db, user_id))
+    # Acquire the write lock up front so the XP check, purchase record, and
+    # card grants are one atomic unit — prevents double-spend and partial packs.
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        # Check XP budget
+        xp_earned = await _get_user_xp_earned(db, user_id)
+        xp_spent = await _get_user_xp_spent(db, user_id)
+        if xp_earned - xp_spent < cost:
+            await db.rollback()
+            return None
 
-    # Pick 3 cards with rarity weighting
-    # Weight: common=50, uncommon=30, rare=15, legendary=5
-    weights = {"common": 50, "uncommon": 30, "rare": 15, "legendary": 5}
+        # Get user's existing cards
+        owned = set(await get_user_cards(db, user_id))
 
-    # Prefer cards the user doesn't own yet (but allow duplicates if they have all)
-    unowned = [c for c in set_cards if c["id"] not in owned]
-    pool = unowned if unowned else set_cards
+        # Pick 3 cards with rarity weighting
+        # Weight: common=50, uncommon=30, rare=15, legendary=5
+        weights = {"common": 50, "uncommon": 30, "rare": 15, "legendary": 5}
 
-    card_weights = [weights.get(c["rarity"], 50) for c in pool]
+        # Prefer cards the user doesn't own yet (but allow duplicates if they have all)
+        unowned = [c for c in set_cards if c["id"] not in owned]
+        pool = unowned if unowned else set_cards
 
-    # Pick 3 (or fewer if pool is small)
-    pick_count = min(3, len(pool))
-    selected = random.choices(pool, weights=card_weights, k=pick_count)
+        card_weights = [weights.get(c["rarity"], 50) for c in pool]
 
-    # Deduplicate within the pack
-    seen_ids: set[int] = set()
-    unique_selected = []
-    for c in selected:
-        if c["id"] not in seen_ids:
-            seen_ids.add(c["id"])
-            unique_selected.append(c)
+        # Pick 3 (or fewer if pool is small)
+        pick_count = min(3, len(pool))
+        selected = random.choices(pool, weights=card_weights, k=pick_count)
 
-    # If we got fewer than 3 due to dedup, try to fill from remaining pool
-    remaining = [c for c in pool if c["id"] not in seen_ids]
-    while len(unique_selected) < pick_count and remaining:
-        extra_weights = [weights.get(c["rarity"], 50) for c in remaining]
-        extra = random.choices(remaining, weights=extra_weights, k=1)[0]
-        if extra["id"] not in seen_ids:
-            seen_ids.add(extra["id"])
-            unique_selected.append(extra)
-            remaining = [c for c in remaining if c["id"] not in seen_ids]
+        # Deduplicate within the pack
+        seen_ids: set[int] = set()
+        unique_selected = []
+        for c in selected:
+            if c["id"] not in seen_ids:
+                seen_ids.add(c["id"])
+                unique_selected.append(c)
 
-    selected_ids = [c["id"] for c in unique_selected]
+        # If we got fewer than 3 due to dedup, try to fill from remaining pool
+        remaining = [c for c in pool if c["id"] not in seen_ids]
+        while len(unique_selected) < pick_count and remaining:
+            extra_weights = [weights.get(c["rarity"], 50) for c in remaining]
+            extra = random.choices(remaining, weights=extra_weights, k=1)[0]
+            if extra["id"] not in seen_ids:
+                seen_ids.add(extra["id"])
+                unique_selected.append(extra)
+                remaining = [c for c in remaining if c["id"] not in seen_ids]
 
-    # Record the purchase
-    await db.execute(
-        "INSERT INTO pack_purchases (user_id, set_id, xp_cost, card_ids_json) VALUES (?, ?, ?, ?)",
-        (user_id, set_id, cost, json.dumps(selected_ids)),
-    )
+        selected_ids = [c["id"] for c in unique_selected]
 
-    # Add cards to collection
-    new_ids = await add_user_cards(db, user_id, selected_ids)
+        # Record the purchase
+        await db.execute(
+            "INSERT INTO pack_purchases (user_id, set_id, xp_cost, card_ids_json) VALUES (?, ?, ?, ?)",
+            (user_id, set_id, cost, json.dumps(selected_ids)),
+        )
+
+        # Add cards to collection (commits the whole transaction at the end)
+        new_ids = await add_user_cards(db, user_id, selected_ids)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     return {
         "cards": unique_selected,

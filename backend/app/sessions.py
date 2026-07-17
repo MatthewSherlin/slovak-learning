@@ -25,7 +25,6 @@ from .prompts import (
     FEEDBACK_PROMPT,
     GRAMMAR_LESSON_PROMPT,
     HINT_PROMPT,
-    MODE_PROMPTS,
     TRANSLATION_BATCH_PROMPT,
     TRANSLATION_EVALUATE_PROMPT,
     VOCAB_BATCH_PROMPT,
@@ -55,6 +54,9 @@ async def _get_learning_context(
     """
     sections: list[str] = []
 
+    all_sessions = await list_sessions(db, user_id)
+    completed_sessions = [s for s in all_sessions if s["completed"]]
+
     # ── 1. Vocabulary progress summary ──
     all_vocab = await get_vocab_progress(db, user_id)
     if all_vocab:
@@ -66,8 +68,6 @@ async def _get_learning_context(
         ]
 
         # Topics covered: derive from completed sessions
-        all_sessions = await list_sessions(db, user_id)
-        completed_sessions = [s for s in all_sessions if s["completed"]]
         topic_counts: dict[str, int] = {}
         for s in completed_sessions:
             topic_label = TOPICS.get(s["mode"], {}).get(s["topic"], s["topic"])
@@ -96,12 +96,9 @@ async def _get_learning_context(
         sections.append(f"[Student's vocabulary progress]\n{vocab_section}")
 
     # ── 2. Recent session history digest (last 3 for this mode) ──
-    if not all_vocab:
-        all_sessions = await list_sessions(db, user_id)
-        completed_sessions = [s for s in all_sessions if s["completed"]]
     mode_sessions = [
-        s for s in all_sessions
-        if s["completed"] and s["mode"] == mode and s.get("feedback")
+        s for s in completed_sessions
+        if s["mode"] == mode and s.get("feedback")
     ][:3]
 
     if mode_sessions:
@@ -416,6 +413,8 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
         raise ValueError("No more questions")
 
     q = questions[idx]
+    if not (0 <= choice_index < len(q["choices"])):
+        raise ValueError(f"choice_index out of range: {choice_index}")
     is_correct = choice_index == q["correctIndex"]
     ex["answers"][idx] = choice_index
 

@@ -4,14 +4,16 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import settings
 from .database import (
     get_db,
     get_dashboard_stats,
     get_leaderboard,
+    get_user,
     get_users,
     get_user_preferences,
     get_vocab_progress,
@@ -25,14 +27,13 @@ from .database import (
     set_user_pin,
     verify_user_pin,
     remove_user_pin,
-    user_has_pin,
     get_user_farm,
     purchase_farm_item,
     move_farm_item,
     remove_farm_item,
     get_user_cards,
     purchase_pack,
-    get_all_users_card_counts,
+    get_all_users_cards,
     _get_user_xp_earned,
     _get_user_xp_spent,
 )
@@ -50,6 +51,7 @@ from .models import (
     UpdatePreferencesRequest,
     VocabAnswerRequest,
 )
+from .llm import LLMError
 from .questions import QUESTIONS, TOPICS
 from .sessions import (
     advance_grammar_phase,
@@ -79,6 +81,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(LLMError)
+async def llm_error_handler(request: Request, exc: LLMError) -> JSONResponse:
+    """Surface upstream AI failures as 502 instead of a raw 500."""
+    logging.getLogger(__name__).error("LLM failure on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "AI service temporarily unavailable — please try again."},
+    )
 
 
 # ── Health ───────────────────────────────────────────────────────────
@@ -196,6 +208,8 @@ async def get_topics(mode: str):
 @app.post("/api/sessions")
 async def create(req: CreateSessionRequest):
     async with get_db() as db:
+        if not await get_user(db, req.user_id):
+            raise HTTPException(404, "User not found")
         session = await create_session(db, {
             "user_id": req.user_id,
             "mode": req.mode.value,
@@ -429,12 +443,12 @@ async def cards_social():
     """Get card collection stats for all users (for social comparison)."""
     async with get_db() as db:
         users_list = await get_users(db)
-        counts = await get_all_users_card_counts(db)
+        cards_by_user = await get_all_users_cards(db)
 
         result = []
         for user in users_list:
             uid = user["id"]
-            card_ids = await get_user_cards(db, uid)
+            card_ids = cards_by_user.get(uid, [])
             # Group by set
             set_counts = {}
             for cid in card_ids:
@@ -448,7 +462,7 @@ async def cards_social():
                 "name": user["name"],
                 "avatar": user["avatar"],
                 "color": user["color"],
-                "total_cards": counts.get(uid, 0),
+                "total_cards": len(card_ids),
                 "sets_progress": set_counts,
             })
 

@@ -229,3 +229,25 @@ async def test_preferences_user_isolation(db):
 
     assert matt_prefs["custom_focus_areas"] == ["topic A"]
     assert zuki_prefs["custom_focus_areas"] == ["topic B"]
+
+
+# ── get_db error handling ────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_db_rolls_back_on_exception(_init_schema):
+    """Uncommitted writes inside a failed get_db block must not persist."""
+    from app.database import get_db
+
+    marker_id = "rollback-test-user"
+    with pytest.raises(RuntimeError):
+        async with get_db() as db:
+            await db.execute(
+                "INSERT INTO users (id, name, avatar, color) VALUES (?, 'X', 'X', '#000')",
+                (marker_id,),
+            )
+            raise RuntimeError("boom before commit")
+
+    async with get_db() as db:
+        cursor = await db.execute("SELECT id FROM users WHERE id = ?", (marker_id,))
+        assert await cursor.fetchone() is None, "partial write leaked through"
