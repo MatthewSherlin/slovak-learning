@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, BookText, MessageCircle, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
+import { Volume2, BookText, MessageCircle, ChevronDown, ChevronUp, BookOpen, Check } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { useUser } from '../components/UserPicker';
 
 interface Guide {
   id: string;
   icon: typeof Volume2;
   color: string;
   iconBg: string;
+  accentColor: string;
   title: string;
   subtitle: string;
   sections: { heading: string; content: string }[];
@@ -16,8 +19,9 @@ const guides: Guide[] = [
   {
     id: 'pronunciation',
     icon: Volume2,
-    color: 'text-mode-vocab',
-    iconBg: 'bg-emerald-500/12',
+    color: 'text-[#5de4a5]',
+    iconBg: 'bg-[rgba(93,228,165,0.12)]',
+    accentColor: '#5de4a5',
     title: 'Slovak Pronunciation',
     subtitle: 'Master the sounds that make Slovak unique',
     sections: [
@@ -42,8 +46,9 @@ const guides: Guide[] = [
   {
     id: 'cases',
     icon: BookText,
-    color: 'text-mode-grammar',
-    iconBg: 'bg-violet-500/12',
+    color: 'text-[#a78bfa]',
+    iconBg: 'bg-[rgba(167,139,250,0.12)]',
+    accentColor: '#a78bfa',
     title: 'Case System Overview',
     subtitle: 'The 6 cases of Slovak nouns and how to use them',
     sections: [
@@ -76,8 +81,9 @@ const guides: Guide[] = [
   {
     id: 'phrases',
     icon: MessageCircle,
-    color: 'text-mode-conversation',
-    iconBg: 'bg-amber-500/12',
+    color: 'text-[#f5c45e]',
+    iconBg: 'bg-[rgba(245,196,94,0.12)]',
+    accentColor: '#f5c45e',
     title: 'Essential Phrases',
     subtitle: 'Survival Slovak for everyday situations',
     sections: [
@@ -101,34 +107,86 @@ const guides: Guide[] = [
   },
 ];
 
+// ── localStorage helpers ──────────────────────────────────────────────
+
+function lsKey(userId: string) {
+  return `guides:read:${userId}`;
+}
+
+function loadReadIds(userId: string): string[] {
+  try {
+    const raw = localStorage.getItem(lsKey(userId));
+    const parsed = JSON.parse(raw ?? '[]');
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveReadIds(userId: string, ids: string[]): void {
+  try {
+    localStorage.setItem(lsKey(userId), JSON.stringify(ids));
+  } catch {
+    // Private browsing / quota exceeded — silently ignore
+  }
+}
+
+// ── Component ─────────────────────────────────────────────────────────
+
 export default function Guides() {
-  const [expandedGuide, setExpandedGuide] = useState<string | null>('pronunciation');
+  const { user } = useUser();
+  const userId = user?.id ?? 'anonymous';
+
+  const [expandedGuide, setExpandedGuide] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [readIds, setReadIds] = useState<string[]>(() => loadReadIds(userId));
 
   const toggleGuide = (id: string) => {
-    setExpandedGuide(expandedGuide === id ? null : id);
+    setExpandedGuide((prev) => (prev === id ? null : id));
   };
 
-  const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggleSection = useCallback(
+    (sectionId: string, key: string) => {
+      setExpandedSections((prev) => {
+        const opening = !prev[key];
+        const next = { ...prev, [key]: opening };
+
+        // Mark as read when opening
+        if (opening) {
+          setReadIds((prevRead) => {
+            if (prevRead.includes(sectionId)) return prevRead;
+            const nextRead = [...prevRead, sectionId];
+            saveReadIds(userId, nextRead);
+            return nextRead;
+          });
+        }
+
+        return next;
+      });
+    },
+    [userId]
+  );
 
   return (
-    <div className="max-w-3xl mx-auto px-6 pt-32 pb-16">
+    <div className="max-w-3xl mx-auto px-5 pt-32 pb-16">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2.5 mb-2">
+        <div className="flex items-center gap-2.5 mb-1.5">
           <BookOpen size={20} className="text-accent" />
-          <h1 className="text-3xl font-bold text-text-primary tracking-tight">Slovak Guides</h1>
+          <h1 className="text-[26px] font-extrabold text-text-primary tracking-tight">Guides</h1>
         </div>
-        <p className="text-text-muted text-sm mb-10">
-          Reference guides and cheat sheets to help you learn Slovak faster.
+        <p className="text-[13.5px] text-text-muted mb-6">
+          Cheat sheets for faster learning.
         </p>
       </motion.div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {guides.map((guide, gi) => {
           const Icon = guide.icon;
           const isOpen = expandedGuide === guide.id;
+          const totalSections = guide.sections.length;
+          const readCount = guide.sections.filter((_, si) =>
+            readIds.includes(`${guide.id}-${si}`)
+          ).length;
 
           return (
             <motion.div
@@ -136,24 +194,28 @@ export default function Guides() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: gi * 0.08 }}
-              className="bg-surface border border-border rounded-2xl overflow-hidden"
+              className="bg-[#151926] border border-white/[0.06] rounded-[22px] overflow-hidden"
             >
               {/* Guide Header */}
               <button
                 onClick={() => toggleGuide(guide.id)}
-                className="w-full flex items-center gap-4 p-5 text-left bg-transparent border-none cursor-pointer hover:bg-surface-hover transition-colors"
+                className="w-full flex items-center gap-3.5 p-[18px] text-left bg-transparent border-none cursor-pointer hover:bg-white/[0.03] transition-colors"
               >
-                <div className={`${guide.iconBg} ${guide.color} w-10 h-10 rounded-xl flex items-center justify-center shrink-0`}>
-                  <Icon size={18} />
+                <div
+                  className={`${guide.iconBg} ${guide.color} w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0`}
+                >
+                  <Icon size={20} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-[15px] font-semibold text-text-primary">{guide.title}</h3>
-                  <p className="text-[12px] text-text-muted mt-0.5">{guide.subtitle}</p>
+                  <h3 className="text-[15px] font-bold text-text-primary m-0">{guide.title}</h3>
+                  <p className="text-[12px] text-[#6b7289] mt-0.5 m-0">
+                    {totalSections} sections{readCount > 0 ? ` · ${readCount} read` : ' · 0 read'}
+                  </p>
                 </div>
                 {isOpen ? (
-                  <ChevronUp size={16} className="text-text-faint shrink-0" />
+                  <ChevronUp size={16} className="text-[#4a5068] shrink-0" />
                 ) : (
-                  <ChevronDown size={16} className="text-text-faint shrink-0" />
+                  <ChevronDown size={16} className="text-[#4a5068] shrink-0" />
                 )}
               </button>
 
@@ -167,27 +229,51 @@ export default function Guides() {
                     transition={{ duration: 0.25 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-5 pb-5 space-y-2">
+                    <div className="px-[18px] pb-[18px] flex flex-col gap-1.5">
                       {guide.sections.map((section, si) => {
-                        const sectionKey = `${guide.id}-${si}`;
-                        const sectionOpen = expandedSections[sectionKey] ?? si === 0;
+                        const sectionId = `${guide.id}-${si}`;
+                        const sectionKey = sectionId;
+                        const sectionOpen = expandedSections[sectionKey] ?? false;
+                        const isRead = readIds.includes(sectionId);
 
                         return (
-                          <div key={si} className="border border-border-subtle rounded-xl overflow-hidden">
+                          <div
+                            key={si}
+                            className="rounded-[14px] bg-white/[0.03] overflow-hidden"
+                            style={{ minHeight: 44, boxSizing: 'border-box' }}
+                          >
+                            {/* Section row */}
                             <button
-                              onClick={() => toggleSection(sectionKey)}
-                              className="w-full flex items-center justify-between p-3.5 text-left bg-surface-2 hover:bg-surface-3 border-none cursor-pointer transition-colors"
+                              onClick={() => toggleSection(sectionId, sectionKey)}
+                              className="w-full flex items-center gap-3 px-3.5 py-[13px] text-left bg-transparent border-none cursor-pointer hover:bg-white/[0.04] transition-colors"
                             >
-                              <span className="text-[13px] font-medium text-text-primary">
+                              {/* Read indicator */}
+                              {isRead ? (
+                                <div
+                                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                                  style={{ background: `${guide.accentColor}26` }}
+                                >
+                                  <Check size={11} color={guide.accentColor} strokeWidth={3} />
+                                </div>
+                              ) : (
+                                <div
+                                  className="w-5 h-5 rounded-full border shrink-0"
+                                  style={{ borderColor: 'rgba(255,255,255,0.15)', boxSizing: 'border-box' }}
+                                />
+                              )}
+                              <span
+                                className={`flex-1 text-[13.5px] font-semibold ${isRead ? 'text-text-primary' : 'text-[#a3aabe]'}`}
+                              >
                                 {section.heading}
                               </span>
-                              {sectionOpen ? (
-                                <ChevronUp size={13} className="text-text-faint shrink-0" />
-                              ) : (
-                                <ChevronDown size={13} className="text-text-faint shrink-0" />
-                              )}
+                              <ChevronDown
+                                size={14}
+                                className="text-[#4a5068] shrink-0 transition-transform"
+                                style={{ transform: sectionOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                              />
                             </button>
 
+                            {/* Section content */}
                             <AnimatePresence>
                               {sectionOpen && (
                                 <motion.div
@@ -197,32 +283,9 @@ export default function Guides() {
                                   transition={{ duration: 0.2 }}
                                   className="overflow-hidden"
                                 >
-                                  <div className="px-4 py-3 border-t border-border-subtle">
-                                    <div className="text-[12.5px] text-text-secondary leading-relaxed whitespace-pre-line markdown-content">
-                                      {section.content.split('\n').map((line, li) => {
-                                        if (line.startsWith('**') && line.endsWith('**')) {
-                                          return <p key={li} className="font-semibold text-text-primary mt-2 mb-1">{line.replace(/\*\*/g, '')}</p>;
-                                        }
-                                        if (line.startsWith('- **')) {
-                                          const [bold, ...rest] = line.slice(2).split('**');
-                                          return (
-                                            <div key={li} className="flex items-start gap-1.5 ml-2 mb-0.5">
-                                              <span className="text-accent shrink-0 mt-px">&bull;</span>
-                                              <span><strong className="text-text-primary">{bold.replace(/\*\*/g, '')}</strong>{rest.join('**')}</span>
-                                            </div>
-                                          );
-                                        }
-                                        if (line.startsWith('- ')) {
-                                          return (
-                                            <div key={li} className="flex items-start gap-1.5 ml-2 mb-0.5">
-                                              <span className="text-text-faint shrink-0 mt-px">&bull;</span>
-                                              <span>{line.slice(2)}</span>
-                                            </div>
-                                          );
-                                        }
-                                        if (line.trim() === '') return <div key={li} className="h-2" />;
-                                        return <p key={li} className="mb-0.5">{line}</p>;
-                                      })}
+                                  <div className="px-4 py-3 border-t border-white/[0.06]">
+                                    <div className="text-[12.5px] text-text-secondary leading-relaxed prose prose-invert prose-sm max-w-none">
+                                      <ReactMarkdown>{section.content}</ReactMarkdown>
                                     </div>
                                   </div>
                                 </motion.div>
