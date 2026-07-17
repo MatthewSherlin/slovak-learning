@@ -75,17 +75,17 @@ describe('CardFrame rarity', () => {
 describe('CardFrame number footer', () => {
   it('formats number and setTotal with 3-digit zero-padding', () => {
     render(<CardFrame card={baseCard} setTotal={16} />);
-    expect(screen.getByText('#001/016')).toBeTruthy();
+    expect(screen.getByText('001 / 016')).toBeTruthy();
   });
 
   it('uses the setTotal prop as denominator (not a hardcoded value)', () => {
     render(<CardFrame card={{ ...baseCard, number: 7 }} setTotal={42} />);
-    expect(screen.getByText('#007/042')).toBeTruthy();
+    expect(screen.getByText('007 / 042')).toBeTruthy();
   });
 
   it('handles single-digit card number', () => {
     render(<CardFrame card={{ ...baseCard, number: 3 }} setTotal={10} />);
-    expect(screen.getByText('#003/010')).toBeTruthy();
+    expect(screen.getByText('003 / 010')).toBeTruthy();
   });
 });
 

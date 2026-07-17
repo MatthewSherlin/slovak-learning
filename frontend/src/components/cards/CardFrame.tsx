@@ -29,7 +29,7 @@ export default function CardFrame({ card, setTotal, size = 210 }: CardFrameProps
   const theme = RARITY_THEMES[card.rarity];
   const scale = size / 210;
 
-  const numStr = `#${String(card.number).padStart(3, '0')}/${String(setTotal).padStart(3, '0')}`;
+  const numStr = `${String(card.number).padStart(3, '0')} / ${String(setTotal).padStart(3, '0')}`;
 
   const isMythic = card.rarity === 'mythic';
   const isLegendary = card.rarity === 'legendary';

@@ -14,6 +14,7 @@ import Session from './pages/Session';
 import Stats from './pages/Stats';
 import Guides from './pages/Guides';
 import Farm from './pages/Farm';
+import Cards from './pages/Cards';
 import type { User } from './lib/types';
 
 /** Routes where the tab bar should NOT appear (full-screen experiences) */
@@ -90,7 +91,7 @@ function AppShell() {
       <Routes>
         {/* Main tab routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/cards" element={<Farm />} />
+        <Route path="/cards" element={<Cards />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/guides" element={<Guides />} />
 
