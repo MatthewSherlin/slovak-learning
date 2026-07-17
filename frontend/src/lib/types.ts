@@ -55,6 +55,7 @@ export interface VocabQuestion {
   choices: string[];
   correctIndex: number;
   explanation: string;
+  pronunciation?: string;
 }
 
 export interface VocabExerciseData {

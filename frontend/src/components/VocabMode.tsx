@@ -32,9 +32,10 @@ export default function VocabMode({ session, setSession, onEnd: _onEnd }: VocabM
   const currentQuestion = ex.questions[ex.currentIndex] ?? null;
 
   // Bug fix #7: derive progress from answers state — never use retryQueue.indexOf(currentIndex)
-  const totalInPhase = ex.phase === 'retry' ? ex.retryQueue.length : ex.questions.length;
+  // During retry: filled = words mastered so far = questions.length - retryQueue.length
+  const totalInPhase = ex.questions.length;
   const currentInPhase = ex.phase === 'retry'
-    ? ex.retryQueue.filter(qi => ex.answers[qi] !== null).length
+    ? ex.questions.length - ex.retryQueue.length
     : ex.currentIndex;
 
   const isCorrect = selected !== null && currentQuestion !== null
@@ -127,12 +128,8 @@ export default function VocabMode({ session, setSession, onEnd: _onEnd }: VocabM
     : 'What is this in Slovak?';
 
   // ── Progress segments ─────────────────────────────────────────────────
-  const progressSegments = (() => {
-    if (ex.phase === 'retry') {
-      return Array.from({ length: ex.retryQueue.length }, (_, i) => i < currentInPhase);
-    }
-    return Array.from({ length: ex.questions.length }, (_, i) => i < currentInPhase);
-  })();
+  // Always use total questions as segment count; filled = words mastered so far
+  const progressSegments = Array.from({ length: ex.questions.length }, (_, i) => i < currentInPhase);
 
   // ── Active quiz ───────────────────────────────────────────────────────
   return (
@@ -179,7 +176,7 @@ export default function VocabMode({ session, setSession, onEnd: _onEnd }: VocabM
       <div style={{ paddingLeft: 20, paddingRight: 20, paddingBottom: 4 }}>
         {ex.phase === 'retry' ? (
           <p data-testid="retry-progress" style={{ fontSize: 11, color: '#f5c45e', fontWeight: 600, margin: 0 }}>
-            Retry round · {currentInPhase} / {totalInPhase}
+            Retry round · {ex.retryQueue.length} left
           </p>
         ) : (
           <p data-testid="questions-progress" style={{ fontSize: 11, color: '#6b7289', fontWeight: 500, margin: 0 }}>
@@ -230,8 +227,8 @@ export default function VocabMode({ session, setSession, onEnd: _onEnd }: VocabM
               }}>
                 {currentQuestion.word}
               </div>
-              {/* Pronunciation pill — JetBrains Mono */}
-              {currentQuestion.direction === 'sk-en' && (
+              {/* Pronunciation pill — JetBrains Mono — only shown when pronunciation data is available */}
+              {currentQuestion.direction === 'sk-en' && currentQuestion.pronunciation && (
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7,
                   padding: '7px 14px', borderRadius: 999,
@@ -244,7 +241,7 @@ export default function VocabMode({ session, setSession, onEnd: _onEnd }: VocabM
                     fontFamily: "'JetBrains Mono', monospace",
                     color: '#a3aabe',
                   }}>
-                    {currentQuestion.word.toUpperCase().split('').join('-')}
+                    /{currentQuestion.pronunciation}/
                   </span>
                 </div>
               )}
