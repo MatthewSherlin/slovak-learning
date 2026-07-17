@@ -11,10 +11,12 @@ import aiosqlite
 
 from .database import (
     create_session as db_create_session,
+    get_due_words,
     get_session as db_get_session,
     get_user,
     get_vocab_progress,
     get_weak_words,
+    get_weakest_concepts,
     list_sessions,
     record_concept_result,
     update_session as db_update_session,
@@ -156,6 +158,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
 
     focus_areas = req.get("focus_areas", [])
     learning_context = await _get_learning_context(db, req["user_id"], "vocabulary")
+    due_words = await get_due_words(db, req["user_id"], limit=6)
 
     # When focus areas exist, use them AS the topic instead of the generic category
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
@@ -173,6 +176,16 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
             f"\n\nCRITICAL: ALL 10 questions MUST be about {effective_topic}. "
             "Do NOT use generic words like water, book, bread, etc. unless they "
             "are directly related to the topic. Every word must connect to the topic."
+        )
+
+    if due_words:
+        due_list = ", ".join(
+            f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
+            for w in due_words
+        )
+        prompt += (
+            f"\n\nPRIORITY — these words are due for review; include as many as fit "
+            f"the topic (at least {min(len(due_words), 4)}): {due_list}"
         )
 
     # Hard deduplication: fetch all previously seen words and exclude them
@@ -246,6 +259,11 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
     focus_areas = req.get("focus_areas", [])
+    target_concept = None
+    if req.get("topic", "general") == "general" and not focus_areas:
+        weakest = await get_weakest_concepts(db, req["user_id"], limit=1)
+        if weakest and weakest[0]["accuracy"] < 0.7:
+            target_concept = weakest[0]["concept"]
     learning_context = await _get_learning_context(db, req["user_id"], "grammar")
 
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
@@ -261,6 +279,12 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
         prompt += (
             f"\n\nCRITICAL: Use example sentences and vocabulary related to {effective_topic}. "
             "All exercises must use vocabulary from this domain."
+        )
+
+    if target_concept:
+        prompt += (
+            f"\n\nTARGET CONCEPT: The student's weakest concept is '{target_concept}' "
+            f"— build this lesson on that concept."
         )
 
     data = await ask_json(prompt, GRAMMAR_LESSON_PROMPT)
