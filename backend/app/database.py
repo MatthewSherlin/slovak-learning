@@ -106,6 +106,16 @@ async def init_db() -> None:
         except Exception:
             pass  # Column already exists
 
+        # Migration: SRS columns on vocabulary_progress
+        for ddl in (
+            "ALTER TABLE vocabulary_progress ADD COLUMN due_at TEXT",
+            "ALTER TABLE vocabulary_progress ADD COLUMN interval_days REAL DEFAULT 1",
+        ):
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass  # Column already exists
+
         # Create farm_items table
         await db.execute("""
             CREATE TABLE IF NOT EXISTS farm_items (
@@ -403,24 +413,49 @@ async def upsert_vocab_progress(
     user_id: str,
     words: list[dict],
 ) -> None:
-    """Insert or update vocabulary progress for a batch of words."""
-    now = datetime.now(timezone.utc).isoformat()
+    """Insert or update vocabulary progress with SRS scheduling.
+
+    Correct answers grow the review interval (x2.5, capped at 60 days);
+    wrong answers reset it to 1 day and mark the word due immediately.
+    """
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
     for w in words:
         slovak = w["slovak"].strip().lower()
         english = w["english"].strip().lower()
-        correct_int = int(w.get("correct", False))
+        correct = bool(w.get("correct", False))
+        correct_int = int(correct)
         if not slovak:
             continue
+
+        cursor = await db.execute(
+            "SELECT interval_days FROM vocabulary_progress WHERE user_id = ? AND slovak = ?",
+            (user_id, slovak),
+        )
+        row = await cursor.fetchone()
+        prev_interval = row["interval_days"] if row and row["interval_days"] else 1.0
+
+        if correct:
+            interval = min((prev_interval if row else 0.4) * 2.5, 60.0)
+            due_at = (now_dt + timedelta(days=interval)).isoformat()
+        else:
+            interval = 1.0
+            due_at = now
+
         await db.execute(
             """INSERT INTO vocabulary_progress
-               (user_id, slovak, english, times_seen, times_correct, last_seen_at, source_mode, created_at)
-               VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+               (user_id, slovak, english, times_seen, times_correct, last_seen_at,
+                source_mode, created_at, due_at, interval_days)
+               VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id, slovak) DO UPDATE SET
                    times_seen = times_seen + 1,
                    times_correct = times_correct + ?,
                    last_seen_at = ?,
+                   due_at = ?,
+                   interval_days = ?,
                    english = CASE WHEN excluded.english != '' THEN excluded.english ELSE english END""",
-            (user_id, slovak, english, correct_int, now, w["source_mode"], now, correct_int, now),
+            (user_id, slovak, english, correct_int, now, w["source_mode"], now,
+             due_at, interval, correct_int, now, due_at, interval),
         )
     await db.commit()
 
@@ -467,6 +502,21 @@ async def get_weak_words(db: aiosqlite.Connection, user_id: str, limit: int = 10
            ORDER BY CAST(times_correct AS REAL) / MAX(times_seen, 1) ASC, times_seen DESC
            LIMIT ?""",
         (user_id, limit),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def get_due_words(db: aiosqlite.Connection, user_id: str, limit: int = 20) -> list[dict]:
+    """Words due for review now, weakest accuracy first."""
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = await db.execute(
+        """SELECT slovak, english, times_seen, times_correct, last_seen_at, source_mode, due_at
+           FROM vocabulary_progress
+           WHERE user_id = ? AND due_at IS NOT NULL AND due_at <= ?
+           ORDER BY CAST(times_correct AS REAL) / MAX(times_seen, 1) ASC, due_at ASC
+           LIMIT ?""",
+        (user_id, now, limit),
     )
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
