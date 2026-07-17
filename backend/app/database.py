@@ -155,6 +155,17 @@ async def init_db() -> None:
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_packs_user ON pack_purchases(user_id)")
 
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS concept_progress (
+                user_id TEXT NOT NULL REFERENCES users(id),
+                concept TEXT NOT NULL,
+                times_seen INTEGER NOT NULL DEFAULT 0,
+                times_correct REAL NOT NULL DEFAULT 0,
+                last_seen_at TEXT NOT NULL,
+                PRIMARY KEY (user_id, concept)
+            )
+        """)
+
         for user in _DEFAULT_USERS:
             await db.execute(
                 "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, ?, ?, ?)",
@@ -520,6 +531,50 @@ async def get_due_words(db: aiosqlite.Connection, user_id: str, limit: int = 20)
     )
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Concept Progress ────────────────────────────────────────────────
+
+
+async def record_concept_result(
+    db: aiosqlite.Connection, user_id: str, concept: str, credits: list[float]
+) -> None:
+    """Accumulate grammar-concept results (fractional credit supported)."""
+    concept = concept.strip()
+    if not concept or not credits:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO concept_progress (user_id, concept, times_seen, times_correct, last_seen_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, concept) DO UPDATE SET
+               times_seen = times_seen + ?,
+               times_correct = times_correct + ?,
+               last_seen_at = ?""",
+        (user_id, concept, len(credits), sum(credits), now,
+         len(credits), sum(credits), now),
+    )
+    await db.commit()
+
+
+async def get_weakest_concepts(
+    db: aiosqlite.Connection, user_id: str, limit: int = 3
+) -> list[dict]:
+    """Concepts with lowest accuracy (min 3 samples), weakest first."""
+    cursor = await db.execute(
+        """SELECT concept, times_seen, times_correct,
+                  times_correct / MAX(times_seen, 1) AS accuracy
+           FROM concept_progress
+           WHERE user_id = ? AND times_seen >= 3
+           ORDER BY accuracy ASC
+           LIMIT ?""",
+        (user_id, limit),
+    )
+    rows = await cursor.fetchall()
+    return [
+        {"concept": r["concept"], "accuracy": round(r["accuracy"], 2), "times_seen": r["times_seen"]}
+        for r in rows
+    ]
 
 
 # ── User Preferences ────────────────────────────────────────────────

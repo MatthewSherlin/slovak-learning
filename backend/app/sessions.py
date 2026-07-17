@@ -16,6 +16,7 @@ from .database import (
     get_vocab_progress,
     get_weak_words,
     list_sessions,
+    record_concept_result,
     update_session as db_update_session,
     upsert_vocab_progress,
 )
@@ -752,6 +753,12 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
             if words:
                 await upsert_vocab_progress(db, session_with_feedback["user_id"], words)
                 log.info("Tracked %d words for user %s", len(words), session_with_feedback["user_id"])
+            ex = session_with_feedback.get("exercises") or {}
+            if ex.get("type") == "grammar":
+                concept = (ex.get("lesson") or {}).get("concept", "")
+                credits = [c for c in (ex.get("credits") or []) if c is not None]
+                if concept and credits:
+                    await record_concept_result(db, session_with_feedback["user_id"], concept, credits)
     except Exception:
         log.exception("Failed to extract vocab progress for session %s", session_id)
 
