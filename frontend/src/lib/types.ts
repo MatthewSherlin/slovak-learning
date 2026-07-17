@@ -325,7 +325,3 @@ export interface TradeInResult {
   xp_gained: number;
 }
 
-// -- Extended pack purchase result --
-export interface PackPurchaseResultV2 extends PackPurchaseResult {
-  copies?: Record<string, number>;
-}

@@ -53,6 +53,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
   const [startError, setStartError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [streak, setStreak] = useState(0);
   const [shakeInput, setShakeInput] = useState(false);
@@ -82,26 +83,31 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
-    const updated = await submitGrammarAnswer(session.id, input.trim());
-    if (updated.exercises?.type !== 'grammar') return;
-    const updatedEx = updated.exercises;
-    const prevIndex = updatedEx.currentIndex - 1;
-    const wasCorrect = updatedEx.correct[prevIndex] ?? false;
-    const tier = updatedEx.tiers?.[prevIndex] ?? null;
-    setLastCorrect(wasCorrect);
-    setLastTier(tier);
-    setShowResult(true);
+    setSubmitError('');
+    try {
+      const updated = await submitGrammarAnswer(session.id, input.trim());
+      if (updated.exercises?.type !== 'grammar') return;
+      const updatedEx = updated.exercises;
+      const prevIndex = updatedEx.currentIndex - 1;
+      const wasCorrect = updatedEx.correct[prevIndex] ?? false;
+      const tier = updatedEx.tiers?.[prevIndex] ?? null;
+      setLastCorrect(wasCorrect);
+      setLastTier(tier);
+      setShowResult(true);
 
-    if (wasCorrect) {
-      setStreak(s => s + 1);
-      playCorrect();
-    } else {
-      setStreak(0);
-      setShakeInput(true);
-      playIncorrect();
+      if (wasCorrect) {
+        setStreak(s => s + 1);
+        playCorrect();
+      } else {
+        setStreak(0);
+        setShakeInput(true);
+        playIncorrect();
+      }
+
+      setSession(updated);
+    } catch {
+      setSubmitError('Failed to submit answer. Please try again.');
     }
-
-    setSession(updated);
   };
 
   const handleSelect = async (idx: number) => {
@@ -555,6 +561,12 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
               ) : (
                 /* Text input (intermediate/advanced) */
                 <div>
+                  {submitError && (
+                    <div className="flex items-center gap-2 text-[12px] text-danger mb-3">
+                      <AlertCircle size={13} />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
                   <div className="flex gap-3 items-end">
                     <input
                       ref={inputRef}

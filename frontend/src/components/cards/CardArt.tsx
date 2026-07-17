@@ -37,7 +37,7 @@ export default function CardArt({ card, height = 118, borderRadius = '10px' }: C
     >
       {!errored ? (
         <img
-          src={`/cards/${card.set_id}/${card.id}.jpg`}
+          src={`${import.meta.env.BASE_URL}cards/${card.set_id}/${card.id}.jpg`}
           alt={card.slovak}
           onError={() => setErrored(true)}
           style={{

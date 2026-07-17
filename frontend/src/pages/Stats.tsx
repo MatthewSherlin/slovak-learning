@@ -395,6 +395,7 @@ function HistoryPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   const load = useCallback(() => {
@@ -412,9 +413,16 @@ function HistoryPanel() {
     load();
   }, [load]);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteRequest = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Delete this session?')) return;
+    setPendingDeleteId(id);
+  };
+
+  const handleDeleteConfirm = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     setDeleteError(null);
     try {
       await deleteSession(id);
@@ -422,6 +430,11 @@ function HistoryPanel() {
     } catch {
       setDeleteError('Failed to delete session. Please try again.');
     }
+  };
+
+  const handleDeleteCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPendingDeleteId(null);
   };
 
   if (loading) {
@@ -518,13 +531,32 @@ function HistoryPanel() {
 
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[11px] text-text-faint">{timeAgo}</span>
-                <button
-                  onClick={(e) => handleDelete(session.id, e)}
-                  aria-label="Delete session"
-                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
-                >
-                  <Trash2 size={13} />
-                </button>
+                {pendingDeleteId === session.id ? (
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={handleDeleteConfirm}
+                      aria-label="Confirm delete"
+                      className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-danger text-white border-none cursor-pointer transition-colors hover:bg-danger/80"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={handleDeleteCancel}
+                      aria-label="Cancel delete"
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border cursor-pointer transition-colors hover:bg-surface-3"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => handleDeleteRequest(session.id, e)}
+                    aria-label="Delete session"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             </motion.div>
           );

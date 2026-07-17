@@ -240,12 +240,15 @@ describe('Stats', () => {
       expect(screen.queryByText(/Animals/i)).not.toBeNull();
     });
 
-    // Confirm the delete prompt
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    // Hover to reveal delete button and click it
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    // First tap shows inline "Delete? / Cancel" buttons
+    const deleteButtons = screen.getAllByRole('button', { name: /delete session/i });
     fireEvent.click(deleteButtons[0]);
+
+    // Inline confirm button should now appear — click it to confirm
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /confirm delete/i })).not.toBeNull();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /confirm delete/i }));
 
     // Wait a tick and verify session still in list
     await waitFor(() => {
@@ -262,10 +265,14 @@ describe('Stats', () => {
       expect(screen.queryByText(/Animals/i)).not.toBeNull();
     });
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    // First tap — show inline confirm
+    const deleteButtons = screen.getAllByRole('button', { name: /delete session/i });
     fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /confirm delete/i })).not.toBeNull();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /confirm delete/i }));
 
     await waitFor(() => {
       expect(screen.queryByText(/failed to delete/i)).not.toBeNull();

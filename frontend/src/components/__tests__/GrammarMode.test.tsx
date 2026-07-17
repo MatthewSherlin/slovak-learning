@@ -515,4 +515,27 @@ describe('GrammarMode', () => {
     expect(mockEnd).not.toHaveBeenCalled();
     expect(mockGet).not.toHaveBeenCalled();
   });
+
+  // ── I3: handleSubmit error handling ─────────────────────────────────────
+  it('shows inline error and re-enables input when submitGrammarAnswer rejects', async () => {
+    const { submitGrammarAnswer } = await import('../../lib/api');
+    const mockSubmit = vi.mocked(submitGrammarAnswer);
+    mockSubmit.mockRejectedValueOnce(new Error('Network error'));
+
+    const user = userEvent.setup();
+    const session = makeFirstExerciseSession();
+    render(<GrammarWrapper initialSession={session} />);
+
+    const input = screen.getByPlaceholderText('Type the missing word...');
+    await user.type(input, 'hovorim');
+    await user.keyboard('{Enter}');
+
+    // Error text should appear
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to submit answer/i)).toBeTruthy();
+    });
+
+    // Input should still be enabled (not locked in an in-flight state)
+    expect((input as HTMLInputElement).disabled).toBe(false);
+  });
 });
