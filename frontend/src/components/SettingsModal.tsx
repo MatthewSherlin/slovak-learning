@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Shield, X, Check, AlertCircle } from 'lucide-react';
+import { Lock, Shield, X, Check, AlertCircle, Sun, Moon } from 'lucide-react';
 import { useUser } from './UserPicker';
+import { useTheme } from './ThemeProvider';
 import { setPin, verifyPin, removePin } from '../lib/api';
 import PinInput from './PinInput';
 
@@ -41,6 +42,7 @@ function ToastMessage({ toast }: { toast: Toast }) {
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const { user, setUser, refreshUsers } = useUser();
+  const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<PinView>('idle');
   const [pin, setPin_] = useState('');
@@ -218,6 +220,42 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </div>
               )}
             </AnimatePresence>
+
+            {/* Theme Section */}
+            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-accent-muted flex items-center justify-center">
+                    {theme === 'dark' ? (
+                      <Moon size={18} className="text-accent" />
+                    ) : (
+                      <Sun size={18} className="text-accent" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">Appearance</h3>
+                    <p className="text-xs text-text-muted">
+                      {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="relative w-12 h-6 rounded-full transition-colors border-none cursor-pointer"
+                  style={{
+                    background: theme === 'light' ? 'var(--color-accent)' : 'var(--color-surface-3)',
+                  }}
+                >
+                  <span
+                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                    style={{
+                      left: theme === 'light' ? '26px' : '2px',
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
 
             {/* PIN Section */}
             <div className="rounded-xl border border-border bg-surface-2 p-5">

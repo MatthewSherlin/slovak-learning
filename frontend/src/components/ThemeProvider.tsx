@@ -7,7 +7,7 @@ interface ThemeContextValue {
   toggleTheme: () => void;
 }
 
-const STORAGE_KEY = 'slovak-learning-theme';
+const STORAGE_KEY = 'theme';
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: 'dark',
@@ -17,7 +17,6 @@ const ThemeContext = createContext<ThemeContextValue>({
 function getInitialTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
-  if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
   return 'dark';
 }
 
