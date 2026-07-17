@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Cinzel:wght@500;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    html { background: #0a0b10; }
+    body { background: #0a0b10; margin: 0; font-family: Inter, system-ui, sans-serif; }
+    a { color: #5ea4f7; } a:hover { color: #7bb5ff; }
+    @keyframes shimmer-sweep { 0% { background-position: 130% 0; } 100% { background-position: -130% 0; } }
+    @keyframes holo-shift { 0% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } 100% { background-position: 0% 0%; } }
+    @keyframes mythic-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    @keyframes loader-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.07); opacity: 0.85; } }
+    @keyframes float-a { 0%, 100% { transform: rotate(-12deg) translateY(0); } 50% { transform: rotate(-12deg) translateY(-8px); } }
+    @keyframes float-b { 0%, 100% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(0deg) translateY(-12px); } }
+    @keyframes float-c { 0%, 100% { transform: rotate(12deg) translateY(0); } 50% { transform: rotate(12deg) translateY(-8px); } }
+    @keyframes legendary-glow { 0%, 100% { box-shadow: 0 0 24px rgba(247,217,119,0.25), 0 8px 24px rgba(0,0,0,0.5); } 50% { box-shadow: 0 0 44px rgba(247,217,119,0.45), 0 8px 24px rgba(0,0,0,0.5); } }
+    @keyframes mythic-glow { 0%, 100% { filter: drop-shadow(0 0 14px rgba(244,114,182,0.35)); } 50% { filter: drop-shadow(0 0 26px rgba(34,211,238,0.35)); } }
+    @keyframes tear-hint { 0%, 100% { transform: translateX(0); opacity: 0.6; } 50% { transform: translateX(10px); opacity: 1; } }
+  </style>
+</helmet>
+
+<section style="padding: 40px; display: flex; flex-direction: column; gap: 56px;">
+  <div style="max-width: 900px;">
+    <div style="display: inline-block; background: #5ea4f7; color: #0a0b10; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 6px; margin-bottom: 12px;">Turn 2</div>
+    <h1 style="color: #eef1f8; font-size: 28px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: -0.02em;">SlovakPrep — mobile redesign</h1>
+    <p style="color: #6b7289; font-size: 14px; margin: 0; line-height: 1.7; max-width: 720px;">Native-app shell with a bottom tab bar, quieter surfaces, bigger type, 44px+ targets. Two home directions (<a href="#2a">2a</a> / <a href="#2b">2b</a>), redesigned sessions, a merged Stats hub, the premium trading-card overhaul — engraved monogram art (no emoji), distinct card shapes per rarity, new Mythic tier, binder, trade-in, showcase — plus new loaders and shimmer skeletons. Card art, shapes and foil are tweakable.</p>
+  </div>
+
+  <!-- ══ HOME ══ -->
+  <div>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7a8199; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 16px 0;">App shell &amp; Home — two directions</p>
+    <div style="display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- 2a Home Focus -->
+      <div id="2a" style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;"><span style="background: #5ea4f7; color: #0a0b10; font-weight: 800; padding: 1px 7px; border-radius: 5px; margin-right: 8px;">2a</span>Home — "Focus" · continue card + mode grid</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+              <div>
+                <p style="font-size: 13px; color: #6b7289; margin: 0 0 2px 0;">Streda · 16. júla</p>
+                <h1 style="font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em;">Ahoj, Matt</h1>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 5px; padding: 7px 11px; border-radius: 999px; background: rgba(245,196,94,0.1); border: 1px solid rgba(245,196,94,0.18);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+                  <span style="font-size: 13px; font-weight: 700; color: #f5c45e; font-variant-numeric: tabular-nums;">6</span>
+                </div>
+                <div style="width: 40px; height: 40px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #ffffff; background: linear-gradient(135deg, #5ea4f7, #5ea4f788);">M</div>
+              </div>
+            </div>
+            <div style="position: relative; border-radius: 22px; padding: 20px; margin-bottom: 28px; background: linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), #151926; border: 1px solid rgba(94,164,247,0.22); overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+                  <svg viewBox="0 0 56 56" style="width: 56px; height: 56px; transform: rotate(-90deg);">
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"></circle>
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="#a78bfa" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="60.3"></circle>
+                  </svg>
+                  <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #a78bfa; font-variant-numeric: tabular-nums;">12/20</div>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <p style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #5ea4f7; margin: 0 0 3px 0;">Continue session</p>
+                  <p style="font-size: 15px; font-weight: 700; color: #eef1f8; margin: 0;">Grammar · Noun Cases</p>
+                  <p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">8 exercises left</p>
+                </div>
+                <div style="width: 44px; height: 44px; border-radius: 999px; background: #5ea4f7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 20px rgba(94,164,247,0.35);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff"><path d="M8 5.14v14l11-7-11-7z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+              <h2 style="font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em;">Practice</h2>
+              <span style="font-size: 12px; color: #6b7289;">Pick a mode</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+              <div style="border-radius: 20px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(93,228,165,0.12); color: #5de4a5; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path><path d="M8 11h8"></path><path d="M8 7h6"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0;">Vocabulary</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">182 words learned</p>
+              </div>
+              <div style="border-radius: 20px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(167,139,250,0.12); color: #a78bfa; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0;">Grammar</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">Avg 6.8</p>
+              </div>
+              <div style="border-radius: 20px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(245,196,94,0.12); color: #f5c45e; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0;">Conversation</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">Talk with the tutor</p>
+              </div>
+              <div style="border-radius: 20px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(240,168,208,0.12); color: #f0a8d0; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0;">Translation</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">SK ⇄ EN</p>
+              </div>
+            </div>
+            <div style="border-radius: 18px; padding: 14px 16px; background: rgba(245,196,94,0.06); border: 1px solid rgba(245,196,94,0.12); display: flex; align-items: center; gap: 10px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path></svg>
+              <p style="font-size: 12.5px; color: #a3aabe; margin: 0; line-height: 1.5;"><em>"Pomaly, ale isto."</em> — Slowly but surely.</p>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="learn" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+
+      <!-- 2b Home Journey -->
+      <div id="2b" style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;"><span style="background: #5ea4f7; color: #0a0b10; font-weight: 800; padding: 1px 7px; border-radius: 5px; margin-right: 8px;">2b</span>Home — "Journey" · daily goal ring + mode list</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+              <h1 style="font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.02em;">Ahoj, Matt</h1>
+              <div style="width: 40px; height: 40px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #ffffff; background: linear-gradient(135deg, #5ea4f7, #5ea4f788);">M</div>
+            </div>
+            <div style="border-radius: 24px; padding: 24px; background: #151926; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px; text-align: center;">
+              <div style="position: relative; width: 128px; height: 128px; margin: 0 auto 14px auto;">
+                <svg viewBox="0 0 128 128" style="width: 128px; height: 128px; transform: rotate(-90deg);">
+                  <circle cx="64" cy="64" r="56" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="9"></circle>
+                  <circle cx="64" cy="64" r="56" fill="none" stroke="#5ea4f7" stroke-width="9" stroke-linecap="round" stroke-dasharray="351.9" stroke-dashoffset="105.6"></circle>
+                </svg>
+                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <span style="font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;">70<span style="font-size: 15px; color: #6b7289;">%</span></span>
+                  <span style="font-size: 11px; color: #6b7289;">daily goal</span>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: center; gap: 24px;">
+                <div style="text-align: center;"><div style="font-size: 17px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">6</div><div style="font-size: 11px; color: #6b7289;">day streak</div></div>
+                <div style="width: 1px; background: rgba(255,255,255,0.07);"></div>
+                <div style="text-align: center;"><div style="font-size: 17px; font-weight: 800; color: #5de4a5; font-variant-numeric: tabular-nums;">182</div><div style="font-size: 11px; color: #6b7289;">words</div></div>
+                <div style="width: 1px; background: rgba(255,255,255,0.07);"></div>
+                <div style="text-align: center;"><div style="font-size: 17px; font-weight: 800; color: #5ea4f7; font-variant-numeric: tabular-nums;">2450</div><div style="font-size: 11px; color: #6b7289;">XP</div></div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 42px; height: 42px; border-radius: 14px; background: rgba(93,228,165,0.12); color: #5de4a5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path><path d="M8 11h8"></path><path d="M8 7h6"></path></svg></div>
+                <div style="flex: 1;"><p style="font-size: 15px; font-weight: 700; margin: 0;">Vocabulary</p><p style="font-size: 12px; color: #6b7289; margin: 1px 0 0 0;">Flashcard quiz · 10 min</p></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 42px; height: 42px; border-radius: 14px; background: rgba(167,139,250,0.12); color: #a78bfa; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"></path></svg></div>
+                <div style="flex: 1;"><p style="font-size: 15px; font-weight: 700; margin: 0;">Grammar</p><p style="font-size: 12px; color: #6b7289; margin: 1px 0 0 0;">Lesson + exercises · 15 min</p></div>
+                <span style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(167,139,250,0.14); color: #a78bfa; margin-right: 4px;">IN PROGRESS</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 42px; height: 42px; border-radius: 14px; background: rgba(245,196,94,0.12); color: #f5c45e; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></div>
+                <div style="flex: 1;"><p style="font-size: 15px; font-weight: 700; margin: 0;">Conversation</p><p style="font-size: 12px; color: #6b7289; margin: 1px 0 0 0;">Chat with the AI tutor</p></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 42px; height: 42px; border-radius: 14px; background: rgba(240,168,208,0.12); color: #f0a8d0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg></div>
+                <div style="flex: 1;"><p style="font-size: 15px; font-weight: 700; margin: 0;">Translation</p><p style="font-size: 12px; color: #6b7289; margin: 1px 0 0 0;">Sentence practice · 12 min</p></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+              </div>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="learn" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+
+      <!-- Home light -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">2a in light theme</p>
+        <div style="width: 390px; height: 800px; background: #f4f5fa; border-radius: 28px; border: 1px solid #d8dce8; overflow: hidden; color: #1a1e2e; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+              <div>
+                <p style="font-size: 13px; color: #6b7289; margin: 0 0 2px 0;">Streda · 16. júla</p>
+                <h1 style="font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em; color: #1a1e2e;">Ahoj, Matt</h1>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 5px; padding: 7px 11px; border-radius: 999px; background: rgba(201,154,46,0.1); border: 1px solid rgba(201,154,46,0.2);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c99a2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+                  <span style="font-size: 13px; font-weight: 700; color: #c99a2e; font-variant-numeric: tabular-nums;">6</span>
+                </div>
+                <div style="width: 40px; height: 40px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #ffffff; background: linear-gradient(135deg, #4a93e8, #4a93e888);">M</div>
+              </div>
+            </div>
+            <div style="border-radius: 22px; padding: 20px; margin-bottom: 28px; background: linear-gradient(120deg, rgba(74,147,232,0.1), rgba(74,147,232,0.03) 70%), #ffffff; border: 1px solid rgba(74,147,232,0.25); box-shadow: 0 4px 16px rgba(30,45,90,0.06);">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+                  <svg viewBox="0 0 56 56" style="width: 56px; height: 56px; transform: rotate(-90deg);">
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(20,25,45,0.08)" stroke-width="5"></circle>
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="#7c5cc4" stroke-width="5" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="60.3"></circle>
+                  </svg>
+                  <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #7c5cc4; font-variant-numeric: tabular-nums;">12/20</div>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <p style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #4a93e8; margin: 0 0 3px 0;">Continue session</p>
+                  <p style="font-size: 15px; font-weight: 700; color: #1a1e2e; margin: 0;">Grammar · Noun Cases</p>
+                  <p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">8 exercises left</p>
+                </div>
+                <div style="width: 44px; height: 44px; border-radius: 999px; background: #4a93e8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 8px 20px rgba(74,147,232,0.35);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff"><path d="M8 5.14v14l11-7-11-7z"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+              <h2 style="font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; color: #1a1e2e;">Practice</h2>
+              <span style="font-size: 12px; color: #6b7289;">Pick a mode</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="border-radius: 20px; padding: 16px; background: #ffffff; border: 1px solid #e2e6f0; box-shadow: 0 2px 8px rgba(30,45,90,0.04); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(45,169,110,0.1); color: #2da96e; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path><path d="M8 11h8"></path><path d="M8 7h6"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0; color: #1a1e2e;">Vocabulary</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">182 words learned</p>
+              </div>
+              <div style="border-radius: 20px; padding: 16px; background: #ffffff; border: 1px solid #e2e6f0; box-shadow: 0 2px 8px rgba(30,45,90,0.04); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(124,92,196,0.1); color: #7c5cc4; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0; color: #1a1e2e;">Grammar</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">Avg 6.8</p>
+              </div>
+              <div style="border-radius: 20px; padding: 16px; background: #ffffff; border: 1px solid #e2e6f0; box-shadow: 0 2px 8px rgba(30,45,90,0.04); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(201,154,46,0.1); color: #c99a2e; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0; color: #1a1e2e;">Conversation</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">Talk with the tutor</p>
+              </div>
+              <div style="border-radius: 20px; padding: 16px; background: #ffffff; border: 1px solid #e2e6f0; box-shadow: 0 2px 8px rgba(30,45,90,0.04); min-height: 118px; box-sizing: border-box;">
+                <div style="width: 40px; height: 40px; border-radius: 13px; background: rgba(196,122,160,0.1); color: #c47aa0; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg></div>
+                <p style="font-size: 15px; font-weight: 700; margin: 0 0 2px 0; color: #1a1e2e;">Translation</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 0;">SK ⇄ EN</p>
+              </div>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="learn" theme="light" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+
+      <!-- Config bottom sheet -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Session setup — bottom sheet</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; position: relative;">
+          <div style="padding: 24px 20px; filter: blur(3px); opacity: 0.4;">
+            <h1 style="font-size: 26px; font-weight: 800; margin: 0 0 24px 0;">Ahoj, Matt</h1>
+            <div style="border-radius: 22px; height: 96px; background: #151926; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="border-radius: 20px; height: 118px; background: #151926; border: 1px solid rgba(255,255,255,0.06);"></div>
+              <div style="border-radius: 20px; height: 118px; background: #151926; border: 1px solid rgba(255,255,255,0.06);"></div>
+            </div>
+          </div>
+          <div style="position: absolute; inset: 0; background: rgba(5,6,10,0.55);"></div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0;">
+            <div style="background: #161a28; border-radius: 28px 28px 0 0; border-top: 1px solid rgba(255,255,255,0.09); padding: 12px 20px 32px 20px;">
+              <div style="width: 40px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.15); margin: 0 auto 20px auto;"></div>
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 22px;">
+                <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(93,228,165,0.12); color: #5de4a5; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path><path d="M8 11h8"></path><path d="M8 7h6"></path></svg></div>
+                <div><h2 style="font-size: 19px; font-weight: 800; margin: 0; letter-spacing: -0.01em;">Vocabulary session</h2><p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">10 flashcards · retry missed words</p></div>
+              </div>
+              <p style="font-size: 12px; font-weight: 600; color: #a3aabe; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.08em;">Difficulty</p>
+              <div style="display: flex; background: #0e1017; border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 20px;">
+                <div style="flex: 1; text-align: center; padding: 10px 0; border-radius: 11px; font-size: 13px; font-weight: 700; background: #5ea4f7; color: #ffffff;">Beginner</div>
+                <div style="flex: 1; text-align: center; padding: 10px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Intermediate</div>
+                <div style="flex: 1; text-align: center; padding: 10px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Advanced</div>
+              </div>
+              <p style="font-size: 12px; font-weight: 600; color: #a3aabe; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.08em;">Topic <span style="color: #4a5068; font-weight: 400; text-transform: none; letter-spacing: 0;">· optional</span></p>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                <span style="padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: rgba(94,164,247,0.14); color: #5ea4f7; border: 1px solid rgba(94,164,247,0.35);">Greetings &amp; Basics</span>
+                <span style="padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #0e1017; color: #6b7289; border: 1px solid rgba(255,255,255,0.08);">Food &amp; Drink</span>
+                <span style="padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #0e1017; color: #6b7289; border: 1px solid rgba(255,255,255,0.08);">Numbers &amp; Time</span>
+                <span style="padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #0e1017; color: #6b7289; border: 1px solid rgba(255,255,255,0.08);">Family</span>
+                <span style="padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #0e1017; color: #6b7289; border: 1px solid rgba(255,255,255,0.08);">Travel</span>
+              </div>
+              <p style="font-size: 12px; font-weight: 600; color: #a3aabe; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.08em;">Tell the tutor what to focus on</p>
+              <div style="padding: 13px 16px; border-radius: 14px; font-size: 14px; background: #0e1017; border: 1px solid rgba(255,255,255,0.08); color: #4a5068; margin-bottom: 24px;">e.g. restaurant vocabulary…</div>
+              <div style="display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(90deg, #5ea4f7, #38bdf8); color: #ffffff; font-weight: 700; height: 52px; border-radius: 16px; font-size: 16px; box-shadow: 0 10px 24px rgba(94,164,247,0.3);">
+                Start session
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vocab quiz redesign -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Vocab quiz — correct answer</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 20px 20px 16px 20px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7289" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            <div style="flex: 1; display: flex; gap: 4px;">
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: #5de4a5;"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: #5de4a5;"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: #5de4a5;"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: #5de4a5;"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.09);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.09);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.09);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.09);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.09);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.09);"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: rgba(245,196,94,0.12); flex-shrink: 0;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+              <span style="font-size: 12px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">3</span>
+            </div>
+          </div>
+          <div style="flex: 1; padding: 24px 20px 0 20px;">
+            <p style="font-size: 12px; color: #6b7289; text-align: center; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; margin: 0 0 20px 0;">What does this mean in English?</p>
+            <div style="border-radius: 26px; padding: 44px 24px; text-align: center; margin-bottom: 28px; background: radial-gradient(circle at 50% 0%, rgba(93,228,165,0.08), transparent 65%), #151926; border: 1px solid rgba(255,255,255,0.07);">
+              <div style="font-size: 40px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px;">ďakujem</div>
+              <div style="display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5ea4f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path></svg>
+                <span style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #a3aabe;">/ĎA-ku-yem/</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="min-height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 18px; border: 2px solid #5de4a5; background: rgba(93,228,165,0.1); font-size: 15px; font-weight: 700; position: relative; box-shadow: 0 0 20px rgba(93,228,165,0.15);">
+                thank you
+                <div style="position: absolute; top: -9px; right: -9px; width: 26px; height: 26px; border-radius: 999px; background: #5de4a5; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.35);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0e1017" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+              </div>
+              <div style="min-height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 18px; border: 2px solid rgba(255,255,255,0.07); background: #151926; font-size: 15px; font-weight: 600; color: #4a5068; opacity: 0.5;">please</div>
+              <div style="min-height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 18px; border: 2px solid rgba(255,255,255,0.07); background: #151926; font-size: 15px; font-weight: 600; color: #4a5068; opacity: 0.5;">goodbye</div>
+              <div style="min-height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 18px; border: 2px solid rgba(255,255,255,0.07); background: #151926; font-size: 15px; font-weight: 600; color: #4a5068; opacity: 0.5;">good morning</div>
+            </div>
+          </div>
+          <div style="background: rgba(93,228,165,0.1); border-top: 1px solid rgba(93,228,165,0.25); padding: 20px 20px 28px 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 30px; height: 30px; border-radius: 999px; background: #5de4a5; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0e1017" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+                <span style="font-size: 17px; font-weight: 800; color: #5de4a5;">Správne!</span>
+              </div>
+              <span style="font-size: 13px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">+10 XP</span>
+            </div>
+            <div style="height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 16px; background: #5de4a5; color: #0e1017; font-size: 16px; font-weight: 800;">Continue</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback redesign -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Session feedback</p>
+        <div style="width: 390px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8;">
+          <div style="padding: 32px 20px;">
+            <div style="text-align: center; margin-bottom: 24px; padding: 28px 20px; border-radius: 26px; background: radial-gradient(circle at 50% 0%, rgba(94,164,247,0.1), transparent 70%), #151926; border: 1px solid rgba(255,255,255,0.07);">
+              <div style="position: relative; width: 132px; height: 132px; margin: 0 auto 16px auto;">
+                <svg viewBox="0 0 132 132" style="width: 132px; height: 132px; transform: rotate(-90deg);">
+                  <circle cx="66" cy="66" r="58" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="9"></circle>
+                  <circle cx="66" cy="66" r="58" fill="none" stroke="#5ea4f7" stroke-width="9" stroke-linecap="round" stroke-dasharray="364.4" stroke-dashoffset="109.3"></circle>
+                </svg>
+                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <span style="font-size: 38px; font-weight: 800; color: #5ea4f7; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;">7.0</span>
+                  <span style="font-size: 11px; color: #6b7289;">out of 10</span>
+                </div>
+              </div>
+              <h2 style="font-size: 24px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.02em;">Dobre!</h2>
+              <p style="font-size: 13.5px; color: #6b7289; margin: 0 auto; max-width: 280px; line-height: 1.55;">Good progress. Focus on the areas below to level up.</p>
+              <div style="display: flex; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
+                <span style="font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: rgba(93,228,165,0.12); color: #5de4a5;">Vocabulary</span>
+                <span style="font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #a3aabe;">Greetings &amp; Basics</span>
+                <span style="font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #a3aabe;">Beginner</span>
+              </div>
+            </div>
+            <div style="border-radius: 22px; background: #151926; border: 1px solid rgba(255,255,255,0.06); padding: 20px; margin-bottom: 14px;">
+              <h3 style="font-size: 14px; font-weight: 700; margin: 0 0 18px 0;">Breakdown</h3>
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 7px;"><span style="font-size: 13px; font-weight: 600;">Word recognition</span><span style="font-size: 13px; font-weight: 800; color: #5de4a5; font-variant-numeric: tabular-nums;">8</span></div>
+                  <div style="height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06);"><div style="width: 80%; height: 7px; border-radius: 999px; background: linear-gradient(90deg, #3dcb8c, #5de4a5);"></div></div>
+                  <p style="font-size: 12px; color: #6b7289; margin: 7px 0 0 0; line-height: 1.55;">Strong recall of everyday greetings and polite phrases.</p>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 7px;"><span style="font-size: 13px; font-weight: 600;">Diacritics</span><span style="font-size: 13px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">5</span></div>
+                  <div style="height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06);"><div style="width: 50%; height: 7px; border-radius: 999px; background: linear-gradient(90deg, #d9a63e, #f5c45e);"></div></div>
+                  <p style="font-size: 12px; color: #6b7289; margin: 7px 0 0 0; line-height: 1.55;">Mixing up á/a and č/c — review the long vowels.</p>
+                </div>
+              </div>
+            </div>
+            <div style="border-radius: 22px; background: #151926; border: 1px solid rgba(255,255,255,0.06); padding: 20px; margin-bottom: 14px;">
+              <h3 style="font-size: 14px; font-weight: 700; margin: 0 0 14px 0;">New words to keep</h3>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                  <div style="flex: 1;"><span style="font-size: 14px; font-weight: 700; color: #5de4a5;">ďakujem</span><span style="font-size: 13px; color: #a3aabe; margin-left: 10px;">thank you</span></div>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5ea4f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path></svg>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                  <div style="flex: 1;"><span style="font-size: 14px; font-weight: 700; color: #5de4a5;">dovidenia</span><span style="font-size: 13px; color: #a3aabe; margin-left: 10px;">goodbye</span></div>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5ea4f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path></svg>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.08); color: #a3aabe; font-size: 15px; font-weight: 600;">History</div>
+              <div style="flex: 2; height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; background: linear-gradient(90deg, #5ea4f7, #38bdf8); color: #ffffff; font-size: 15px; font-weight: 700; box-shadow: 0 10px 24px rgba(94,164,247,0.25);">Practice again</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats hub -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Stats hub — merges Dashboard · History · Leaderboard</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <h1 style="font-size: 26px; font-weight: 800; margin: 0 0 18px 0; letter-spacing: -0.02em;">Stats</h1>
+            <div style="display: flex; background: #151926; border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 22px;">
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 700; background: #5ea4f7; color: #ffffff;">Overview</div>
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">History</div>
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Friends</div>
+            </div>
+            <div style="border-radius: 22px; padding: 18px; background: linear-gradient(120deg, rgba(245,196,94,0.1), transparent 60%), #151926; border: 1px solid rgba(245,196,94,0.18); margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #f5c45e;">XP race</span>
+                <span style="font-size: 11px; color: #6b7289;">this month</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 28px; height: 28px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #ffffff; background: #5ea4f7; flex-shrink: 0;">M</div>
+                  <div style="flex: 1; height: 12px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 100%; height: 12px; border-radius: 999px; background: linear-gradient(90deg, #5ea4f7, #38bdf8);"></div></div>
+                  <span style="font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; width: 40px; text-align: right;">2450</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 28px; height: 28px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #ffffff; background: #f472b6; flex-shrink: 0;">Z</div>
+                  <div style="flex: 1; height: 12px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 81%; height: 12px; border-radius: 999px; background: linear-gradient(90deg, #f472b6, #fb7fc4);"></div></div>
+                  <span style="font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; width: 40px; text-align: right;">1980</span>
+                </div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+              <div style="border-radius: 18px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <p style="font-size: 11px; font-weight: 600; color: #6b7289; margin: 0 0 6px 0;">Day streak</p>
+                <div style="display: flex; align-items: baseline; gap: 5px;"><span style="font-size: 26px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">6</span><span style="font-size: 12px; color: #6b7289;">days</span></div>
+              </div>
+              <div style="border-radius: 18px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <p style="font-size: 11px; font-weight: 600; color: #6b7289; margin: 0 0 6px 0;">Avg score</p>
+                <div style="display: flex; align-items: baseline; gap: 5px;"><span style="font-size: 26px; font-weight: 800; color: #5ea4f7; font-variant-numeric: tabular-nums;">7.4</span><span style="font-size: 12px; color: #6b7289;">/10</span></div>
+              </div>
+              <div style="border-radius: 18px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <p style="font-size: 11px; font-weight: 600; color: #6b7289; margin: 0 0 6px 0;">Words learned</p>
+                <div style="display: flex; align-items: baseline; gap: 5px;"><span style="font-size: 26px; font-weight: 800; color: #5de4a5; font-variant-numeric: tabular-nums;">182</span></div>
+              </div>
+              <div style="border-radius: 18px; padding: 16px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <p style="font-size: 11px; font-weight: 600; color: #6b7289; margin: 0 0 6px 0;">Sessions</p>
+                <div style="display: flex; align-items: baseline; gap: 5px;"><span style="font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums;">23</span><span style="font-size: 12px; color: #6b7289;">done</span></div>
+              </div>
+            </div>
+            <div style="border-radius: 22px; background: #151926; border: 1px solid rgba(255,255,255,0.06); padding: 20px;">
+              <h3 style="font-size: 14px; font-weight: 700; margin: 0 0 16px 0;">By category</h3>
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="font-size: 13px; color: #a3aabe;">Vocabulary</span><span style="font-size: 13px; font-weight: 800; color: #5de4a5; font-variant-numeric: tabular-nums;">8.2</span></div>
+                  <div style="height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06);"><div style="width: 82%; height: 7px; border-radius: 999px; background: #5de4a5;"></div></div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="font-size: 13px; color: #a3aabe;">Translation</span><span style="font-size: 13px; font-weight: 800; color: #f0a8d0; font-variant-numeric: tabular-nums;">7.1</span></div>
+                  <div style="height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06);"><div style="width: 71%; height: 7px; border-radius: 999px; background: #f0a8d0;"></div></div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="font-size: 13px; color: #a3aabe;">Grammar</span><span style="font-size: 13px; font-weight: 800; color: #a78bfa; font-variant-numeric: tabular-nums;">6.8</span></div>
+                  <div style="height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06);"><div style="width: 68%; height: 7px; border-radius: 999px; background: #a78bfa;"></div></div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="font-size: 13px; color: #a3aabe;">Conversation</span><span style="font-size: 13px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">5.5</span></div>
+                  <div style="height: 7px; border-radius: 999px; background: rgba(255,255,255,0.06);"><div style="width: 55%; height: 7px; border-radius: 999px; background: #f5c45e;"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="stats" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+
+      <!-- Guides redesign -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Guides</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <h1 style="font-size: 26px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.02em;">Guides</h1>
+            <p style="font-size: 13.5px; color: #6b7289; margin: 0 0 22px 0;">Cheat sheets for faster learning.</p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="border-radius: 22px; background: #151926; border: 1px solid rgba(255,255,255,0.06); overflow: hidden;">
+                <div style="display: flex; align-items: center; gap: 14px; padding: 18px;">
+                  <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(93,228,165,0.12); color: #5de4a5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg></div>
+                  <div style="flex: 1;">
+                    <h3 style="font-size: 15px; font-weight: 700; margin: 0;">Pronunciation</h3>
+                    <p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">4 sections · 2 read</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg>
+                </div>
+                <div style="padding: 0 18px 18px 18px; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); min-height: 44px; box-sizing: border-box;">
+                    <div style="width: 20px; height: 20px; border-radius: 999px; background: rgba(93,228,165,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5de4a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+                    <span style="flex: 1; font-size: 13.5px; font-weight: 600;">Vowels &amp; Length</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); min-height: 44px; box-sizing: border-box;">
+                    <div style="width: 20px; height: 20px; border-radius: 999px; background: rgba(93,228,165,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5de4a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+                    <span style="flex: 1; font-size: 13.5px; font-weight: 600;">Consonants &amp; Tricky Sounds</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); min-height: 44px; box-sizing: border-box;">
+                    <div style="width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,0.15); box-sizing: border-box; flex-shrink: 0;"></div>
+                    <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #a3aabe;">Stress &amp; Rhythm</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); min-height: 44px; box-sizing: border-box;">
+                    <div style="width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,0.15); box-sizing: border-box; flex-shrink: 0;"></div>
+                    <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: #a3aabe;">Common Mistakes</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                  </div>
+                </div>
+              </div>
+              <div style="border-radius: 22px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; align-items: center; gap: 14px; padding: 18px;">
+                  <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(167,139,250,0.12); color: #a78bfa; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path><path d="M8 11h8"></path><path d="M8 7h6"></path></svg></div>
+                  <div style="flex: 1;">
+                    <h3 style="font-size: 15px; font-weight: 700; margin: 0;">Case System</h3>
+                    <p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">6 sections · all 6 cases</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+                </div>
+              </div>
+              <div style="border-radius: 22px; background: #151926; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; align-items: center; gap: 14px; padding: 18px;">
+                  <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(245,196,94,0.12); color: #f5c45e; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></div>
+                  <div style="flex: 1;">
+                    <h3 style="font-size: 15px; font-weight: 700; margin: 0;">Essential Phrases</h3>
+                    <p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">4 sections · survival Slovak</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a5068" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="guides" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TRADING CARDS ══ -->
+  <div>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7a8199; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 6px 0;">Trading cards — premium overhaul</p>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 16px 0;">Engraved monogram art (Cinzel) replaces emoji · distinct physical shape per rarity: chamfered corners (Rare), cathedral arch (Legendary), gem cartouche (Mythic) · tweak panel toggles art style, shapes, foil</p>
+    <div style="display: flex; gap: 28px; align-items: center; flex-wrap: wrap; margin-bottom: 44px;">
+
+      <!-- Common -->
+      <div style="flex-shrink: 0;">
+        <div style="width: 210px; height: 330px; border-radius: 18px; padding: 6px; background: linear-gradient(160deg, #3a4152, #5b6478 28%, #2c3242 58%, #4a5265 85%); box-shadow: 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: 13px; background: #0d1019; padding: 9px; box-sizing: border-box; display: flex; flex-direction: column; color: #eef1f8;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;">
+              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #6b7289;">Mýty a Legendy</span>
+              <span style="width: 7px; height: 7px; transform: rotate(45deg); background: #a855f7; border-radius: 1px;"></span>
+            </div>
+            <div style="height: 118px; border-radius: 10px; background: radial-gradient(circle at 50% 40%, rgba(148,163,184,0.16), transparent 72%), #12151f; border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 9px; position: relative;">
+              <sc-if value="{{ useImage }}" hint-placeholder-val="{{ true }}">
+                <div style="position: absolute; inset: 0;"><x-import component-from-global-scope="image-slot" from="./image-slot.js" id="card-art-common" shape="rounded" radius="10" placeholder="Drop art: vodník" hint-size="100%,118px"></x-import></div>
+              </sc-if>
+              <sc-if value="{{ useGlyph }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                  <div style="position: absolute; width: 74px; height: 74px; transform: rotate(45deg); border: 1px solid rgba(148,163,184,0.25); border-radius: 6px; opacity: {{ ornOpacity }};"></div>
+                  <div style="position: absolute; width: 92px; height: 92px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.12); opacity: {{ ornOpacity }};"></div>
+                  <span style="font-family: Cinzel, serif; font-size: 54px; font-weight: 700; line-height: 1; background: linear-gradient(180deg, #d7dce8, #8b93a8); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative;">{{ artCommon }}</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="text-align: center; margin-bottom: 3px;">
+              <h3 style="font-size: 19px; font-weight: 900; margin: 0; letter-spacing: -0.02em;">vodník</h3>
+              <p style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #6b7289; margin: 2px 0 0 0;">/VOD-neek/ · water spirit</p>
+            </div>
+            <div style="flex: 1; display: flex; align-items: center;">
+              <p style="font-size: 9.5px; color: #8b92a8; font-style: italic; line-height: 1.5; margin: 0; text-align: center;">"Vodník žije na dne rybníka a láka neopatrných pocestných."</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 7px;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6b7289;">001 / 015</span>
+              <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #8b93a8, #5b6478); border-radius: 1.5px;"></span><span style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af;">Common</span></div>
+            </div>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">Common — steel frame</p>
+      </div>
+
+      <!-- Uncommon -->
+      <div style="flex-shrink: 0;">
+        <div style="width: 210px; height: 330px; border-radius: 18px; padding: 6px; background: linear-gradient(160deg, #0e5f46, #4fd6a4 28%, #0a3d2e 58%, #2fa87d 85%); box-shadow: 0 0 18px rgba(52,211,153,0.18), 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: 13px; background: #0d1019; padding: 9px; box-sizing: border-box; display: flex; flex-direction: column; color: #eef1f8; position: relative; overflow: hidden;">
+            <div style="position: absolute; inset: 0; pointer-events: none; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 30%, rgba(52,211,153,0.07) 48%, rgba(255,255,255,0.06) 52%, transparent 70%); background-size: 250% 250%; animation: holo-shift 5s ease infinite;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;">
+              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #6b7289;">Mýty a Legendy</span>
+              <span style="width: 7px; height: 7px; transform: rotate(45deg); background: #a855f7; border-radius: 1px;"></span>
+            </div>
+            <div style="height: 118px; border-radius: 10px; background: radial-gradient(circle at 50% 40%, rgba(52,211,153,0.18), transparent 72%), #101823; border: 1px solid rgba(52,211,153,0.14); display: flex; align-items: center; justify-content: center; margin-bottom: 9px; position: relative;">
+              <sc-if value="{{ useImage }}" hint-placeholder-val="{{ true }}">
+                <div style="position: absolute; inset: 0;"><x-import component-from-global-scope="image-slot" from="./image-slot.js" id="card-art-uncommon" shape="rounded" radius="10" placeholder="Drop art: poludnica" hint-size="100%,118px"></x-import></div>
+              </sc-if>
+              <sc-if value="{{ useGlyph }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                  <div style="position: absolute; width: 74px; height: 74px; transform: rotate(45deg); border: 1px solid rgba(52,211,153,0.3); border-radius: 6px; opacity: {{ ornOpacity }};"></div>
+                  <div style="position: absolute; width: 92px; height: 92px; border-radius: 999px; border: 1px solid rgba(52,211,153,0.14); opacity: {{ ornOpacity }};"></div>
+                  <span style="font-family: Cinzel, serif; font-size: 54px; font-weight: 700; line-height: 1; background: linear-gradient(180deg, #a7f3d0, #34d399 55%, #059669); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative;">{{ artUncommon }}</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="text-align: center; margin-bottom: 3px;">
+              <h3 style="font-size: 19px; font-weight: 900; margin: 0; letter-spacing: -0.02em;">poludnica</h3>
+              <p style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #6b7289; margin: 2px 0 0 0;">/POH-lud-nyih-tsah/ · noon witch</p>
+            </div>
+            <div style="flex: 1; display: flex; align-items: center;">
+              <p style="font-size: 9.5px; color: #8b92a8; font-style: italic; line-height: 1.5; margin: 0; text-align: center;">"Poludnica sa zjavovala na poliach v horúcom poludňajšom slnku."</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(52,211,153,0.14); padding-top: 7px;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6b7289;">012 / 015</span>
+              <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #6ee7b7, #059669); border-radius: 1.5px; box-shadow: 0 0 6px rgba(52,211,153,0.6);"></span><span style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #34d399;">Uncommon</span></div>
+            </div>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">Uncommon — emerald frame</p>
+      </div>
+
+      <!-- Rare — chamfered corners -->
+      <div style="flex-shrink: 0;">
+        <div style="width: 210px; height: 330px; border-radius: {{ rareRadius }}; clip-path: {{ rareClip }}; padding: 6px; background: linear-gradient(160deg, #1e3f8f, #7db2ff 28%, #142450 58%, #4f7ee0 85%); box-shadow: 0 0 22px rgba(96,165,250,0.25), 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: {{ rareRadiusInner }}; clip-path: {{ rareClipInner }}; background: #0d1019; padding: 9px; box-sizing: border-box; display: flex; flex-direction: column; color: #eef1f8; position: relative; overflow: hidden;">
+            <div style="position: absolute; inset: 0; pointer-events: none; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 25%, rgba(96,165,250,0.1) 42%, rgba(168,85,247,0.1) 50%, rgba(255,255,255,0.1) 55%, transparent 75%); background-size: 250% 250%; animation: holo-shift 4s ease infinite;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 6px 7px 6px;">
+              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #6b7289;">Mýty a Legendy</span>
+              <span style="width: 7px; height: 7px; transform: rotate(45deg); background: #a855f7; border-radius: 1px;"></span>
+            </div>
+            <div style="height: 114px; border-radius: 10px; background: radial-gradient(circle at 50% 40%, rgba(96,165,250,0.2), transparent 72%), #0f1526; border: 1px solid rgba(96,165,250,0.18); display: flex; align-items: center; justify-content: center; margin-bottom: 9px; position: relative;">
+              <sc-if value="{{ useImage }}" hint-placeholder-val="{{ true }}">
+                <div style="position: absolute; inset: 0;"><x-import component-from-global-scope="image-slot" from="./image-slot.js" id="card-art-rare" shape="rounded" radius="10" placeholder="Drop art: Baba Jaga" hint-size="100%,114px"></x-import></div>
+              </sc-if>
+              <sc-if value="{{ useGlyph }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                  <div style="position: absolute; width: 72px; height: 72px; transform: rotate(45deg); border: 1px solid rgba(96,165,250,0.35); border-radius: 6px; opacity: {{ ornOpacity }};"></div>
+                  <div style="position: absolute; width: 90px; height: 90px; border-radius: 999px; border: 1px solid rgba(96,165,250,0.16); opacity: {{ ornOpacity }};"></div>
+                  <span style="font-family: Cinzel, serif; font-size: 52px; font-weight: 700; line-height: 1; background: linear-gradient(180deg, #bfdbfe, #60a5fa 55%, #2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative;">{{ artRare }}</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="text-align: center; margin-bottom: 3px;">
+              <h3 style="font-size: 19px; font-weight: 900; margin: 0; letter-spacing: -0.02em;">Baba Jaga</h3>
+              <p style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #6b7289; margin: 2px 0 0 0;">/BAH-bah YAH-gah/ · Baba Yaga</p>
+            </div>
+            <div style="flex: 1; display: flex; align-items: center;">
+              <p style="font-size: 9.5px; color: #8b92a8; font-style: italic; line-height: 1.5; margin: 0 6px; text-align: center;">"Baba Jaga lietala v mažiari a bývala v chalúpke na kuracích nožkách."</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(96,165,250,0.18); padding: 7px 6px 4px 6px;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6b7289;">014 / 015</span>
+              <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #93c5fd, #2563eb); border-radius: 1.5px; box-shadow: 0 0 6px rgba(96,165,250,0.7);"></span><span style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #60a5fa;">Rare</span></div>
+            </div>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">Rare — sapphire, chamfered cut</p>
+      </div>
+
+      <!-- Legendary — cathedral arch -->
+      <div style="flex-shrink: 0;">
+        <div style="width: 210px; height: 330px; border-radius: {{ legendRadius }}; padding: 6px; background: linear-gradient(160deg, #8a6118, #f7d977 26%, #6e4c12 55%, #e3b74a 82%, #8a6118); animation: legendary-glow 2.4s ease-in-out infinite; box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: {{ legendRadiusInner }}; background: #0d1019; padding: 9px; box-sizing: border-box; display: flex; flex-direction: column; color: #eef1f8; position: relative; overflow: hidden;">
+            <div style="position: absolute; inset: 0; pointer-events: none; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 20%, rgba(251,191,36,0.12) 38%, rgba(255,255,255,0.14) 50%, rgba(239,68,68,0.08) 62%, transparent 80%); background-size: 250% 250%; animation: holo-shift 3.2s ease infinite;"></div>
+            <div style="height: 132px; border-radius: {{ legendArtRadius }}; background: radial-gradient(circle at 50% 45%, rgba(251,191,36,0.22), transparent 75%), #17130d; border: 1px solid rgba(251,191,36,0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 9px; position: relative;">
+              <sc-if value="{{ useImage }}" hint-placeholder-val="{{ true }}">
+                <div style="position: absolute; inset: 0;"><x-import component-from-global-scope="image-slot" from="./image-slot.js" id="card-art-legendary" shape="rounded" radius="10" mask="{{ legendArtMask }}" placeholder="Drop art: Juraj a drak" hint-size="100%,132px"></x-import></div>
+              </sc-if>
+              <sc-if value="{{ useGlyph }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                  <div style="position: absolute; width: 76px; height: 76px; transform: rotate(45deg); border: 1px solid rgba(251,191,36,0.4); border-radius: 6px; opacity: {{ ornOpacity }};"></div>
+                  <div style="position: absolute; width: 96px; height: 96px; border-radius: 999px; border: 1px solid rgba(251,191,36,0.18); opacity: {{ ornOpacity }};"></div>
+                  <span style="font-family: Cinzel, serif; font-size: 56px; font-weight: 900; line-height: 1; background: linear-gradient(180deg, #fef3c7, #fbbf24 55%, #b45309); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; filter: drop-shadow(0 4px 10px rgba(251,191,36,0.35));">{{ artLegendary }}</span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="text-align: center; margin-bottom: 3px; position: relative;">
+              <p style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #b8a05e; margin: 0 0 3px 0;">Mýty a Legendy</p>
+              <h3 style="font-size: 18px; font-weight: 900; margin: 0; letter-spacing: -0.02em; background: linear-gradient(90deg, #f7d977, #ffffff, #f7d977); -webkit-background-clip: text; background-clip: text; color: transparent;">Juraj a drak</h3>
+              <p style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #6b7289; margin: 2px 0 0 0;">/YOO-rai ah DRAHK/ · St. George</p>
+            </div>
+            <div style="flex: 1; display: flex; align-items: center; position: relative;">
+              <p style="font-size: 9.5px; color: #8b92a8; font-style: italic; line-height: 1.5; margin: 0; text-align: center;">"Svätý Juraj je patrónom Slovenska a podľa legendy zabil draka."</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(251,191,36,0.22); padding-top: 7px; position: relative;">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6b7289;">015 / 015</span>
+              <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #fde68a, #d97706); border-radius: 1.5px; box-shadow: 0 0 8px rgba(251,191,36,0.8);"></span><span style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #fbbf24;">Legendary</span></div>
+            </div>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">Legendary — gold, cathedral arch</p>
+      </div>
+
+      <!-- Mythic — gem cartouche -->
+      <div style="flex-shrink: 0;">
+        <div style="animation: mythic-glow 3s ease-in-out infinite;">
+          <div style="width: 210px; height: 336px; border-radius: {{ mythicRadius }}; clip-path: {{ mythicClip }}; padding: 6px; background: linear-gradient(160deg, #7c3aed, #f472b6 25%, #f59e0b 50%, #22d3ee 75%, #7c3aed); background-size: 300% 300%; animation: mythic-shift 5s ease infinite; box-sizing: border-box; display: flex;">
+            <div style="flex: 1; border-radius: {{ mythicRadiusInner }}; clip-path: {{ mythicClipInner }}; background: #0d1019; padding: 16px 9px; box-sizing: border-box; display: flex; flex-direction: column; color: #eef1f8; position: relative; overflow: hidden;">
+              <div style="position: absolute; inset: 0; pointer-events: none; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, rgba(124,58,237,0.1) 10%, rgba(244,114,182,0.12) 30%, rgba(255,255,255,0.14) 50%, rgba(34,211,238,0.12) 70%, rgba(124,58,237,0.1) 90%); background-size: 300% 300%; animation: mythic-shift 4s ease infinite;"></div>
+              <div style="height: 116px; border-radius: 10px; background: radial-gradient(circle at 50% 40%, rgba(244,114,182,0.2), rgba(124,58,237,0.12) 55%, transparent 80%), #140f1e; border: 1px solid rgba(244,114,182,0.25); display: flex; align-items: center; justify-content: center; margin-bottom: 9px; position: relative;">
+                <sc-if value="{{ useImage }}" hint-placeholder-val="{{ true }}">
+                  <div style="position: absolute; inset: 0;"><x-import component-from-global-scope="image-slot" from="./image-slot.js" id="card-art-mythic" shape="rounded" radius="10" placeholder="Drop art: Šarkan kráľ" hint-size="100%,116px"></x-import></div>
+                </sc-if>
+                <sc-if value="{{ useGlyph }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 72px; height: 72px; transform: rotate(45deg); border: 1px solid rgba(244,114,182,0.4); border-radius: 6px; opacity: {{ ornOpacity }};"></div>
+                    <div style="position: absolute; width: 90px; height: 90px; border-radius: 999px; border: 1px solid rgba(34,211,238,0.25); opacity: {{ ornOpacity }};"></div>
+                    <span style="font-family: Cinzel, serif; font-size: 52px; font-weight: 900; line-height: 1; background: linear-gradient(120deg, #f9a8d4, #fbbf24 50%, #67e8f9); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; filter: drop-shadow(0 4px 12px rgba(244,114,182,0.4));">{{ artMythic }}</span>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="text-align: center; margin-bottom: 3px; position: relative;">
+                <p style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: #c7a5f7; margin: 0 0 3px 0;">Mýty a Legendy</p>
+                <h3 style="font-size: 18px; font-weight: 900; margin: 0; letter-spacing: -0.02em; background: linear-gradient(90deg, #f472b6, #fbbf24, #22d3ee); -webkit-background-clip: text; background-clip: text; color: transparent;">Šarkan kráľ</h3>
+                <p style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #6b7289; margin: 2px 0 0 0;">/SHAR-kahn krahl/ · dragon king</p>
+              </div>
+              <div style="flex: 1; display: flex; align-items: center; position: relative;">
+                <p style="font-size: 9.5px; color: #8b92a8; font-style: italic; line-height: 1.5; margin: 0; text-align: center;">"Sedemhlavý šarkan vládol všetkým drakom pod Tatrami."</p>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(244,114,182,0.22); padding-top: 7px; position: relative;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 8px; color: #6b7289;">M-01</span>
+                <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #f472b6, #7c3aed); border-radius: 1.5px; box-shadow: 0 0 8px rgba(244,114,182,0.9);"></span><span style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; background: linear-gradient(90deg, #f472b6, #22d3ee); -webkit-background-clip: text; background-clip: text; color: transparent;">Mythic</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">NEW Mythic — prismatic gem cartouche, ~1% pull</p>
+      </div>
+
+      <!-- Full-art variant -->
+      <div style="flex-shrink: 0;">
+        <div style="width: 210px; height: 330px; border-radius: 18px; padding: 6px; background: linear-gradient(160deg, #8a6118, #f7d977 26%, #6e4c12 55%, #e3b74a 82%); box-shadow: 0 0 22px rgba(247,217,119,0.2), 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: 13px; background: linear-gradient(180deg, #1a1508, #0d1019 75%); box-sizing: border-box; display: flex; flex-direction: column; color: #eef1f8; position: relative; overflow: hidden;">
+            <sc-if value="{{ useImage }}" hint-placeholder-val="{{ true }}">
+              <div style="position: absolute; inset: 0;"><x-import component-from-global-scope="image-slot" from="./image-slot.js" id="card-art-fullart" shape="rounded" radius="13" placeholder="Drop full-bleed art: Juraj a drak" hint-size="100%,318px"></x-import></div>
+            </sc-if>
+            <sc-if value="{{ useGlyph }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 32%, rgba(251,191,36,0.28), transparent 60%);">
+                <span style="font-family: Cinzel, serif; font-size: 128px; font-weight: 900; line-height: 1; background: linear-gradient(180deg, #fef3c7, #fbbf24 55%, #b45309); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 12px 20px rgba(251,191,36,0.35));">{{ artFullArt }}</span>
+              </div>
+            </sc-if>
+            <div style="position: absolute; inset: 0; pointer-events: none; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 20%, rgba(251,191,36,0.14) 40%, rgba(255,255,255,0.16) 50%, transparent 75%); background-size: 250% 250%; animation: holo-shift 3.2s ease infinite;"></div>
+            <div style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 0 12px; pointer-events: none;">
+              <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(247,217,119,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.7);">Mýty a Legendy</span>
+              <span style="font-size: 8px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: rgba(20,15,4,0.55); border: 1px solid rgba(251,191,36,0.35); color: #fde68a; letter-spacing: 0.08em;">FULL ART</span>
+            </div>
+            <div style="flex: 1; pointer-events: none;"></div>
+            <div style="position: relative; padding: 22px 12px 10px 12px; background: linear-gradient(180deg, transparent, rgba(8,9,14,0.9) 55%); pointer-events: none;">
+              <h3 style="font-size: 20px; font-weight: 900; margin: 0; letter-spacing: -0.02em; background: linear-gradient(90deg, #f7d977, #ffffff); -webkit-background-clip: text; background-clip: text; color: transparent;">Juraj a drak</h3>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <p style="font-size: 10px; color: #d8c07a; margin: 0;">St. George and the Dragon</p>
+                <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; transform: rotate(45deg); background: linear-gradient(135deg, #fde68a, #d97706); border-radius: 1.5px; box-shadow: 0 0 8px rgba(251,191,36,0.8);"></span><span style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #fbbf24;">Legendary</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">NEW — full-art alt variant · drop your own art</p>
+      </div>
+
+      <!-- New card back -->
+      <div style="flex-shrink: 0;">
+        <div style="width: 210px; height: 330px; border-radius: 18px; padding: 6px; background: linear-gradient(160deg, #2b3a5e, #6f92d8 28%, #1c2540 58%, #4a6cb8 85%); box-shadow: 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box;">
+          <div style="width: 100%; height: 100%; border-radius: 13px; background: #0b0e17; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; inset: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(94,164,247,0.05) 9px, rgba(94,164,247,0.05) 10px), repeating-linear-gradient(-45deg, transparent, transparent 9px, rgba(94,164,247,0.05) 9px, rgba(94,164,247,0.05) 10px);"></div>
+            <div style="position: absolute; inset: 0; opacity: {{ holoOpacity }}; background: linear-gradient(125deg, transparent 25%, rgba(94,164,247,0.1) 45%, rgba(111,146,216,0.14) 52%, transparent 75%); background-size: 250% 250%; animation: holo-shift 6s ease infinite;"></div>
+            <div style="position: absolute; inset: 10px; border: 1px solid rgba(94,164,247,0.2); border-radius: 9px;"></div>
+            <div style="position: relative; width: 88px; height: 88px; border-radius: 24px; background: radial-gradient(circle at 50% 35%, rgba(94,164,247,0.3), rgba(94,164,247,0.06) 75%); border: 1px solid rgba(94,164,247,0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+              <svg width="44" height="44" viewBox="0 0 32 32" fill="none"><rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="#9cc4ff"></rect><rect x="10" y="7" width="12" height="3.2" rx="1" fill="#9cc4ff"></rect><rect x="8" y="14" width="16" height="3.2" rx="1" fill="#9cc4ff"></rect></svg>
+            </div>
+            <p style="position: relative; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.32em; color: rgba(156,196,255,0.85); margin: 0;">SlovakPrep</p>
+            <p style="position: relative; font-size: 8px; font-family: 'JetBrains Mono', monospace; color: rgba(156,196,255,0.4); margin: 6px 0 0 0; letter-spacing: 0.2em;">ZBERATEĽSKÉ KARTY</p>
+          </div>
+        </div>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #565d78; margin: 8px 0 0 0; text-align: center;">NEW card back — double-cross mark</p>
+      </div>
+    </div>
+
+    <!-- Cards screens -->
+    <div style="display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- Shop -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Cards — shop, foil booster packs</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+              <h1 style="font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em;">Cards</h1>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(245,196,94,0.1); border: 1px solid rgba(245,196,94,0.2);">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+                <span style="font-size: 14px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">450</span>
+              </div>
+            </div>
+            <div style="display: flex; background: #151926; border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 22px;">
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 700; background: #5ea4f7; color: #ffffff;">Shop</div>
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Binder</div>
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Friends</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div style="text-align: center;">
+                <div style="position: relative; border-radius: 14px; overflow: hidden; background: linear-gradient(165deg, #2a1a4a, #6d28d9 45%, #1e1235 90%); border: 1px solid rgba(168,85,247,0.35); padding: 18px 12px 16px 12px; box-shadow: 0 10px 26px rgba(109,40,217,0.25);">
+                  <div style="position: absolute; inset: 0; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%); background-size: 250% 250%; animation: holo-shift 4.5s ease infinite;"></div>
+                  <div style="position: absolute; top: 0; left: 0; right: 0; height: 9px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 5px, transparent 5px 10px);"></div>
+                  <div style="position: relative; width: 58px; height: 58px; margin: 8px auto 10px auto; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 46px; height: 46px; transform: rotate(45deg); border: 1.5px solid rgba(233,213,255,0.5); border-radius: 8px;"></div>
+                    <span style="font-family: Cinzel, serif; font-size: 30px; font-weight: 900; color: #e9d5ff; position: relative;">M</span>
+                  </div>
+                  <p style="position: relative; font-size: 13px; font-weight: 900; margin: 0; letter-spacing: -0.01em;">Mýty a Legendy</p>
+                  <p style="position: relative; font-size: 9px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); margin: 4px 0 12px 0;">8C · 4U · 2R · 1L+</p>
+                  <div style="position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 8px 16px; border-radius: 999px; background: rgba(0,0,0,0.35); border: 1px solid rgba(245,196,94,0.35);">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+                    <span style="font-size: 12px; font-weight: 800; color: #f5c45e;">150</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px;">
+                  <div style="flex: 1; max-width: 90px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.08);"><div style="width: 60%; height: 4px; border-radius: 999px; background: #a855f7;"></div></div>
+                  <span style="font-size: 10px; color: #6b7289; font-variant-numeric: tabular-nums;">9/15</span>
+                </div>
+              </div>
+              <div style="text-align: center;">
+                <div style="position: relative; border-radius: 14px; overflow: hidden; background: linear-gradient(165deg, #4a1a1a, #dc2626 45%, #351212 90%); border: 1px solid rgba(239,68,68,0.35); padding: 18px 12px 16px 12px; box-shadow: 0 10px 26px rgba(220,38,38,0.2);">
+                  <div style="position: absolute; inset: 0; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%); background-size: 250% 250%; animation: holo-shift 5s ease infinite;"></div>
+                  <div style="position: absolute; top: 0; left: 0; right: 0; height: 9px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 5px, transparent 5px 10px);"></div>
+                  <div style="position: relative; width: 58px; height: 58px; margin: 8px auto 10px auto; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 46px; height: 46px; transform: rotate(45deg); border: 1.5px solid rgba(254,202,202,0.5); border-radius: 8px;"></div>
+                    <span style="font-family: Cinzel, serif; font-size: 30px; font-weight: 900; color: #fecaca; position: relative;">K</span>
+                  </div>
+                  <p style="position: relative; font-size: 13px; font-weight: 900; margin: 0; letter-spacing: -0.01em;">Slovenská Kuchyňa</p>
+                  <p style="position: relative; font-size: 9px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); margin: 4px 0 12px 0;">8C · 4U · 2R · 1L+</p>
+                  <div style="position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 8px 16px; border-radius: 999px; background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.4);">
+                    <span style="font-size: 12px; font-weight: 800; color: #34d399;">COMPLETE</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px;">
+                  <div style="flex: 1; max-width: 90px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.08);"><div style="width: 100%; height: 4px; border-radius: 999px; background: #34d399;"></div></div>
+                  <span style="font-size: 10px; color: #6b7289; font-variant-numeric: tabular-nums;">15/15</span>
+                </div>
+              </div>
+              <div style="text-align: center;">
+                <div style="position: relative; border-radius: 14px; overflow: hidden; background: linear-gradient(165deg, #1a2c4a, #2563eb 45%, #12203a 90%); border: 1px solid rgba(96,165,250,0.35); padding: 18px 12px 16px 12px; box-shadow: 0 10px 26px rgba(37,99,235,0.22);">
+                  <div style="position: absolute; inset: 0; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%); background-size: 250% 250%; animation: holo-shift 5.5s ease infinite;"></div>
+                  <div style="position: absolute; top: 0; left: 0; right: 0; height: 9px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 5px, transparent 5px 10px);"></div>
+                  <div style="position: relative; width: 58px; height: 58px; margin: 8px auto 10px auto; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 46px; height: 46px; transform: rotate(45deg); border: 1.5px solid rgba(191,219,254,0.5); border-radius: 8px;"></div>
+                    <span style="font-family: Cinzel, serif; font-size: 30px; font-weight: 900; color: #bfdbfe; position: relative;">P</span>
+                  </div>
+                  <p style="position: relative; font-size: 13px; font-weight: 900; margin: 0; letter-spacing: -0.01em;">Pamiatky</p>
+                  <p style="position: relative; font-size: 9px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); margin: 4px 0 12px 0;">8C · 4U · 2R · 1L+</p>
+                  <div style="position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 8px 16px; border-radius: 999px; background: rgba(0,0,0,0.35); border: 1px solid rgba(245,196,94,0.35);">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+                    <span style="font-size: 12px; font-weight: 800; color: #f5c45e;">150</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px;">
+                  <div style="flex: 1; max-width: 90px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.08);"><div style="width: 27%; height: 4px; border-radius: 999px; background: #60a5fa;"></div></div>
+                  <span style="font-size: 10px; color: #6b7289; font-variant-numeric: tabular-nums;">4/15</span>
+                </div>
+              </div>
+              <div style="text-align: center; opacity: 0.45;">
+                <div style="position: relative; border-radius: 14px; overflow: hidden; background: linear-gradient(165deg, #3a1a3a, #be185d 45%, #2a1228 90%); border: 1px solid rgba(236,72,153,0.35); padding: 18px 12px 16px 12px;">
+                  <div style="position: absolute; top: 0; left: 0; right: 0; height: 9px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.14) 0 5px, transparent 5px 10px);"></div>
+                  <div style="position: relative; width: 58px; height: 58px; margin: 8px auto 10px auto; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 46px; height: 46px; transform: rotate(45deg); border: 1.5px solid rgba(251,207,232,0.5); border-radius: 8px;"></div>
+                    <span style="font-family: Cinzel, serif; font-size: 30px; font-weight: 900; color: #fbcfe8; position: relative;">S</span>
+                  </div>
+                  <p style="position: relative; font-size: 13px; font-weight: 900; margin: 0; letter-spacing: -0.01em;">Slang &amp; Výrazy</p>
+                  <p style="position: relative; font-size: 9px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); margin: 4px 0 12px 0;">8C · 4U · 2R · 1L+</p>
+                  <div style="position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 8px 16px; border-radius: 999px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.15);">
+                    <span style="font-size: 12px; font-weight: 800; color: #a3aabe;">Need 150</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px;">
+                  <div style="flex: 1; max-width: 90px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.08);"></div>
+                  <span style="font-size: 10px; color: #6b7289; font-variant-numeric: tabular-nums;">0/15</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="cards" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+
+      <!-- Binder -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Binder — album grid by set (new)</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: hidden; padding: 24px 20px 0 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+              <h1 style="font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em;">Cards</h1>
+              <div style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(245,196,94,0.1); border: 1px solid rgba(245,196,94,0.2);">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" stroke-width="2" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+                <span style="font-size: 14px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">450</span>
+              </div>
+            </div>
+            <div style="display: flex; background: #151926; border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 22px;">
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Shop</div>
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 700; background: #5ea4f7; color: #ffffff;">Binder</div>
+              <div style="flex: 1; text-align: center; padding: 9px 0; border-radius: 11px; font-size: 13px; font-weight: 500; color: #6b7289;">Friends</div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 9px;">
+                <span style="font-family: Cinzel, serif; font-size: 16px; font-weight: 900; color: #c7a5f7;">M</span>
+                <div>
+                  <p style="font-size: 14px; font-weight: 800; margin: 0;">Mýty a Legendy</p>
+                  <p style="font-size: 11px; color: #6b7289; margin: 0;">9 of 15 collected</p>
+                </div>
+              </div>
+              <div style="width: 60px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08);"><div style="width: 60%; height: 5px; border-radius: 999px; background: #a855f7;"></div></div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 22px;">
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #3a4152, #5b6478 40%, #2c3242); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #aeb6c8;">V</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">001</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #3a4152, #5b6478 40%, #2c3242); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #aeb6c8;">V</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">002</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed rgba(255,255,255,0.13); box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><span style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #3d4358;">003</span></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #3a4152, #5b6478 40%, #2c3242); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #aeb6c8;">D</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">004</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed rgba(255,255,255,0.13); box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><span style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #3d4358;">005</span></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #0e5f46, #4fd6a4 40%, #0a3d2e); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #6ee7b7;">M</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">009</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #0e5f46, #4fd6a4 40%, #0a3d2e); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #6ee7b7;">P</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">012</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; border: 1.5px dashed rgba(255,255,255,0.13); box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><span style="font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #3d4358;">013</span></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #1e3f8f, #7db2ff 40%, #142450); box-sizing: border-box; clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);"><div style="width: 100%; height: 100%; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #93c5fd;">B</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">014</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 26px 26px 8px 8px; padding: 2px; background: linear-gradient(160deg, #8a6118, #f7d977 40%, #6e4c12); box-sizing: border-box; animation: legendary-glow 2.4s ease-in-out infinite;"><div style="width: 100%; height: 100%; border-radius: 24px 24px 6px 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 900; color: #fde68a;">J</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">015</span></div></div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 9px;">
+                <span style="font-family: Cinzel, serif; font-size: 16px; font-weight: 900; color: #fca5a5;">K</span>
+                <div>
+                  <p style="font-size: 14px; font-weight: 800; margin: 0;">Slovenská Kuchyňa</p>
+                  <p style="font-size: 11px; color: #6b7289; margin: 0;">Complete · 15 of 15</p>
+                </div>
+              </div>
+              <span style="font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: rgba(52,211,153,0.14); color: #34d399;">COMPLETE</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;">
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #3a4152, #5b6478 40%, #2c3242); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #aeb6c8;">H</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">016</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #3a4152, #5b6478 40%, #2c3242); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #aeb6c8;">B</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">017</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #0e5f46, #4fd6a4 40%, #0a3d2e); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #6ee7b7;">K</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">024</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 8px; padding: 2px; background: linear-gradient(160deg, #1e3f8f, #7db2ff 40%, #142450); box-sizing: border-box; clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);"><div style="width: 100%; height: 100%; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 700; color: #93c5fd;">Ž</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">028</span></div></div>
+              <div style="aspect-ratio: 5 / 7; border-radius: 26px 26px 8px 8px; padding: 2px; background: linear-gradient(160deg, #8a6118, #f7d977 40%, #6e4c12); box-sizing: border-box;"><div style="width: 100%; height: 100%; border-radius: 24px 24px 6px 6px; background: #0d1019; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;"><span style="font-family: Cinzel, serif; font-size: 17px; font-weight: 900; color: #fde68a;">B</span><span style="font-size: 6.5px; font-family: 'JetBrains Mono', monospace; color: #4a5068;">030</span></div></div>
+            </div>
+          </div>
+          <dc-import name="Redesign Tab Bar" active="cards" hint-size="390px,76px"></dc-import>
+        </div>
+      </div>
+
+      <!-- Pack opening -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Pack opening — swipe-to-tear (replaces shake)</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; display: flex; flex-direction: column;">
+          <div style="padding: 28px 20px 0 20px; text-align: center;">
+            <h2 style="font-size: 18px; font-weight: 800; margin: 0 0 2px 0;">Mýty a Legendy</h2>
+            <p style="font-size: 12px; color: #6b7289; margin: 0;">Swipe the foil strip to tear it open</p>
+          </div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+            <div style="position: relative; width: 210px; height: 290px;">
+              <div style="position: absolute; inset: 0; border-radius: 16px; background: linear-gradient(165deg, #2a1a4a, #6d28d9 45%, #1e1235 90%); border: 1px solid rgba(168,85,247,0.4); box-shadow: 0 24px 50px rgba(109,40,217,0.3); overflow: hidden;">
+                <div style="position: absolute; inset: 0; opacity: {{ holoOpacity }}; background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%); background-size: 250% 250%; animation: holo-shift 4s ease infinite;"></div>
+                <div style="position: absolute; top: 34px; left: 0; right: 0; border-top: 2px dashed rgba(255,255,255,0.35);"></div>
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 34px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: flex-end; padding: 0 12px;">
+                  <div style="display: flex; align-items: center; gap: 6px; animation: tear-hint 1.4s ease-in-out infinite;">
+                    <span style="font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.75); letter-spacing: 0.06em;">POTIAHNI</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                  </div>
+                </div>
+                <div style="position: absolute; top: 34px; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+                  <div style="position: relative; width: 84px; height: 84px; display: flex; align-items: center; justify-content: center;">
+                    <div style="position: absolute; width: 66px; height: 66px; transform: rotate(45deg); border: 2px solid rgba(233,213,255,0.5); border-radius: 10px;"></div>
+                    <span style="font-family: Cinzel, serif; font-size: 44px; font-weight: 900; color: #e9d5ff; position: relative;">M</span>
+                  </div>
+                  <div style="text-align: center;">
+                    <p style="font-size: 16px; font-weight: 900; margin: 0;">Mýty a Legendy</p>
+                    <p style="font-size: 10px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.5); margin: 4px 0 0 0;">5 KARIET · 1 RARE+</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 0 20px 28px 20px;">
+            <p style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #565d78; text-align: center; margin: 0 0 20px 0;">tear → foil peels back → cards fan out ↓</p>
+            <div style="display: flex; justify-content: center; align-items: flex-end; height: 150px; position: relative;">
+              <div style="position: absolute; width: 84px; height: 120px; border-radius: 10px; padding: 3px; background: linear-gradient(160deg, #2b3a5e, #6f92d8 40%, #1c2540); transform-origin: bottom center; animation: float-a 3s ease-in-out infinite; left: 84px; bottom: 8px;"><div style="width: 100%; height: 100%; border-radius: 7px; background: #0b0e17; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="#9cc4ff"></rect><rect x="10" y="7" width="12" height="3.2" rx="1" fill="#9cc4ff"></rect><rect x="8" y="14" width="16" height="3.2" rx="1" fill="#9cc4ff"></rect></svg></div></div>
+              <div style="position: absolute; width: 84px; height: 120px; border-radius: 10px; padding: 3px; background: linear-gradient(160deg, #2b3a5e, #6f92d8 40%, #1c2540); transform-origin: bottom center; animation: float-b 3s ease-in-out 0.3s infinite; bottom: 16px;"><div style="width: 100%; height: 100%; border-radius: 7px; background: #0b0e17; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="#9cc4ff"></rect><rect x="10" y="7" width="12" height="3.2" rx="1" fill="#9cc4ff"></rect><rect x="8" y="14" width="16" height="3.2" rx="1" fill="#9cc4ff"></rect></svg></div></div>
+              <div style="position: absolute; width: 84px; height: 120px; border-radius: 10px; padding: 3px; background: linear-gradient(160deg, #2b3a5e, #6f92d8 40%, #1c2540); transform-origin: bottom center; animation: float-c 3s ease-in-out 0.6s infinite; right: 84px; bottom: 8px;"><div style="width: 100%; height: 100%; border-radius: 7px; background: #0b0e17; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="#9cc4ff"></rect><rect x="10" y="7" width="12" height="3.2" rx="1" fill="#9cc4ff"></rect><rect x="8" y="14" width="16" height="3.2" rx="1" fill="#9cc4ff"></rect></svg></div></div>
+            </div>
+            <p style="font-size: 11px; color: #6b7289; text-align: center; margin: 14px 0 0 0;">Tap each card to flip · rarity decides the reveal fanfare</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trade-in + showcase -->
+      <div style="width: 390px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Duplicate trade-in sheet + profile showcase (new)</p>
+        <div style="width: 390px; height: 800px; background: #0e1017; border-radius: 28px; border: 1px solid #262b3d; overflow: hidden; color: #eef1f8; position: relative;">
+          <div style="padding: 24px 20px;">
+            <div style="border-radius: 22px; padding: 18px; background: linear-gradient(120deg, rgba(94,164,247,0.12), transparent 65%), #151926; border: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 14px;">
+              <div style="width: 54px; height: 54px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #ffffff; background: linear-gradient(135deg, #5ea4f7, #5ea4f788); flex-shrink: 0;">M</div>
+              <div style="flex: 1;">
+                <p style="font-size: 16px; font-weight: 800; margin: 0;">Matt</p>
+                <p style="font-size: 12px; color: #6b7289; margin: 2px 0 0 0;">38 / 150 cards · 2450 XP</p>
+              </div>
+              <div style="width: 52px; height: 74px; border-radius: 16px 16px 6px 6px; padding: 2px; background: linear-gradient(160deg, #8a6118, #f7d977 40%, #6e4c12); animation: legendary-glow 2.4s ease-in-out infinite; position: relative; flex-shrink: 0;">
+                <div style="width: 100%; height: 100%; border-radius: 14px 14px 4px 4px; background: #0d1019; display: flex; align-items: center; justify-content: center;"><span style="font-family: Cinzel, serif; font-size: 20px; font-weight: 900; color: #fde68a;">J</span></div>
+                <div style="position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; border-radius: 999px; background: #f5c45e; display: flex; align-items: center; justify-content: center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#0e1017"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5L8 13.8 2 9.2h7.6z"></path></svg></div>
+              </div>
+            </div>
+            <p style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #565d78; margin: 10px 0 0 0; text-align: right;">↑ showcase card slot on profile</p>
+          </div>
+          <div style="position: absolute; inset: 0; background: rgba(5,6,10,0.5); top: 160px;"></div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #161a28; border-radius: 28px 28px 0 0; border-top: 1px solid rgba(255,255,255,0.09); padding: 12px 20px 32px 20px;">
+            <div style="width: 40px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.15); margin: 0 auto 20px auto;"></div>
+            <h2 style="font-size: 19px; font-weight: 800; margin: 0 0 4px 0;">Duplicates</h2>
+            <p style="font-size: 12.5px; color: #6b7289; margin: 0 0 20px 0;">Trade extra copies back into XP.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px;">
+              <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 38px; height: 54px; border-radius: 7px; padding: 2px; background: linear-gradient(160deg, #3a4152, #5b6478 40%, #2c3242); flex-shrink: 0;"><div style="width: 100%; height: 100%; border-radius: 5px; background: #0d1019; display: flex; align-items: center; justify-content: center;"><span style="font-family: Cinzel, serif; font-size: 15px; font-weight: 700; color: #aeb6c8;">V</span></div></div>
+                <div style="flex: 1;"><p style="font-size: 14px; font-weight: 700; margin: 0;">vodník</p><p style="font-size: 11px; color: #6b7289; margin: 1px 0 0 0;">Common · ×2 extra</p></div>
+                <span style="font-size: 13px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">+20 XP</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 38px; height: 54px; border-radius: 7px; padding: 2px; background: linear-gradient(160deg, #0e5f46, #4fd6a4 40%, #0a3d2e); flex-shrink: 0;"><div style="width: 100%; height: 100%; border-radius: 5px; background: #0d1019; display: flex; align-items: center; justify-content: center;"><span style="font-family: Cinzel, serif; font-size: 15px; font-weight: 700; color: #6ee7b7;">P</span></div></div>
+                <div style="flex: 1;"><p style="font-size: 14px; font-weight: 700; margin: 0;">poludnica</p><p style="font-size: 11px; color: #6b7289; margin: 1px 0 0 0;">Uncommon · ×1 extra</p></div>
+                <span style="font-size: 13px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">+25 XP</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                <div style="width: 38px; height: 54px; padding: 2px; background: linear-gradient(160deg, #1e3f8f, #7db2ff 40%, #142450); flex-shrink: 0; clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);"><div style="width: 100%; height: 100%; background: #0d1019; display: flex; align-items: center; justify-content: center; clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);"><span style="font-family: Cinzel, serif; font-size: 15px; font-weight: 700; color: #93c5fd;">B</span></div></div>
+                <div style="flex: 1;"><p style="font-size: 14px; font-weight: 700; margin: 0;">Baba Jaga</p><p style="font-size: 11px; color: #6b7289; margin: 1px 0 0 0;">Rare · ×1 extra</p></div>
+                <span style="font-size: 13px; font-weight: 800; color: #f5c45e; font-variant-numeric: tabular-nums;">+60 XP</span>
+              </div>
+            </div>
+            <div style="height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; background: linear-gradient(90deg, #f5c45e, #fbbf24); color: #171205; font-size: 15px; font-weight: 800;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+              Trade 4 duplicates · +105 XP
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LOADING &amp; SKELETONS ══ -->
+  <div>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7a8199; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 16px 0;">Loading &amp; skeletons — shimmer sweep, subtle pulse</p>
+    <div style="display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- Branded loader -->
+      <div style="width: 300px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Branded loader — lesson generation</p>
+        <div style="width: 300px; height: 480px; background: #0e1017; border-radius: 24px; border: 1px solid #262b3d; color: #eef1f8; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box;">
+          <div style="position: relative; width: 96px; height: 96px; margin-bottom: 28px;">
+            <svg viewBox="0 0 96 96" style="position: absolute; inset: 0; width: 96px; height: 96px; animation: ring-spin 1.6s linear infinite;"><circle cx="48" cy="48" r="43" fill="none" stroke="rgba(94,164,247,0.15)" stroke-width="3"></circle><circle cx="48" cy="48" r="43" fill="none" stroke="#5ea4f7" stroke-width="3" stroke-linecap="round" stroke-dasharray="70 200"></circle></svg>
+            <div style="position: absolute; inset: 18px; border-radius: 20px; background: linear-gradient(135deg, #5ea4f7, #38bdf8); display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 28px rgba(94,164,247,0.35); animation: loader-pulse 1.6s ease-in-out infinite;">
+              <svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="white"></rect><rect x="10" y="7" width="12" height="3.2" rx="1" fill="white"></rect><rect x="8" y="14" width="16" height="3.2" rx="1" fill="white"></rect></svg>
+            </div>
+          </div>
+          <h2 style="font-size: 18px; font-weight: 800; margin: 0 0 6px 0; text-align: center;">Pripravujeme lekciu…</h2>
+          <p style="font-size: 12.5px; color: #6b7289; margin: 0 0 24px 0; text-align: center;">Building vocabulary exercises for your level</p>
+          <div style="width: 180px; height: 5px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.06);">
+            <div style="width: 100%; height: 100%; background: linear-gradient(90deg, transparent 25%, #5ea4f7 50%, transparent 75%); background-size: 250% 100%; animation: shimmer-sweep 1.4s linear infinite;"></div>
+          </div>
+          <p style="font-size: 10px; color: #4a5068; margin: 16px 0 0 0;">usually 5–10 seconds</p>
+        </div>
+      </div>
+
+      <!-- Home skeleton -->
+      <div style="width: 300px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Home skeleton — matches 2a layout</p>
+        <div style="width: 300px; height: 480px; background: #0e1017; border-radius: 24px; border: 1px solid #262b3d; padding: 20px 16px; box-sizing: border-box; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;">
+            <div>
+              <div style="width: 76px; height: 9px; border-radius: 999px; margin-bottom: 8px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear infinite;"></div>
+              <div style="width: 120px; height: 17px; border-radius: 999px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.1s infinite;"></div>
+            </div>
+            <div style="width: 34px; height: 34px; border-radius: 12px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.2s infinite;"></div>
+          </div>
+          <div style="height: 84px; border-radius: 18px; margin-bottom: 22px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.15s infinite;"></div>
+          <div style="width: 70px; height: 12px; border-radius: 999px; margin-bottom: 12px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.25s infinite;"></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="height: 96px; border-radius: 16px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.3s infinite;"></div>
+            <div style="height: 96px; border-radius: 16px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.4s infinite;"></div>
+            <div style="height: 96px; border-radius: 16px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.5s infinite;"></div>
+            <div style="height: 96px; border-radius: 16px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.6s infinite;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Binder skeleton -->
+      <div style="width: 300px; flex-shrink: 0;">
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #565d78; margin: 0 0 8px 0;">Binder skeleton — card slots</p>
+        <div style="width: 300px; height: 480px; background: #0e1017; border-radius: 24px; border: 1px solid #262b3d; padding: 20px 16px; box-sizing: border-box; overflow: hidden;">
+          <div style="width: 110px; height: 15px; border-radius: 999px; margin-bottom: 16px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear infinite;"></div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-bottom: 20px;">
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.05s infinite;"></div>
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.15s infinite;"></div>
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.25s infinite;"></div>
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.35s infinite;"></div>
+          </div>
+          <div style="width: 130px; height: 15px; border-radius: 999px; margin-bottom: 16px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.2s infinite;"></div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px;">
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.45s infinite;"></div>
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.55s infinite;"></div>
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.65s infinite;"></div>
+            <div style="aspect-ratio: 5 / 7; border-radius: 9px; background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0) 65%) #171b28; background-size: 250% 100%; animation: shimmer-sweep 1.8s linear 0.75s infinite;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;cardArt&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;image&quot;, &quot;options&quot;: [&quot;image&quot;, &quot;monogram&quot;, &quot;emoji&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Trading cards&quot;}, &quot;rarityShapes&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Trading cards&quot;}, &quot;foilAnimation&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Trading cards&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const art = this.props.cardArt ?? 'image';
+    const shapes = this.props.rarityShapes ?? true;
+    const foil = this.props.foilAnimation ?? true;
+    const em = art === 'emoji';
+    const useImage = art === 'image';
+    const oct = (o) => `polygon(${o}px 0, calc(100% - ${o}px) 0, 100% ${o}px, 100% calc(100% - ${o}px), calc(100% - ${o}px) 100%, ${o}px 100%, 0 calc(100% - ${o}px), 0 ${o}px)`;
+    return {
+      artCommon: em ? '🧜' : 'V',
+      artUncommon: em ? '☀️' : 'P',
+      artRare: em ? '🏚️' : 'B',
+      artLegendary: em ? '⚔️' : 'J',
+      artMythic: em ? '🐲' : 'Š',
+      artFullArt: em ? '⚔️' : 'J',
+      useImage: useImage,
+      useGlyph: !useImage,
+      legendArtMask: shapes ? 'inset(0 round 92px 92px 10px 10px)' : 'inset(0 round 10px)',
+      ornOpacity: em ? '0' : '1',
+      holoOpacity: foil ? '1' : '0',
+      rareClip: shapes ? oct(18) : 'none',
+      rareClipInner: shapes ? oct(14) : 'none',
+      rareRadius: shapes ? '0px' : '18px',
+      rareRadiusInner: shapes ? '0px' : '13px',
+      legendRadius: shapes ? '104px 104px 18px 18px' : '18px',
+      legendRadiusInner: shapes ? '99px 99px 13px 13px' : '13px',
+      legendArtRadius: shapes ? '92px 92px 10px 10px' : '10px',
+      mythicClip: shapes ? 'polygon(0 3.5%, 50% 0, 100% 3.5%, 100% 96.5%, 50% 100%, 0 96.5%)' : 'none',
+      mythicClipInner: shapes ? 'polygon(0 3.8%, 50% 0, 100% 3.8%, 100% 96.2%, 50% 100%, 0 96.2%)' : 'none',
+      mythicRadius: shapes ? '8px' : '18px',
+      mythicRadiusInner: shapes ? '6px' : '13px',
+    };
+  }
+}
+</script>
+</body>
+</html>
