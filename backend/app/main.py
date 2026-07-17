@@ -12,6 +12,7 @@ from .config import settings
 from .database import (
     get_db,
     get_dashboard_stats,
+    get_due_words,
     get_leaderboard,
     get_user,
     get_users,
@@ -19,6 +20,7 @@ from .database import (
     get_vocab_progress,
     get_vocab_stats,
     get_weak_words,
+    get_weakest_concepts,
     init_db,
     list_sessions,
     update_user_preferences,
@@ -160,6 +162,60 @@ async def get_vocabulary(user_id: str):
             "words": all_vocab,
             "stats": stats,
             "weak_words": weak,
+        }
+
+
+@app.get("/api/users/{user_id}/recommendations")
+async def recommendations(user_id: str):
+    async with get_db() as db:
+        if not await get_user(db, user_id):
+            raise HTTPException(404, "User not found")
+
+        sessions = await list_sessions(db, user_id)
+        in_progress = next((s for s in sessions if not s["completed"]), None)
+        due = await get_due_words(db, user_id, limit=20)
+        weakest = await get_weakest_concepts(db, user_id, limit=1)
+        weakest_concept = weakest[0] if weakest else None
+
+        recommended: list[dict] = []
+        if in_progress:
+            topic_label = TOPICS.get(in_progress["mode"], {}).get(
+                in_progress["topic"], in_progress["topic"]
+            )
+            recommended.append({
+                "kind": "continue",
+                "label": f"Continue {in_progress['mode'].title()} · {topic_label}",
+                "mode": in_progress["mode"],
+                "session_id": in_progress["id"],
+            })
+        if len(due) >= 3:
+            recommended.append({
+                "kind": "review_vocab",
+                "label": f"Review {len(due)} due words",
+                "mode": "vocabulary",
+            })
+        if weakest_concept and weakest_concept["accuracy"] < 0.7:
+            recommended.append({
+                "kind": "practice_concept",
+                "label": f"Practice: {weakest_concept['concept']}",
+                "mode": "grammar",
+            })
+
+        in_progress_summary = None
+        if in_progress:
+            in_progress_summary = {
+                "id": in_progress["id"],
+                "mode": in_progress["mode"],
+                "topic": in_progress["topic"],
+                "difficulty": in_progress["difficulty"],
+                "created_at": in_progress["created_at"],
+            }
+
+        return {
+            "in_progress_session": in_progress_summary,
+            "due_words": len(due),
+            "weakest_concept": weakest_concept,
+            "recommended": recommended,
         }
 
 
