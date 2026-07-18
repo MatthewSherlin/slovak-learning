@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app import llm
-from app.config import settings
+from app.config import Settings, settings
 from app.llm import LLMError, _parse_openrouter_response
 
 
@@ -144,4 +144,6 @@ class TestProviderRouting:
         assert captured["system"] == "Be brief"
 
     async def test_anthropic_is_default_provider(self):
-        assert settings.llm_provider == "anthropic"
+        # Test the code-level default, independent of any local .env override
+        # (a deployed .env may legitimately set SLOVAK_LLM_PROVIDER=openrouter).
+        assert Settings.model_fields["llm_provider"].default == "anthropic"

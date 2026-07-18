@@ -60,6 +60,7 @@ class VocabQuestion(BaseModel):
     choices: list[str]
     correctIndex: int
     explanation: str
+    pronunciation: str = ""  # simple phonetic hint for the Slovak word (e.g. VOH-dah)
 
 
 class VocabExerciseData(BaseModel):

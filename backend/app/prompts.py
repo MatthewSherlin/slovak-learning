@@ -89,10 +89,11 @@ You MUST respond with ONLY valid JSON in this exact format:
   "questions": [
     {{
       "word": "<the word to display>",
+      "pronunciation": "<simple phonetic hint for the SLOVAK word, e.g. VOH-dah — never IPA>",
       "direction": "sk-en",
       "choices": ["<option A>", "<option B>", "<option C>", "<option D>"],
       "correctIndex": 0,
-      "explanation": "<brief note: pronunciation hint, etymology, or usage tip>"
+      "explanation": "<brief note: etymology or usage tip>"
     }}
   ]
 }}
@@ -106,7 +107,7 @@ Rules:
 - For sk-en: word is Slovak, choices are English. The CORRECT English meaning must be accurate.
 - For en-sk: word is English, choices are Slovak (with proper diacritics). The CORRECT Slovak translation must be accurate.
 - The wrong choices (distractors) must also be real words — do not invent fake words as distractors
-- Include a pronunciation hint in the explanation for Slovak words
+- "pronunciation" is ALWAYS the phonetic hint for the SLOVAK word (the answer for en-sk, the prompt word for sk-en), using simple syllables like VOH-dah or CHLEE-eb — never IPA, never the English word
 - EVERY Slovak word must have correct diacritics. Verify each one.
 - Only use words you are absolutely certain about. Common, well-known vocabulary only. Do not guess.
 
