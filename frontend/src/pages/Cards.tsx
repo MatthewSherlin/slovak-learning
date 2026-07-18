@@ -18,6 +18,15 @@ import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards
 import type { CardData, CardSet, UserCardCollection, CardSocialEntry, PackPurchaseResult } from '../lib/types';
 import { getSetTheme } from '../components/cards/setThemes';
 
+// Tailwind text-color per rarity for the binder mini-tile rarity letter.
+const RARITY_TEXT_CLASS: Record<CardData['rarity'], string> = {
+  common: 'text-gray-400',
+  uncommon: 'text-emerald-400',
+  rare: 'text-blue-400',
+  legendary: 'text-amber-400',
+  mythic: 'text-pink-400',
+};
+
 // Local alias so existing call-sites don't change
 function getTheme(setId: string) {
   return getSetTheme(setId);
@@ -299,13 +308,6 @@ function BinderTab({
                 const card = byNumber[num];
 
                 if (owned && card) {
-                  const rarityTextClass: Record<CardData['rarity'], string> = {
-                    common: 'text-gray-400',
-                    uncommon: 'text-emerald-400',
-                    rare: 'text-blue-400',
-                    legendary: 'text-amber-400',
-                    mythic: 'text-pink-400',
-                  };
                   const copyCount = copies[String(card.id)] ?? 1;
                   return (
                     <motion.button
@@ -325,7 +327,7 @@ function BinderTab({
                       />
                       {/* Rarity + number overlays */}
                       <div className="absolute inset-0 flex flex-col items-center justify-end p-1 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 40%, transparent)' }}>
-                        <span className={`text-[7px] font-bold uppercase ${rarityTextClass[card.rarity]}`}>{card.rarity.charAt(0)}</span>
+                        <span className={`text-[7px] font-bold uppercase ${RARITY_TEXT_CLASS[card.rarity]}`}>{card.rarity.charAt(0)}</span>
                         <span className="text-[7px] font-mono text-white/40">{String(num).padStart(3, '0')}</span>
                       </div>
                       {copyCount >= 2 && (
