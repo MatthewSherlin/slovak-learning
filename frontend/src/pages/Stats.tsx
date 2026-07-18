@@ -985,7 +985,7 @@ export default function Stats() {
   }, [location.search]);
 
   return (
-    <div className="max-w-4xl mx-auto px-5 pt-8 pb-24">
+    <div className="max-w-4xl mx-auto px-5 pb-24" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h1
           className="font-extrabold tracking-tight text-text-primary"

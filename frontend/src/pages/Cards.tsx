@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap,
@@ -84,6 +84,33 @@ function ErrorRetry({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+// ── Card image with emoji fallback ────────────────────────────────
+
+const CardImage = memo(function CardImage({
+  card,
+  className,
+  style,
+  emojiClass,
+}: {
+  card: CardData;
+  className?: string;
+  style?: React.CSSProperties;
+  emojiClass?: string;
+}) {
+  const [err, setErr] = useState(false);
+  if (err) return <span className={emojiClass}>{card.emoji}</span>;
+  return (
+    <img
+      src={`${import.meta.env.BASE_URL}cards/${card.set_id}/${card.id}.jpg`}
+      alt={card.slovak}
+      onError={() => setErr(true)}
+      className={className}
+      style={style}
+      loading="lazy"
+    />
+  );
+});
+
 // ── Pack opening: inline CardFront (for flip animation only) ───────
 
 function CardFront({
@@ -117,10 +144,13 @@ function CardFront({
           {card.set_name}
         </span>
       </div>
-      <div className="flex items-center justify-center relative z-10" style={{ flex: isLarge ? '1 1 auto' : '0 0 auto', margin: isSmall ? '4px 0' : isLarge ? '8px 0' : '6px 0' }}>
-        <span className={`leading-none select-none drop-shadow-lg ${isSmall ? 'text-4xl' : isLarge ? 'text-8xl' : 'text-6xl'}`}>
-          {card.emoji}
-        </span>
+      <div className="flex items-center justify-center relative z-10 overflow-hidden rounded-lg" style={{ flex: isLarge ? '1 1 auto' : '0 0 auto', margin: isSmall ? '4px 0' : isLarge ? '8px 0' : '6px 0', minHeight: isLarge ? 120 : isSmall ? 48 : 80 }}>
+        <CardImage
+          card={card}
+          className="w-full h-full object-cover rounded-lg"
+          style={{ minHeight: isLarge ? 120 : isSmall ? 48 : 80 }}
+          emojiClass={`leading-none select-none drop-shadow-lg ${isSmall ? 'text-4xl' : isLarge ? 'text-8xl' : 'text-6xl'}`}
+        />
       </div>
       <div className={`h-px w-3/5 mx-auto relative z-10`} style={{ marginBottom: isSmall ? '4px' : isLarge ? '12px' : '6px', background: `linear-gradient(90deg, transparent, ${r.borderColor}, transparent)` }} />
       <div className="text-center relative z-10" style={{ marginBottom: isSmall ? '1px' : isLarge ? '4px' : '2px' }}>
@@ -175,7 +205,8 @@ function CardInspectModal({ card, onClose }: { card: CardData; onClose: () => vo
         <CardFront card={card} size="large" />
       </motion.div>
       <motion.button
-        className="absolute top-6 right-6 z-20 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center cursor-pointer text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+        className="absolute right-6 z-20 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center cursor-pointer text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+        style={{ top: 'calc(env(safe-area-inset-top) + 1.5rem)' }}
         onClick={onClose}
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -375,9 +406,15 @@ function BinderTab({
                       style={{ height: 88, background: getRarityMiniGradient(card.rarity) }}
                       title={`${card.slovak} — ${card.english}`}
                     >
-                      <div className="w-full h-full flex flex-col items-center justify-center p-1">
-                        <span className="text-2xl leading-none">{card.emoji}</span>
-                        <span className={`text-[7px] font-bold uppercase mt-1 ${r.text}`}>{card.rarity.charAt(0)}</span>
+                      {/* Card art image (covers tile); emoji shown as fallback */}
+                      <CardImage
+                        card={card}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        emojiClass="absolute inset-0 w-full h-full flex items-center justify-center text-2xl leading-none"
+                      />
+                      {/* Rarity + number overlays */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-end p-1 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 40%, transparent)' }}>
+                        <span className={`text-[7px] font-bold uppercase ${r.text}`}>{card.rarity.charAt(0)}</span>
                         <span className="text-[7px] font-mono text-white/40">{String(num).padStart(3, '0')}</span>
                       </div>
                       {copyCount >= 2 && (
@@ -467,11 +504,15 @@ function FriendsTab({
             {showcaseCard && (
               <div
                 data-testid={`showcase-thumb-${entry.user_id}`}
-                className="w-10 h-14 rounded-lg overflow-hidden shrink-0 flex flex-col items-center justify-center border border-white/10"
+                className="w-10 h-14 rounded-lg overflow-hidden shrink-0 relative border border-white/10"
                 style={{ background: getRarityMiniGradient(showcaseCard.rarity) }}
                 title={`${showcaseCard.slovak} — ${showcaseCard.english}`}
               >
-                <span className="text-lg leading-none">{showcaseCard.emoji}</span>
+                <CardImage
+                  card={showcaseCard}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  emojiClass="absolute inset-0 flex items-center justify-center text-lg leading-none"
+                />
               </div>
             )}
             <div className="text-right">
