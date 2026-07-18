@@ -220,7 +220,7 @@ export default function Home() {
   // ── Error state ───────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="max-w-lg mx-auto px-5 pt-20 pb-6 flex flex-col items-center text-center">
+      <div className="max-w-lg mx-auto px-5 pb-6 flex flex-col items-center text-center" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 5rem)' }}>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -270,7 +270,8 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="max-w-lg mx-auto px-5 pt-6 pb-6"
+      className="max-w-lg mx-auto px-5 pb-6"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}
     >
       {/* ── Header: date + greeting + streak + avatar ── */}
       <div className="flex items-center justify-between mb-7">
