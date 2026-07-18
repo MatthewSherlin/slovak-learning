@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock } from 'lucide-react';
 import type { User } from '../lib/types';
 import { verifyPin } from '../lib/api';
+import PinInput from './PinInput';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -11,100 +12,6 @@ interface PinEntryProps {
   user: User;
   onSuccess: () => void;
   onCancel: () => void;
-}
-
-// ── 4-digit PIN input (same pattern as SettingsModal) ────────────────
-
-function PinInput({
-  value,
-  onChange,
-  disabled,
-  shake,
-  autoFocus,
-}: {
-  value: string;
-  onChange: (pin: string) => void;
-  disabled?: boolean;
-  shake?: boolean;
-  autoFocus?: boolean;
-}) {
-  const refs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-
-  const digits = value.padEnd(4, ' ');
-
-  useEffect(() => {
-    if (autoFocus) refs[0].current?.focus();
-  }, [autoFocus]);
-
-  const setDigit = (index: number, digit: string) => {
-    const arr = [...digits];
-    arr[index] = digit || ' ';
-    const next = arr.join('').replace(/ /g, '');
-    onChange(next);
-    if (digit && index < 3) {
-      refs[index + 1].current?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      if (digits[index]?.trim()) {
-        setDigit(index, '');
-      } else if (index > 0) {
-        refs[index - 1].current?.focus();
-        setDigit(index - 1, '');
-      }
-    } else if (/^\d$/.test(e.key)) {
-      e.preventDefault();
-      setDigit(index, e.key);
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      refs[index - 1].current?.focus();
-    } else if (e.key === 'ArrowRight' && index < 3) {
-      refs[index + 1].current?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
-    if (pasted) {
-      onChange(pasted);
-      const focusIndex = Math.min(pasted.length, 3);
-      refs[focusIndex].current?.focus();
-    }
-  };
-
-  return (
-    <motion.div
-      animate={shake ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : {}}
-      transition={{ duration: 0.4 }}
-      className="flex gap-3 justify-center"
-    >
-      {[0, 1, 2, 3].map((i) => (
-        <input
-          key={i}
-          ref={refs[i]}
-          type="password"
-          inputMode="numeric"
-          maxLength={1}
-          disabled={disabled}
-          value={digits[i]?.trim() ? '\u2022' : ''}
-          onChange={() => {/* Handled by onKeyDown */}}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={handlePaste}
-          onFocus={(e) => e.target.select()}
-          className="w-12 h-14 rounded-xl border-2 border-border bg-surface-2 text-center text-xl font-bold text-text-primary focus:border-accent focus:outline-none transition-colors disabled:opacity-50 appearance-none"
-          style={{ caretColor: 'transparent' }}
-        />
-      ))}
-    </motion.div>
-  );
 }
 
 // ── PIN entry modal ──────────────────────────────────────────────────
@@ -144,7 +51,7 @@ export default function PinEntry({ user, onSuccess, onCancel }: PinEntryProps) {
     setTimeout(() => setShake(false), 500);
   }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (pin.length !== 4 || loading || locked) return;
 
     setLoading(true);
@@ -171,14 +78,14 @@ export default function PinEntry({ user, onSuccess, onCancel }: PinEntryProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pin, loading, locked, user.id, attempts, triggerShake, onSuccess]);
 
   // Auto-submit when 4 digits entered
   useEffect(() => {
     if (pin.length === 4 && !loading && !locked) {
       handleSubmit();
     }
-  }, [pin]);
+  }, [pin, loading, locked, handleSubmit]);
 
   return (
     <motion.div

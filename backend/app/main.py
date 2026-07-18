@@ -4,19 +4,23 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import settings
 from .database import (
     get_db,
     get_dashboard_stats,
+    get_due_words,
     get_leaderboard,
+    get_user,
     get_users,
     get_user_preferences,
     get_vocab_progress,
     get_vocab_stats,
     get_weak_words,
+    get_weakest_concepts,
     init_db,
     list_sessions,
     update_user_preferences,
@@ -25,14 +29,16 @@ from .database import (
     set_user_pin,
     verify_user_pin,
     remove_user_pin,
-    user_has_pin,
     get_user_farm,
     purchase_farm_item,
     move_farm_item,
     remove_farm_item,
     get_user_cards,
+    get_user_card_copies,
     purchase_pack,
-    get_all_users_card_counts,
+    get_all_users_cards,
+    trade_in_duplicates,
+    set_showcase_card,
     _get_user_xp_earned,
     _get_user_xp_spent,
 )
@@ -46,10 +52,13 @@ from .models import (
     PackPurchaseRequest,
     PinRequest,
     PinVerifyResponse,
+    ShowcaseRequest,
+    TradeInRequest,
     TranslationAnswerRequest,
     UpdatePreferencesRequest,
     VocabAnswerRequest,
 )
+from .llm import LLMError
 from .questions import QUESTIONS, TOPICS
 from .sessions import (
     advance_grammar_phase,
@@ -79,6 +88,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(LLMError)
+async def llm_error_handler(request: Request, exc: LLMError) -> JSONResponse:
+    """Surface upstream AI failures as 502 instead of a raw 500."""
+    logging.getLogger(__name__).error("LLM failure on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "AI service temporarily unavailable — please try again."},
+    )
 
 
 # ── Health ───────────────────────────────────────────────────────────
@@ -151,6 +170,60 @@ async def get_vocabulary(user_id: str):
         }
 
 
+@app.get("/api/users/{user_id}/recommendations")
+async def recommendations(user_id: str):
+    async with get_db() as db:
+        if not await get_user(db, user_id):
+            raise HTTPException(404, "User not found")
+
+        sessions = await list_sessions(db, user_id)
+        in_progress = next((s for s in sessions if not s["completed"]), None)
+        due = await get_due_words(db, user_id, limit=20)
+        weakest = await get_weakest_concepts(db, user_id, limit=1)
+        weakest_concept = weakest[0] if weakest else None
+
+        recommended: list[dict] = []
+        if in_progress:
+            topic_label = TOPICS.get(in_progress["mode"], {}).get(
+                in_progress["topic"], in_progress["topic"]
+            )
+            recommended.append({
+                "kind": "continue",
+                "label": f"Continue {in_progress['mode'].title()} · {topic_label}",
+                "mode": in_progress["mode"],
+                "session_id": in_progress["id"],
+            })
+        if len(due) >= 3:
+            recommended.append({
+                "kind": "review_vocab",
+                "label": f"Review {len(due)} due words",
+                "mode": "vocabulary",
+            })
+        if weakest_concept and weakest_concept["accuracy"] < 0.7:
+            recommended.append({
+                "kind": "practice_concept",
+                "label": f"Practice: {weakest_concept['concept']}",
+                "mode": "grammar",
+            })
+
+        in_progress_summary = None
+        if in_progress:
+            in_progress_summary = {
+                "id": in_progress["id"],
+                "mode": in_progress["mode"],
+                "topic": in_progress["topic"],
+                "difficulty": in_progress["difficulty"],
+                "created_at": in_progress["created_at"],
+            }
+
+        return {
+            "in_progress_session": in_progress_summary,
+            "due_words": len(due),
+            "weakest_concept": weakest_concept,
+            "recommended": recommended,
+        }
+
+
 # ── Modes & Topics ───────────────────────────────────────────────────
 
 @app.get("/api/modes")
@@ -196,6 +269,8 @@ async def get_topics(mode: str):
 @app.post("/api/sessions")
 async def create(req: CreateSessionRequest):
     async with get_db() as db:
+        if not await get_user(db, req.user_id):
+            raise HTTPException(404, "User not found")
         session = await create_session(db, {
             "user_id": req.user_id,
             "mode": req.mode.value,
@@ -399,6 +474,7 @@ async def user_cards(user_id: str):
     async with get_db() as db:
         card_ids = await get_user_cards(db, user_id)
         cards = [CARD_BY_ID[cid] for cid in card_ids if cid in CARD_BY_ID]
+        copies = await get_user_card_copies(db, user_id)
 
         # Calculate XP
         xp_earned = await _get_user_xp_earned(db, user_id)
@@ -406,6 +482,7 @@ async def user_cards(user_id: str):
 
         return {
             "cards": cards,
+            "copies": {cid: n for cid, n in copies.items() if n > 0},
             "total_unique": len(set(card_ids)),
             "total_possible": len(CARDS),
             "xp_earned": xp_earned,
@@ -424,17 +501,36 @@ async def purchase_card_pack(user_id: str, req: PackPurchaseRequest):
         return result
 
 
+@app.post("/api/users/{user_id}/cards/trade-in")
+async def trade_in_cards(user_id: str, req: TradeInRequest):
+    """Trade duplicate cards back into XP."""
+    async with get_db() as db:
+        result = await trade_in_duplicates(db, user_id, req.card_ids)
+        if not result:
+            raise HTTPException(400, "Trade-in failed: card not owned in duplicate")
+        return result
+
+
+@app.put("/api/users/{user_id}/showcase")
+async def set_showcase(user_id: str, req: ShowcaseRequest):
+    """Pin a card to the user's profile (null clears)."""
+    async with get_db() as db:
+        if not await set_showcase_card(db, user_id, req.card_id):
+            raise HTTPException(400, "Showcase failed: card not owned")
+        return {"ok": True}
+
+
 @app.get("/api/cards/social")
 async def cards_social():
     """Get card collection stats for all users (for social comparison)."""
     async with get_db() as db:
         users_list = await get_users(db)
-        counts = await get_all_users_card_counts(db)
+        cards_by_user = await get_all_users_cards(db)
 
         result = []
         for user in users_list:
             uid = user["id"]
-            card_ids = await get_user_cards(db, uid)
+            card_ids = cards_by_user.get(uid, [])
             # Group by set
             set_counts = {}
             for cid in card_ids:
@@ -448,8 +544,9 @@ async def cards_social():
                 "name": user["name"],
                 "avatar": user["avatar"],
                 "color": user["color"],
-                "total_cards": counts.get(uid, 0),
+                "total_cards": len(card_ids),
                 "sets_progress": set_counts,
+                "showcase_card_id": user.get("showcase_card_id"),
             })
 
         return result

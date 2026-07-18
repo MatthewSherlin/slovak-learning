@@ -3,6 +3,7 @@
  */
 
 import type {
+  AllCardsResponse,
   CardSocialEntry,
   CardSet,
   DashboardStats,
@@ -13,10 +14,12 @@ import type {
   LearningMode,
   Mode,
   PackPurchaseResult,
+  Recommendations,
   Session,
   SessionFeedback,
   SessionSummary,
   Topic,
+  TradeInResult,
   User,
   UserCardCollection,
   UserPreferences,
@@ -196,6 +199,9 @@ export const removeFarmItem = (
 export const getCardCatalog = (): Promise<CardSet[]> =>
   apiFetch('/api/cards/catalog');
 
+export const getAllCards = (): Promise<AllCardsResponse> =>
+  apiFetch('/api/cards/all');
+
 export const getUserCards = (userId: string): Promise<UserCardCollection> =>
   apiFetch(`/api/users/${userId}/cards`);
 
@@ -210,3 +216,22 @@ export const purchasePack = (
 
 export const getCardsSocial = (): Promise<CardSocialEntry[]> =>
   apiFetch('/api/cards/social');
+
+// ── Recommendations ──────────────────────────────────────────────────
+
+export const getRecommendations = (userId: string): Promise<Recommendations> =>
+  apiFetch(`/api/users/${userId}/recommendations`);
+
+// ── Card trade-in & showcase ─────────────────────────────────────────
+
+export const tradeInCards = (userId: string, cardIds: number[]): Promise<TradeInResult> =>
+  apiFetch(`/api/users/${userId}/cards/trade-in`, {
+    method: 'POST',
+    body: JSON.stringify({ card_ids: cardIds }),
+  });
+
+export const setShowcase = (userId: string, cardId: number | null): Promise<void> =>
+  apiFetch(`/api/users/${userId}/showcase`, {
+    method: 'PUT',
+    body: JSON.stringify({ card_id: cardId }),
+  });

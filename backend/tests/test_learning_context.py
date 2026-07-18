@@ -1,8 +1,11 @@
-"""Tests for the learning context builder that injects history into LLM prompts."""
+"""Tests for the learning context builder that injects history into LLM prompts.
+
+Note: custom focus areas are request-driven (passed per-session by the client),
+so they are intentionally NOT part of the learning context. See sessions.py.
+"""
 
 from __future__ import annotations
 
-import json
 import uuid
 
 import pytest
@@ -11,7 +14,6 @@ import pytest_asyncio
 from app.database import (
     create_session as db_create_session,
     update_session as db_update_session,
-    update_user_preferences,
     upsert_vocab_progress,
 )
 from app.sessions import _get_learning_context
@@ -37,12 +39,11 @@ class TestLearningContextEmpty:
 
     async def test_empty_for_new_user(self, db):
         # Use a user ID that no other test touches to avoid shared-DB pollution
-        context, focus_areas = await _get_learning_context(db, "fresh_user_lc", "vocabulary")
+        context = await _get_learning_context(db, "fresh_user_lc", "vocabulary")
         assert context == ""
-        assert focus_areas == []
 
     async def test_empty_string_type(self, db):
-        context, _ = await _get_learning_context(db, "fresh_user_lc", "grammar")
+        context = await _get_learning_context(db, "fresh_user_lc", "grammar")
         assert isinstance(context, str)
 
 
@@ -62,15 +63,15 @@ class TestLearningContextVocabProgress:
         return "matt"
 
     async def test_includes_total_words(self, db, user_with_vocab):
-        context, _ = await _get_learning_context(db, user_with_vocab, "vocabulary")
+        context = await _get_learning_context(db, user_with_vocab, "vocabulary")
         assert "Total unique words practiced:" in context
 
     async def test_includes_weak_words(self, db, user_with_vocab):
-        context, _ = await _get_learning_context(db, user_with_vocab, "vocabulary")
+        context = await _get_learning_context(db, user_with_vocab, "vocabulary")
         assert "Words the student struggles with:" in context
 
     async def test_includes_vocab_progress_header(self, db, user_with_vocab):
-        context, _ = await _get_learning_context(db, user_with_vocab, "vocabulary")
+        context = await _get_learning_context(db, user_with_vocab, "vocabulary")
         assert "[Student's vocabulary progress]" in context
 
 
@@ -84,46 +85,22 @@ class TestLearningContextSessionHistory:
         return "matt"
 
     async def test_includes_session_history(self, db, user_with_sessions):
-        context, _ = await _get_learning_context(db, user_with_sessions, "vocabulary")
+        context = await _get_learning_context(db, user_with_sessions, "vocabulary")
         assert "[Recent vocabulary session history]" in context
 
     async def test_includes_score(self, db, user_with_sessions):
-        context, _ = await _get_learning_context(db, user_with_sessions, "vocabulary")
+        context = await _get_learning_context(db, user_with_sessions, "vocabulary")
         assert "score:" in context
 
     async def test_includes_topics_covered(self, db, user_with_sessions):
-        context, _ = await _get_learning_context(db, user_with_sessions, "vocabulary")
+        context = await _get_learning_context(db, user_with_sessions, "vocabulary")
         assert "Previously covered topics:" in context
 
     async def test_mode_specific_history(self, db, user_with_sessions):
         """Grammar context should not include vocab session history."""
-        context, _ = await _get_learning_context(db, user_with_sessions, "grammar")
+        context = await _get_learning_context(db, user_with_sessions, "grammar")
         # Should NOT have "Recent grammar session history" since we only seeded vocab
         assert "[Recent grammar session history]" not in context
-
-
-class TestLearningContextFocusAreas:
-    """Tests for the custom focus areas section."""
-
-    @pytest_asyncio.fixture
-    async def user_with_focus(self, db):
-        """Seed matt with custom focus areas."""
-        await update_user_preferences(db, "matt", ["restaurant vocabulary", "accusative case"])
-        return "matt"
-
-    async def test_includes_focus_areas(self, db, user_with_focus):
-        context, focus_areas = await _get_learning_context(db, user_with_focus, "vocabulary")
-        assert "[Student's custom focus areas]" in context
-        assert "restaurant vocabulary" in context
-        assert "accusative case" in context
-        assert focus_areas == ["restaurant vocabulary", "accusative case"]
-
-    async def test_no_focus_section_when_empty(self, db):
-        """No focus section when user has no custom areas set."""
-        await update_user_preferences(db, "zuki", [])
-        context, focus_areas = await _get_learning_context(db, "zuki", "vocabulary")
-        assert "[Student's custom focus areas]" not in context
-        assert focus_areas == []
 
 
 class TestLearningContextCombined:
@@ -131,7 +108,7 @@ class TestLearningContextCombined:
 
     @pytest_asyncio.fixture
     async def fully_seeded_user(self, db, sample_vocab_session):
-        """Seed matt with vocab progress, sessions, and focus areas."""
+        """Seed matt with vocab progress and a completed session."""
         # Vocab progress
         words = [
             {"slovak": "dobrý", "english": "good", "correct": True, "source_mode": "vocabulary"},
@@ -143,25 +120,20 @@ class TestLearningContextCombined:
         session = {**sample_vocab_session, "id": f"test-combined-{uuid.uuid4().hex[:8]}"}
         await _seed_completed_session(db, session)
 
-        # Focus areas
-        await update_user_preferences(db, "matt", ["travel phrases"])
-
         return "matt"
 
-    async def test_all_three_sections_present(self, db, fully_seeded_user):
-        context, focus_areas = await _get_learning_context(db, fully_seeded_user, "vocabulary")
+    async def test_both_sections_present(self, db, fully_seeded_user):
+        context = await _get_learning_context(db, fully_seeded_user, "vocabulary")
         assert "[Student's vocabulary progress]" in context
         assert "[Recent vocabulary session history]" in context
-        assert "[Student's custom focus areas]" in context
-        assert "travel phrases" in focus_areas
 
     async def test_sections_separated_by_newlines(self, db, fully_seeded_user):
-        context, _ = await _get_learning_context(db, fully_seeded_user, "vocabulary")
+        context = await _get_learning_context(db, fully_seeded_user, "vocabulary")
         # Sections should be separated by double newlines
         assert "\n\n" in context
 
     async def test_context_is_reasonable_length(self, db, fully_seeded_user):
         """Context should be concise enough for prompt injection."""
-        context, _ = await _get_learning_context(db, fully_seeded_user, "vocabulary")
+        context = await _get_learning_context(db, fully_seeded_user, "vocabulary")
         # Should be under ~2000 chars (well within 500 tokens)
         assert len(context) < 2000

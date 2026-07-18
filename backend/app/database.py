@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import random
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import AsyncIterator
@@ -95,6 +96,7 @@ FARM_ITEM_CATALOG = {
 
 async def init_db() -> None:
     """Create tables and seed default users."""
+    settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(str(settings.db_path)) as db:
         await db.executescript(_SCHEMA)
 
@@ -103,6 +105,22 @@ async def init_db() -> None:
             await db.execute("ALTER TABLE users ADD COLUMN pin_hash TEXT")
         except Exception:
             pass  # Column already exists
+
+        # Migration: add showcase_card_id column to users table
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN showcase_card_id INTEGER")
+        except Exception:
+            pass  # Column already exists
+
+        # Migration: SRS columns on vocabulary_progress
+        for ddl in (
+            "ALTER TABLE vocabulary_progress ADD COLUMN due_at TEXT",
+            "ALTER TABLE vocabulary_progress ADD COLUMN interval_days REAL DEFAULT 1",
+        ):
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass  # Column already exists
 
         # Create farm_items table
         await db.execute("""
@@ -128,6 +146,7 @@ async def init_db() -> None:
             )
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_cards_user ON card_collection(user_id)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_farm_user ON farm_items(user_id)")
 
         # Create pack_purchases table
         await db.execute("""
@@ -138,6 +157,36 @@ async def init_db() -> None:
                 xp_cost INTEGER NOT NULL,
                 card_ids_json TEXT NOT NULL,
                 purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_packs_user ON pack_purchases(user_id)")
+
+        # Create xp_adjustments table
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS xp_adjustments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                amount INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_xpadj_user ON xp_adjustments(user_id)")
+
+        # Migration: add copies column to card_collection
+        try:
+            await db.execute("ALTER TABLE card_collection ADD COLUMN copies INTEGER NOT NULL DEFAULT 1")
+        except Exception:
+            pass  # Column already exists
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS concept_progress (
+                user_id TEXT NOT NULL REFERENCES users(id),
+                concept TEXT NOT NULL,
+                times_seen INTEGER NOT NULL DEFAULT 0,
+                times_correct REAL NOT NULL DEFAULT 0,
+                last_seen_at TEXT NOT NULL,
+                PRIMARY KEY (user_id, concept)
             )
         """)
 
@@ -164,7 +213,7 @@ async def get_db() -> AsyncIterator[aiosqlite.Connection]:
 # ── User operations ──────────────────────────────────────────────────
 
 async def get_users(db: aiosqlite.Connection) -> list[dict]:
-    cursor = await db.execute("SELECT id, name, avatar, color, pin_hash FROM users")
+    cursor = await db.execute("SELECT id, name, avatar, color, pin_hash, showcase_card_id FROM users")
     rows = await cursor.fetchall()
     users = []
     for r in rows:
@@ -289,6 +338,11 @@ async def get_leaderboard(db: aiosqlite.Connection) -> list[dict]:
     sessions = await list_sessions(db)
     entries = []
 
+    adj_cursor = await db.execute(
+        "SELECT user_id, COALESCE(SUM(amount), 0) AS total FROM xp_adjustments GROUP BY user_id"
+    )
+    adjustments = {r["user_id"]: r["total"] for r in await adj_cursor.fetchall()}
+
     for user in users:
         uid = user["id"]
         user_sessions = [s for s in sessions if s["user_id"] == uid]
@@ -310,7 +364,7 @@ async def get_leaderboard(db: aiosqlite.Connection) -> list[dict]:
             "avg_score": sum(scores) / len(scores) if scores else None,
             "total_vocab": total_vocab,
             "streak_days": _calculate_streak(user_sessions),
-            "xp": _calculate_xp(completed),
+            "xp": _calculate_xp(completed) + adjustments.get(uid, 0),
         })
 
     entries.sort(key=lambda e: e["xp"], reverse=True)
@@ -399,24 +453,49 @@ async def upsert_vocab_progress(
     user_id: str,
     words: list[dict],
 ) -> None:
-    """Insert or update vocabulary progress for a batch of words."""
-    now = datetime.now(timezone.utc).isoformat()
+    """Insert or update vocabulary progress with SRS scheduling.
+
+    Correct answers grow the review interval (x2.5, capped at 60 days);
+    wrong answers reset it to 1 day and mark the word due immediately.
+    """
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
     for w in words:
         slovak = w["slovak"].strip().lower()
         english = w["english"].strip().lower()
-        correct_int = int(w.get("correct", False))
+        correct = bool(w.get("correct", False))
+        correct_int = int(correct)
         if not slovak:
             continue
+
+        cursor = await db.execute(
+            "SELECT interval_days FROM vocabulary_progress WHERE user_id = ? AND slovak = ?",
+            (user_id, slovak),
+        )
+        row = await cursor.fetchone()
+        prev_interval = row["interval_days"] if row and row["interval_days"] else 1.0
+
+        if correct:
+            interval = min((prev_interval if row else 0.4) * 2.5, 60.0)
+            due_at = (now_dt + timedelta(days=interval)).isoformat()
+        else:
+            interval = 1.0
+            due_at = now
+
         await db.execute(
             """INSERT INTO vocabulary_progress
-               (user_id, slovak, english, times_seen, times_correct, last_seen_at, source_mode, created_at)
-               VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+               (user_id, slovak, english, times_seen, times_correct, last_seen_at,
+                source_mode, created_at, due_at, interval_days)
+               VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id, slovak) DO UPDATE SET
                    times_seen = times_seen + 1,
                    times_correct = times_correct + ?,
                    last_seen_at = ?,
+                   due_at = ?,
+                   interval_days = ?,
                    english = CASE WHEN excluded.english != '' THEN excluded.english ELSE english END""",
-            (user_id, slovak, english, correct_int, now, w["source_mode"], now, correct_int, now),
+            (user_id, slovak, english, correct_int, now, w["source_mode"], now,
+             due_at, interval, correct_int, now, due_at, interval),
         )
     await db.commit()
 
@@ -468,6 +547,65 @@ async def get_weak_words(db: aiosqlite.Connection, user_id: str, limit: int = 10
     return [dict(r) for r in rows]
 
 
+async def get_due_words(db: aiosqlite.Connection, user_id: str, limit: int = 20) -> list[dict]:
+    """Words due for review now, weakest accuracy first."""
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = await db.execute(
+        """SELECT slovak, english, times_seen, times_correct, last_seen_at, source_mode, due_at
+           FROM vocabulary_progress
+           WHERE user_id = ? AND due_at IS NOT NULL AND due_at <= ?
+           ORDER BY CAST(times_correct AS REAL) / MAX(times_seen, 1) ASC, due_at ASC
+           LIMIT ?""",
+        (user_id, now, limit),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── Concept Progress ────────────────────────────────────────────────
+
+
+async def record_concept_result(
+    db: aiosqlite.Connection, user_id: str, concept: str, credits: list[float]
+) -> None:
+    """Accumulate grammar-concept results (fractional credit supported)."""
+    concept = concept.strip()
+    if not concept or not credits:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO concept_progress (user_id, concept, times_seen, times_correct, last_seen_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, concept) DO UPDATE SET
+               times_seen = times_seen + ?,
+               times_correct = times_correct + ?,
+               last_seen_at = ?""",
+        (user_id, concept, len(credits), sum(credits), now,
+         len(credits), sum(credits), now),
+    )
+    await db.commit()
+
+
+async def get_weakest_concepts(
+    db: aiosqlite.Connection, user_id: str, limit: int = 3
+) -> list[dict]:
+    """Concepts with lowest accuracy (min 3 samples), weakest first."""
+    cursor = await db.execute(
+        """SELECT concept, times_seen, times_correct,
+                  times_correct / MAX(times_seen, 1) AS accuracy
+           FROM concept_progress
+           WHERE user_id = ? AND times_seen >= 3
+           ORDER BY accuracy ASC
+           LIMIT ?""",
+        (user_id, limit),
+    )
+    rows = await cursor.fetchall()
+    return [
+        {"concept": r["concept"], "accuracy": round(r["accuracy"], 2), "times_seen": r["times_seen"]}
+        for r in rows
+    ]
+
+
 # ── User Preferences ────────────────────────────────────────────────
 
 
@@ -506,8 +644,26 @@ async def update_user_preferences(
 # ── User PIN ────────────────────────────────────────────────────────
 
 
-def _hash_pin(pin: str) -> str:
-    return hashlib.sha256(pin.encode()).hexdigest()
+_PBKDF2_ITERATIONS = 100_000
+
+
+def _hash_pin(pin: str, salt: bytes | None = None) -> str:
+    """Salted PBKDF2 hash, stored as 'salt_hex$hash_hex'."""
+    if salt is None:
+        salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", pin.encode(), salt, _PBKDF2_ITERATIONS)
+    return f"{salt.hex()}${digest.hex()}"
+
+
+def _check_pin(pin: str, stored: str) -> bool:
+    """Verify a PIN against a stored hash (salted or legacy bare SHA-256)."""
+    if "$" in stored:
+        salt_hex, _ = stored.split("$", 1)
+        candidate = _hash_pin(pin, bytes.fromhex(salt_hex))
+        return secrets.compare_digest(candidate, stored)
+    # Legacy unsalted SHA-256 (pre-migration)
+    legacy = hashlib.sha256(pin.encode()).hexdigest()
+    return secrets.compare_digest(legacy, stored)
 
 
 async def set_user_pin(db: aiosqlite.Connection, user_id: str, pin: str) -> bool:
@@ -521,12 +677,22 @@ async def set_user_pin(db: aiosqlite.Connection, user_id: str, pin: str) -> bool
 
 
 async def verify_user_pin(db: aiosqlite.Connection, user_id: str, pin: str) -> bool:
-    """Verify a PIN against the stored hash. Return True if match."""
+    """Verify a PIN against the stored hash. Return True if match.
+
+    Legacy bare-SHA256 hashes are transparently upgraded to salted
+    PBKDF2 on the first successful verification.
+    """
     cursor = await db.execute("SELECT pin_hash FROM users WHERE id = ?", (user_id,))
     row = await cursor.fetchone()
     if not row or not row["pin_hash"]:
         return False
-    return row["pin_hash"] == _hash_pin(pin)
+    stored = row["pin_hash"]
+    if not _check_pin(pin, stored):
+        return False
+    if "$" not in stored:
+        # Upgrade legacy hash now that we know the plaintext PIN
+        await set_user_pin(db, user_id, pin)
+    return True
 
 
 async def remove_user_pin(db: aiosqlite.Connection, user_id: str) -> bool:
@@ -549,10 +715,15 @@ async def user_has_pin(db: aiosqlite.Connection, user_id: str) -> bool:
 
 
 async def _get_user_xp_earned(db: aiosqlite.Connection, user_id: str) -> int:
-    """Calculate total XP earned by a user from completed sessions."""
+    """Total XP earned: completed sessions + adjustments (e.g. card trade-ins)."""
     sessions = await list_sessions(db, user_id)
     completed = [s for s in sessions if s["completed"] and s.get("feedback")]
-    return _calculate_xp(completed)
+    cursor = await db.execute(
+        "SELECT COALESCE(SUM(amount), 0) AS total FROM xp_adjustments WHERE user_id = ?",
+        (user_id,),
+    )
+    row = await cursor.fetchone()
+    return _calculate_xp(completed) + row["total"]
 
 
 async def get_user_farm(db: aiosqlite.Connection, user_id: str) -> dict:
@@ -590,31 +761,35 @@ async def purchase_farm_item(
     if not (0 <= grid_x <= 7 and 0 <= grid_y <= 7):
         return None
 
-    # Check XP budget
-    xp_earned = await _get_user_xp_earned(db, user_id)
-    spent_cursor = await db.execute(
-        "SELECT COALESCE(SUM(xp_cost), 0) as total FROM farm_items WHERE user_id = ?",
-        (user_id,),
-    )
-    spent_row = await spent_cursor.fetchone()
-    xp_spent = spent_row["total"]
-    if xp_earned - xp_spent < cost:
-        return None
+    # Acquire the write lock up front so the XP check and the insert are atomic
+    # across connections — otherwise two concurrent requests can double-spend.
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        # Check XP budget
+        xp_earned = await _get_user_xp_earned(db, user_id)
+        xp_spent = await _get_user_xp_spent(db, user_id)
+        if xp_earned - xp_spent < cost:
+            await db.rollback()
+            return None
 
-    # Check grid position not occupied
-    collision_cursor = await db.execute(
-        "SELECT id FROM farm_items WHERE user_id = ? AND grid_x = ? AND grid_y = ?",
-        (user_id, grid_x, grid_y),
-    )
-    if await collision_cursor.fetchone():
-        return None
+        # Check grid position not occupied
+        collision_cursor = await db.execute(
+            "SELECT id FROM farm_items WHERE user_id = ? AND grid_x = ? AND grid_y = ?",
+            (user_id, grid_x, grid_y),
+        )
+        if await collision_cursor.fetchone():
+            await db.rollback()
+            return None
 
-    # Insert
-    cursor = await db.execute(
-        "INSERT INTO farm_items (user_id, item_type, grid_x, grid_y, xp_cost) VALUES (?, ?, ?, ?, ?)",
-        (user_id, item_type, grid_x, grid_y, cost),
-    )
-    await db.commit()
+        # Insert
+        cursor = await db.execute(
+            "INSERT INTO farm_items (user_id, item_type, grid_x, grid_y, xp_cost) VALUES (?, ?, ?, ?, ?)",
+            (user_id, item_type, grid_x, grid_y, cost),
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     # Fetch the inserted row
     new_cursor = await db.execute(
@@ -691,7 +866,7 @@ async def _get_user_xp_spent(db: aiosqlite.Connection, user_id: str) -> int:
 async def get_user_cards(db: aiosqlite.Connection, user_id: str) -> list[int]:
     """Return list of card IDs the user owns."""
     cursor = await db.execute(
-        "SELECT card_id FROM card_collection WHERE user_id = ? ORDER BY obtained_at",
+        "SELECT card_id FROM card_collection WHERE user_id = ? AND copies > 0 ORDER BY obtained_at",
         (user_id,),
     )
     rows = await cursor.fetchall()
@@ -699,28 +874,112 @@ async def get_user_cards(db: aiosqlite.Connection, user_id: str) -> list[int]:
 
 
 async def add_user_cards(db: aiosqlite.Connection, user_id: str, card_ids: list[int]) -> list[int]:
-    """Add cards to user collection. Returns list of NEW card IDs (skips duplicates)."""
+    """Add cards to the collection. Duplicates increment `copies`.
+
+    Returns only the card IDs that are NEW to the user (first copy).
+    NOTE: does not commit — callers own the transaction.
+    """
     new_ids = []
     for cid in card_ids:
-        try:
+        cursor = await db.execute(
+            "SELECT copies FROM card_collection WHERE user_id = ? AND card_id = ?",
+            (user_id, cid),
+        )
+        row = await cursor.fetchone()
+        if row:
+            await db.execute(
+                "UPDATE card_collection SET copies = copies + 1 WHERE user_id = ? AND card_id = ?",
+                (user_id, cid),
+            )
+        else:
             await db.execute(
                 "INSERT INTO card_collection (user_id, card_id) VALUES (?, ?)",
                 (user_id, cid),
             )
             new_ids.append(cid)
-        except Exception:
-            pass  # Duplicate - user already has this card
-    await db.commit()
     return new_ids
 
 
-async def get_all_users_card_counts(db: aiosqlite.Connection) -> dict[str, int]:
-    """Get card count per user for social display."""
+async def get_user_card_copies(db: aiosqlite.Connection, user_id: str) -> dict[int, int]:
+    """card_id -> copies owned."""
     cursor = await db.execute(
-        "SELECT user_id, COUNT(*) as count FROM card_collection GROUP BY user_id"
+        "SELECT card_id, copies FROM card_collection WHERE user_id = ?", (user_id,)
     )
     rows = await cursor.fetchall()
-    return {r["user_id"]: r["count"] for r in rows}
+    return {r["card_id"]: r["copies"] for r in rows}
+
+
+TRADE_IN_XP = {"common": 20, "uncommon": 40, "rare": 80, "legendary": 200, "mythic": 500}
+
+
+async def trade_in_duplicates(
+    db: aiosqlite.Connection, user_id: str, card_ids: list[int]
+) -> dict | None:
+    """Trade ONE extra copy of each listed card for XP.
+
+    Every card must be owned with copies >= 2. Returns None if any card
+    fails validation (all-or-nothing).
+    """
+    from .cards import CARD_BY_ID
+
+    if not card_ids:
+        return None
+
+    card_ids = list(dict.fromkeys(card_ids))  # deduplicate preserving order
+
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        copies = await get_user_card_copies(db, user_id)
+        total_xp = 0
+        for cid in card_ids:
+            card = CARD_BY_ID.get(cid)
+            if not card or copies.get(cid, 0) < 2:
+                await db.rollback()
+                return None
+            total_xp += TRADE_IN_XP.get(card["rarity"], 20)
+
+        for cid in card_ids:
+            await db.execute(
+                "UPDATE card_collection SET copies = copies - 1 WHERE user_id = ? AND card_id = ?",
+                (user_id, cid),
+            )
+        await db.execute(
+            "INSERT INTO xp_adjustments (user_id, amount, reason) VALUES (?, ?, ?)",
+            (user_id, total_xp, f"trade-in: {len(card_ids)} card(s)"),
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return {"traded": card_ids, "xp_gained": total_xp}
+
+
+async def set_showcase_card(
+    db: aiosqlite.Connection, user_id: str, card_id: int | None
+) -> bool:
+    """Pin a card to the user's profile. None clears. Must own the card."""
+    if card_id is not None:
+        cursor = await db.execute(
+            "SELECT 1 FROM card_collection WHERE user_id = ? AND card_id = ?",
+            (user_id, card_id),
+        )
+        if not await cursor.fetchone():
+            return False
+    cursor = await db.execute(
+        "UPDATE users SET showcase_card_id = ? WHERE id = ?", (card_id, user_id)
+    )
+    await db.commit()
+    return cursor.rowcount > 0
+
+
+async def get_all_users_cards(db: aiosqlite.Connection) -> dict[str, list[int]]:
+    """Get all card IDs per user in a single query (avoids N+1 in social view)."""
+    cursor = await db.execute("SELECT user_id, card_id FROM card_collection WHERE copies > 0")
+    rows = await cursor.fetchall()
+    result: dict[str, list[int]] = {}
+    for r in rows:
+        result.setdefault(r["user_id"], []).append(r["card_id"])
+    return result
 
 
 async def purchase_pack(
@@ -734,66 +993,74 @@ async def purchase_pack(
 
     cost = SETS[set_id]["cost"]
 
-    # Check XP budget
-    xp_earned = await _get_user_xp_earned(db, user_id)
-    xp_spent = await _get_user_xp_spent(db, user_id)
-    if xp_earned - xp_spent < cost:
-        return None
-
     # Get cards in this set
     set_cards = CARDS_BY_SET.get(set_id, [])
     if not set_cards:
         return None
 
-    # Get user's existing cards
-    owned = set(await get_user_cards(db, user_id))
+    # Acquire the write lock up front so the XP check, purchase record, and
+    # card grants are one atomic unit — prevents double-spend and partial packs.
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        # Check XP budget
+        xp_earned = await _get_user_xp_earned(db, user_id)
+        xp_spent = await _get_user_xp_spent(db, user_id)
+        if xp_earned - xp_spent < cost:
+            await db.rollback()
+            return None
 
-    # Pick 3 cards with rarity weighting
-    # Weight: common=50, uncommon=30, rare=15, legendary=5
-    weights = {"common": 50, "uncommon": 30, "rare": 15, "legendary": 5}
+        # Get user's existing cards
+        owned = set(await get_user_cards(db, user_id))
 
-    # Prefer cards the user doesn't own yet (but allow duplicates if they have all)
-    unowned = [c for c in set_cards if c["id"] not in owned]
-    pool = unowned if unowned else set_cards
+        # Deal PACK_SIZE cards with rarity weighting and a rare+ guarantee
+        PACK_SIZE = 5
+        weights = {"common": 50, "uncommon": 30, "rare": 15, "legendary": 4, "mythic": 1}
+        rare_plus = {"rare", "legendary", "mythic"}
 
-    card_weights = [weights.get(c["rarity"], 50) for c in pool]
+        unowned = [c for c in set_cards if c["id"] not in owned]
+        pool = unowned if len(unowned) >= PACK_SIZE else set_cards
 
-    # Pick 3 (or fewer if pool is small)
-    pick_count = min(3, len(pool))
-    selected = random.choices(pool, weights=card_weights, k=pick_count)
+        def _weighted_unique(source: list, k: int, exclude: set[int]) -> list:
+            picked: list = []
+            candidates = [c for c in source if c["id"] not in exclude]
+            while candidates and len(picked) < k:
+                ws = [weights.get(c["rarity"], 50) for c in candidates]
+                choice = random.choices(candidates, weights=ws, k=1)[0]
+                picked.append(choice)
+                candidates = [c for c in candidates if c["id"] != choice["id"]]
+            return picked
 
-    # Deduplicate within the pack
-    seen_ids: set[int] = set()
-    unique_selected = []
-    for c in selected:
-        if c["id"] not in seen_ids:
-            seen_ids.add(c["id"])
-            unique_selected.append(c)
+        unique_selected = _weighted_unique(pool, PACK_SIZE, set())
 
-    # If we got fewer than 3 due to dedup, try to fill from remaining pool
-    remaining = [c for c in pool if c["id"] not in seen_ids]
-    while len(unique_selected) < pick_count and remaining:
-        extra_weights = [weights.get(c["rarity"], 50) for c in remaining]
-        extra = random.choices(remaining, weights=extra_weights, k=1)[0]
-        if extra["id"] not in seen_ids:
-            seen_ids.add(extra["id"])
-            unique_selected.append(extra)
-            remaining = [c for c in remaining if c["id"] not in seen_ids]
+        # Guarantee at least one rare-or-better
+        if not any(c["rarity"] in rare_plus for c in unique_selected):
+            rare_pool = [c for c in set_cards if c["rarity"] in rare_plus]
+            if rare_pool:
+                ws = [weights.get(c["rarity"], 1) for c in rare_pool]
+                replacement = random.choices(rare_pool, weights=ws, k=1)[0]
+                if replacement["id"] not in {c["id"] for c in unique_selected[:-1]}:
+                    unique_selected[-1] = replacement
 
-    selected_ids = [c["id"] for c in unique_selected]
+        selected_ids = [c["id"] for c in unique_selected]
 
-    # Record the purchase
-    await db.execute(
-        "INSERT INTO pack_purchases (user_id, set_id, xp_cost, card_ids_json) VALUES (?, ?, ?, ?)",
-        (user_id, set_id, cost, json.dumps(selected_ids)),
-    )
+        # Record the purchase
+        await db.execute(
+            "INSERT INTO pack_purchases (user_id, set_id, xp_cost, card_ids_json) VALUES (?, ?, ?, ?)",
+            (user_id, set_id, cost, json.dumps(selected_ids)),
+        )
 
-    # Add cards to collection
-    new_ids = await add_user_cards(db, user_id, selected_ids)
+        # Add cards to collection (caller owns the transaction)
+        new_ids = await add_user_cards(db, user_id, selected_ids)
+        copies_map = await get_user_card_copies(db, user_id)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     return {
         "cards": unique_selected,
         "new_card_ids": new_ids,
         "duplicate_card_ids": [cid for cid in selected_ids if cid not in new_ids],
         "xp_cost": cost,
+        "copies": {cid: copies_map.get(cid, 1) for cid in selected_ids},
     }

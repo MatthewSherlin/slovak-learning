@@ -11,11 +11,14 @@ import aiosqlite
 
 from .database import (
     create_session as db_create_session,
+    get_due_words,
     get_session as db_get_session,
     get_user,
     get_vocab_progress,
     get_weak_words,
+    get_weakest_concepts,
     list_sessions,
+    record_concept_result,
     update_session as db_update_session,
     upsert_vocab_progress,
 )
@@ -25,12 +28,12 @@ from .prompts import (
     FEEDBACK_PROMPT,
     GRAMMAR_LESSON_PROMPT,
     HINT_PROMPT,
-    MODE_PROMPTS,
     TRANSLATION_BATCH_PROMPT,
     TRANSLATION_EVALUATE_PROMPT,
     VOCAB_BATCH_PROMPT,
 )
 from .questions import QUESTIONS, TOPICS
+from .scoring import compute_category_scores, compute_session_score, grade_answer
 from .vocab_extraction import extract_vocab_from_session
 
 log = logging.getLogger(__name__)
@@ -55,6 +58,9 @@ async def _get_learning_context(
     """
     sections: list[str] = []
 
+    all_sessions = await list_sessions(db, user_id)
+    completed_sessions = [s for s in all_sessions if s["completed"]]
+
     # ── 1. Vocabulary progress summary ──
     all_vocab = await get_vocab_progress(db, user_id)
     if all_vocab:
@@ -66,8 +72,6 @@ async def _get_learning_context(
         ]
 
         # Topics covered: derive from completed sessions
-        all_sessions = await list_sessions(db, user_id)
-        completed_sessions = [s for s in all_sessions if s["completed"]]
         topic_counts: dict[str, int] = {}
         for s in completed_sessions:
             topic_label = TOPICS.get(s["mode"], {}).get(s["topic"], s["topic"])
@@ -96,12 +100,9 @@ async def _get_learning_context(
         sections.append(f"[Student's vocabulary progress]\n{vocab_section}")
 
     # ── 2. Recent session history digest (last 3 for this mode) ──
-    if not all_vocab:
-        all_sessions = await list_sessions(db, user_id)
-        completed_sessions = [s for s in all_sessions if s["completed"]]
     mode_sessions = [
-        s for s in all_sessions
-        if s["completed"] and s["mode"] == mode and s.get("feedback")
+        s for s in completed_sessions
+        if s["mode"] == mode and s.get("feedback")
     ][:3]
 
     if mode_sessions:
@@ -157,6 +158,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
 
     focus_areas = req.get("focus_areas", [])
     learning_context = await _get_learning_context(db, req["user_id"], "vocabulary")
+    due_words = await get_due_words(db, req["user_id"], limit=6)
 
     # When focus areas exist, use them AS the topic instead of the generic category
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
@@ -174,6 +176,16 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
             f"\n\nCRITICAL: ALL 10 questions MUST be about {effective_topic}. "
             "Do NOT use generic words like water, book, bread, etc. unless they "
             "are directly related to the topic. Every word must connect to the topic."
+        )
+
+    if due_words:
+        due_list = ", ".join(
+            f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
+            for w in due_words
+        )
+        prompt += (
+            f"\n\nPRIORITY — these words are due for review; include as many as fit "
+            f"the topic (at least {min(len(due_words), 4)}): {due_list}"
         )
 
     # Hard deduplication: fetch all previously seen words and exclude them
@@ -231,6 +243,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
         "questions": questions,
         "currentIndex": 0,
         "answers": [None] * len(questions),
+        "credits": [None] * len(questions),
         "retryQueue": [],
         "phase": "questions",
     }
@@ -246,6 +259,11 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
     focus_areas = req.get("focus_areas", [])
+    target_concept = None
+    if req.get("topic", "general") == "general" and not focus_areas:
+        weakest = await get_weakest_concepts(db, req["user_id"], limit=1)
+        if weakest and weakest[0]["accuracy"] < 0.7:
+            target_concept = weakest[0]["concept"]
     learning_context = await _get_learning_context(db, req["user_id"], "grammar")
 
     effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
@@ -261,6 +279,12 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
         prompt += (
             f"\n\nCRITICAL: Use example sentences and vocabulary related to {effective_topic}. "
             "All exercises must use vocabulary from this domain."
+        )
+
+    if target_concept:
+        prompt += (
+            f"\n\nTARGET CONCEPT: The student's weakest concept is '{target_concept}' "
+            f"— build this lesson on that concept."
         )
 
     data = await ask_json(prompt, GRAMMAR_LESSON_PROMPT)
@@ -289,6 +313,8 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
         "currentIndex": 0,
         "answers": [None] * len(exercise_list),
         "correct": [None] * len(exercise_list),
+        "credits": [None] * len(exercise_list),
+        "tiers": [None] * len(exercise_list),
         "phase": "lesson",
     }
 
@@ -416,8 +442,15 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
         raise ValueError("No more questions")
 
     q = questions[idx]
+    if not (0 <= choice_index < len(q["choices"])):
+        raise ValueError(f"choice_index out of range: {choice_index}")
     is_correct = choice_index == q["correctIndex"]
     ex["answers"][idx] = choice_index
+    credits = ex.setdefault("credits", [None] * len(questions))
+    if ex["phase"] == "questions":
+        credits[idx] = 1.0 if is_correct else 0.0
+    elif ex["phase"] == "retry" and is_correct and credits[idx] == 0.0:
+        credits[idx] = 0.5  # recovered on retry
 
     # Track wrong answers for retry
     if not is_correct and ex["phase"] == "questions":
@@ -491,16 +524,22 @@ async def submit_grammar_answer(db: aiosqlite.Connection, session_id: str, answe
         raise ValueError("No more exercises")
 
     correct_answer = exercises[idx]["blank"]
-    is_correct = answer.strip().lower() == correct_answer.strip().lower()
+    grade = grade_answer(correct_answer, answer)
+    is_correct = grade.tier in ("exact", "accent")
 
     ex["answers"][idx] = answer
     ex["correct"][idx] = is_correct
+    ex.setdefault("credits", [None] * len(exercises))[idx] = grade.credit
+    ex.setdefault("tiers", [None] * len(exercises))[idx] = grade.tier
 
     # Synthetic message
-    session["messages"].append({
-        "role": "student",
-        "content": f"Answer: {answer} ({'correct' if is_correct else f'incorrect, correct: {correct_answer}'})"
-    })
+    if grade.tier == "accent":
+        note = f"Answer: {answer} (almost — watch the diacritics: {correct_answer})"
+    elif is_correct:
+        note = f"Answer: {answer} (correct)"
+    else:
+        note = f"Answer: {answer} (incorrect, correct: {correct_answer})"
+    session["messages"].append({"role": "student", "content": note})
 
     # Advance
     if idx + 1 < len(exercises):
@@ -697,12 +736,23 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
 
     data = await ask_json(prompt, FEEDBACK_PROMPT)
 
-    feedback = {
-        "overall_score": data.get("overall_score", 5),
-        "scores": [
+    computed_score = compute_session_score(session.get("exercises"))
+    computed_categories = compute_category_scores(session.get("exercises"))
+
+    if computed_score is not None:
+        overall = computed_score
+        scores = computed_categories
+    else:
+        # Conversation (and legacy/unscorable): LLM decides
+        overall = data.get("overall_score", 5)
+        scores = [
             {"category": s.get("category", ""), "score": s.get("score", 5), "comment": s.get("comment", "")}
             for s in data.get("scores", [])
-        ],
+        ]
+
+    feedback = {
+        "overall_score": overall,
+        "scores": scores,
         "strengths": data.get("strengths", []),
         "improvements": data.get("improvements", []),
         "sample_answer": data.get("sample_answer"),
@@ -727,6 +777,12 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
             if words:
                 await upsert_vocab_progress(db, session_with_feedback["user_id"], words)
                 log.info("Tracked %d words for user %s", len(words), session_with_feedback["user_id"])
+            ex = session_with_feedback.get("exercises") or {}
+            if ex.get("type") == "grammar":
+                concept = (ex.get("lesson") or {}).get("concept", "")
+                credits = [c for c in (ex.get("credits") or []) if c is not None]
+                if concept and credits:
+                    await record_concept_result(db, session_with_feedback["user_id"], concept, credits)
     except Exception:
         log.exception("Failed to extract vocab progress for session %s", session_id)
 

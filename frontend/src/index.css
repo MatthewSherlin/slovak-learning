@@ -98,6 +98,59 @@
   --map-opacity: 0.04;
 }
 
+/* -- Design-system shorthand tokens (dark default) ----------- */
+
+:root {
+  --bg: #0a0b10;
+  --surface: #0e1017;
+  --surface-2: #151926;
+  --border: #262b3d;
+  --text: #eef1f8;
+  --text-dim: #6b7289;
+  --accent: #5ea4f7;
+  --accent-hover: #7bb5ff;
+}
+
+[data-theme="light"] {
+  --bg: #f4f5fa;
+  --surface: #ffffff;
+  --surface-2: #f0f2f7;
+  --border: #d8dce8;
+  --text: #1a1e2e;
+  --text-dim: #6b7289;
+  --accent: #4a93e8;
+  --accent-hover: #3a7fd4;
+}
+
+/* -- Card frame keyframes ---------------- */
+
+@keyframes shimmer-sweep {
+  0%   { background-position: 130% 0; }
+  100% { background-position: -130% 0; }
+}
+
+@keyframes holo-shift {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes mythic-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes legendary-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(247,217,119,0.25), 0 8px 24px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 44px rgba(247,217,119,0.45), 0 8px 24px rgba(0,0,0,0.5); }
+}
+
+@keyframes mythic-glow {
+  0%, 100% { filter: drop-shadow(0 0 14px rgba(244,114,182,0.35)); }
+  50%       { filter: drop-shadow(0 0 26px rgba(34,211,238,0.35)); }
+}
+
 /* -- Base -------------------------------- */
 
 * {
@@ -237,6 +290,17 @@ select {
   background: linear-gradient(90deg, transparent 30%, var(--color-accent-muted) 50%, transparent 70%);
   background-size: 200% 100%;
   animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* Skeleton shimmer used by HomeSkeleton (matches design's shimmer-sweep) */
+@keyframes shimmer-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -50% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(100deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 65%) #1a1e2c;
+  background-size: 250% 100%;
+  animation: shimmer-sweep 1.8s linear infinite;
 }
 
 @keyframes float {

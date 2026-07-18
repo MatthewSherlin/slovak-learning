@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Send, Lightbulb, Square, ArrowLeft, Clock, MessageSquare } from 'lucide-react';
+import { Send, Lightbulb, Square, ArrowLeft, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import ChatMessage from '../components/ChatMessage';
 import LoadingDots from '../components/LoadingDots';
 import FeedbackView from '../components/FeedbackView';
@@ -130,7 +130,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-3xl mx-auto">
           {session.messages.map((msg, i) => (
-            <ChatMessage key={i} message={msg} index={i} />
+            <ChatMessage key={i} message={msg} />
           ))}
           {loading && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3 my-5">
@@ -209,12 +209,66 @@ export default function Session() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionType | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  const loadSession = async (sessionId: string) => {
+    setLoadError(null);
+    try {
+      const s = await getSession(sessionId);
+      setSession(s);
+    } catch {
+      setLoadError('Failed to load session. Please check your connection and try again.');
+    }
+  };
 
   useEffect(() => {
     if (id) {
-      getSession(id).then(setSession).catch(() => navigate('/'));
+      loadSession(id);
     }
-  }, [id, navigate]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRetry = async () => {
+    if (!id) return;
+    setRetrying(true);
+    await loadSession(id);
+    setRetrying(false);
+  };
+
+  // Error state — show banner with retry, don't silently navigate
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-sm w-full bg-surface border border-border rounded-2xl p-8 text-center shadow-xl"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-danger-muted flex items-center justify-center mx-auto mb-4">
+            <span className="text-danger text-xl">!</span>
+          </div>
+          <h2 className="text-lg font-bold text-text-primary mb-2">Could not load session</h2>
+          <p className="text-sm text-text-muted mb-6">{loadError}</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent text-white text-sm font-semibold border-none cursor-pointer hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={15} className={retrying ? 'animate-spin' : ''} />
+              {retrying ? 'Retrying…' : 'Try Again'}
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="px-4 py-3 rounded-xl bg-surface-2 text-text-secondary text-sm font-medium border-none cursor-pointer hover:bg-surface-3 transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
@@ -230,22 +284,18 @@ export default function Session() {
     return <FeedbackView session={session} feedback={session.feedback} />;
   }
 
-  const handleEnd = () => {
-    // Mode components handle their own end flow
-  };
-
   // Route to mode-specific component based on exercises type
   const mode = session.exercises?.type ?? null;
 
   switch (mode) {
     case 'vocabulary':
-      return <VocabMode session={session} setSession={setSession} onEnd={handleEnd} />;
+      return <VocabMode session={session} setSession={setSession} />;
     case 'grammar':
-      return <GrammarMode session={session} setSession={setSession} onEnd={handleEnd} />;
+      return <GrammarMode session={session} setSession={setSession} />;
     case 'translation':
-      return <TranslationMode session={session} setSession={setSession} onEnd={handleEnd} />;
+      return <TranslationMode session={session} setSession={setSession} />;
     case 'conversation':
-      return <ConversationMode session={session} setSession={setSession} onEnd={handleEnd} />;
+      return <ConversationMode session={session} setSession={setSession} />;
     default:
       return <LegacyChatMode session={session} setSession={setSession} />;
   }

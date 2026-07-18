@@ -13,7 +13,6 @@ import type { Session, SessionFeedback, TranslationExerciseData, TranslationAnsw
 interface TranslationModeProps {
   session: Session;
   setSession: (s: Session) => void;
-  onEnd: () => void;
 }
 
 export default function TranslationMode({ session, setSession }: TranslationModeProps) {

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
+
+# Focus areas are interpolated into LLM prompts — keep them short and few.
+FocusArea = Annotated[str, StringConstraints(max_length=100)]
+FocusAreaList = Annotated[list[FocusArea], Field(max_length=10)]
 
 
 class PracticeMode(str, Enum):
@@ -63,6 +67,7 @@ class VocabExerciseData(BaseModel):
     questions: list[VocabQuestion]
     currentIndex: int = 0
     answers: list[int | None] = []
+    credits: list[float | None] = []
     retryQueue: list[int] = []
     phase: str = "questions"  # "questions" | "retry" | "complete"
 
@@ -91,6 +96,8 @@ class GrammarExerciseData(BaseModel):
     currentIndex: int = 0
     answers: list[str | None] = []
     correct: list[bool | None] = []
+    credits: list[float | None] = []
+    tiers: list[str | None] = []
     phase: str = "lesson"  # "lesson" | "exercises" | "complete"
 
 
@@ -203,7 +210,7 @@ class CreateSessionRequest(BaseModel):
     mode: PracticeMode
     topic: str = "general"
     difficulty: Difficulty = Difficulty.beginner
-    focus_areas: list[str] = []
+    focus_areas: FocusAreaList = []
 
 
 class AnswerRequest(BaseModel):
@@ -229,7 +236,7 @@ class UserPreferences(BaseModel):
 
 
 class UpdatePreferencesRequest(BaseModel):
-    custom_focus_areas: list[str]
+    custom_focus_areas: FocusAreaList
 
 
 # ── PIN models ──────────────────────────────────────────────────────
@@ -258,6 +265,14 @@ class FarmMoveRequest(BaseModel):
 
 class PackPurchaseRequest(BaseModel):
     set_id: str
+
+
+class TradeInRequest(BaseModel):
+    card_ids: Annotated[list[int], Field(min_length=1, max_length=50)]
+
+
+class ShowcaseRequest(BaseModel):
+    card_id: int | None = None
 
 
 class FarmItem(BaseModel):

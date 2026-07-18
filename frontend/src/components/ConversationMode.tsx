@@ -21,7 +21,6 @@ import type { Session, SessionFeedback, ConversationExerciseData, Difficulty } f
 interface ConversationModeProps {
   session: Session;
   setSession: (s: Session) => void;
-  onEnd: () => void;
 }
 
 interface Correction {
@@ -281,7 +280,7 @@ export default function ConversationMode({ session, setSession }: ConversationMo
 
           {/* Messages */}
           {session.messages.map((msg, i) => (
-            <ChatMessage key={i} message={msg} index={i} />
+            <ChatMessage key={i} message={msg} />
           ))}
 
           {loading && (

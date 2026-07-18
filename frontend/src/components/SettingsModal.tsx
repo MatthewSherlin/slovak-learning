@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Shield, X, Check, AlertCircle } from 'lucide-react';
+import { Lock, Shield, X, Check, AlertCircle, Sun, Moon } from 'lucide-react';
 import { useUser } from './UserPicker';
+import { useTheme } from './ThemeProvider';
 import { setPin, verifyPin, removePin } from '../lib/api';
+import PinInput from './PinInput';
 
 type PinView = 'idle' | 'set' | 'change-verify' | 'change-new' | 'remove-verify';
 
@@ -14,101 +16,6 @@ interface Toast {
 interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
-}
-
-// ── 4-digit PIN input ────────────────────────────────────────────────
-
-function PinInput({
-  value,
-  onChange,
-  disabled,
-  shake,
-  autoFocus,
-}: {
-  value: string;
-  onChange: (pin: string) => void;
-  disabled?: boolean;
-  shake?: boolean;
-  autoFocus?: boolean;
-}) {
-  const refs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
-
-  // Pad value to 4 chars for safe indexing
-  const digits = value.padEnd(4, ' ');
-
-  useEffect(() => {
-    if (autoFocus) refs[0].current?.focus();
-  }, [autoFocus]);
-
-  const setDigit = (index: number, digit: string) => {
-    const arr = [...digits];
-    arr[index] = digit || ' ';
-    const next = arr.join('').replace(/ /g, '');
-    onChange(next);
-    if (digit && index < 3) {
-      refs[index + 1].current?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      if (digits[index]?.trim()) {
-        setDigit(index, '');
-      } else if (index > 0) {
-        refs[index - 1].current?.focus();
-        setDigit(index - 1, '');
-      }
-    } else if (/^\d$/.test(e.key)) {
-      e.preventDefault();
-      setDigit(index, e.key);
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      refs[index - 1].current?.focus();
-    } else if (e.key === 'ArrowRight' && index < 3) {
-      refs[index + 1].current?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
-    if (pasted) {
-      onChange(pasted);
-      const focusIndex = Math.min(pasted.length, 3);
-      refs[focusIndex].current?.focus();
-    }
-  };
-
-  return (
-    <motion.div
-      animate={shake ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : {}}
-      transition={{ duration: 0.4 }}
-      className="flex gap-3 justify-center"
-    >
-      {[0, 1, 2, 3].map((i) => (
-        <input
-          key={i}
-          ref={refs[i]}
-          type="password"
-          inputMode="numeric"
-          maxLength={1}
-          disabled={disabled}
-          value={digits[i]?.trim() ? '\u2022' : ''}
-          onChange={() => {/* Handled by onKeyDown */}}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={handlePaste}
-          onFocus={(e) => e.target.select()}
-          className="w-12 h-14 rounded-xl border-2 border-border bg-surface-2 text-center text-xl font-bold text-text-primary focus:border-accent focus:outline-none transition-colors disabled:opacity-50 appearance-none"
-          style={{ caretColor: 'transparent' }}
-        />
-      ))}
-    </motion.div>
-  );
 }
 
 // ── Toast notification ───────────────────────────────────────────────
@@ -134,7 +41,8 @@ function ToastMessage({ toast }: { toast: Toast }) {
 // ── Main modal ───────────────────────────────────────────────────────
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
-  const { user, refreshUsers } = useUser();
+  const { user, setUser, refreshUsers } = useUser();
+  const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<PinView>('idle');
   const [pin, setPin_] = useState('');
@@ -174,8 +82,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     try {
       await setPin(user.id, pin);
       await refreshUsers();
-      // Update the local user object's has_pin
-      user.has_pin = true;
+      // Update context object so UI reflects the new pin state immediately
+      setUser({ ...user, has_pin: true });
       showToast('PIN set successfully', 'success');
       setView('idle');
       setPin_('');
@@ -228,7 +136,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     try {
       await removePin(user.id, pin);
       await refreshUsers();
-      user.has_pin = false;
+      // Update context object so UI reflects the removed pin state immediately
+      setUser({ ...user, has_pin: false });
       showToast('PIN removed', 'success');
       setView('idle');
       setPin_('');
@@ -311,6 +220,42 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </div>
               )}
             </AnimatePresence>
+
+            {/* Theme Section */}
+            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-accent-muted flex items-center justify-center">
+                    {theme === 'dark' ? (
+                      <Moon size={18} className="text-accent" />
+                    ) : (
+                      <Sun size={18} className="text-accent" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">Appearance</h3>
+                    <p className="text-xs text-text-muted">
+                      {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="relative w-12 h-6 rounded-full transition-colors border-none cursor-pointer"
+                  style={{
+                    background: theme === 'light' ? 'var(--color-accent)' : 'var(--color-surface-3)',
+                  }}
+                >
+                  <span
+                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                    style={{
+                      left: theme === 'light' ? '26px' : '2px',
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
 
             {/* PIN Section */}
             <div className="rounded-xl border border-border bg-surface-2 p-5">

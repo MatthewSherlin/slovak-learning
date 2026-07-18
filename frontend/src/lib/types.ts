@@ -55,6 +55,7 @@ export interface VocabQuestion {
   choices: string[];
   correctIndex: number;
   explanation: string;
+  pronunciation?: string;
 }
 
 export interface VocabExerciseData {
@@ -64,6 +65,7 @@ export interface VocabExerciseData {
   answers: (number | null)[];
   retryQueue: number[];
   phase: 'questions' | 'retry' | 'complete';
+  credits?: (number | null)[];
 }
 
 // -- Grammar exercise types --
@@ -90,6 +92,8 @@ export interface GrammarExerciseData {
   answers: (string | null)[];
   correct: (boolean | null)[];
   phase: 'lesson' | 'exercises' | 'complete';
+  credits?: (number | null)[];
+  tiers?: (string | null)[];
 }
 
 // -- Translation exercise types --
@@ -243,7 +247,7 @@ export interface CardData {
   english: string;
   example_sk: string;
   example_en: string;
-  rarity: 'common' | 'uncommon' | 'rare' | 'legendary';
+  rarity: 'common' | 'uncommon' | 'rare' | 'legendary' | 'mythic';
   number: number;
   origin?: string;
 }
@@ -264,12 +268,19 @@ export interface UserCardCollection {
   xp_earned: number;
   xp_spent: number;
   xp_available: number;
+  copies?: Record<string, number>;
+}
+
+export interface AllCardsResponse {
+  cards: CardData[];
+  sets: Record<string, unknown>;
 }
 
 export interface PackPurchaseResult {
   cards: CardData[];
   new_card_ids: number[];
   duplicate_card_ids: number[];
+  copies?: Record<string, number>;
   xp_cost: number;
 }
 
@@ -280,4 +291,37 @@ export interface CardSocialEntry {
   color: string;
   total_cards: number;
   sets_progress: Record<string, number>;
+  showcase_card_id?: number | null;
 }
+
+// -- Recommendations types --
+export interface RecommendedAction {
+  kind: 'continue' | 'review_vocab' | 'practice_concept';
+  label: string;
+  mode: LearningMode;
+  session_id?: string;
+}
+
+export interface Recommendations {
+  in_progress_session: {
+    id: string;
+    mode: LearningMode;
+    topic: string;
+    difficulty: Difficulty;
+    created_at: string;
+  } | null;
+  due_words: number;
+  weakest_concept: {
+    concept: string;
+    accuracy: number;
+    times_seen: number;
+  } | null;
+  recommended: RecommendedAction[];
+}
+
+// -- Trade-in types --
+export interface TradeInResult {
+  traded: number[];
+  xp_gained: number;
+}
+
