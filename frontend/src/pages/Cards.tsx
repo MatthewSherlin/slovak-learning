@@ -12,6 +12,7 @@ import {
 import PackOpening from '../components/cards/PackOpening';
 import TradeInSheet from '../components/cards/TradeInSheet';
 import ShowcasePicker from '../components/cards/ShowcasePicker';
+import CardFrame from '../components/cards/CardFrame';
 import { useUser } from '../components/UserPicker';
 import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards } from '../lib/api';
 import type { CardData, CardSet, UserCardCollection, CardSocialEntry, PackPurchaseResult } from '../lib/types';
@@ -22,15 +23,6 @@ function getTheme(setId: string) {
   return getSetTheme(setId);
 }
 
-// ── Rarity config for inline CardFront (inspect modal only) ──
-
-const RARITY = {
-  common:    { label: 'Common',    borderColor: 'rgba(148, 163, 184, 0.4)', glow: '', bg: 'from-slate-800/95 via-slate-800 to-slate-900', dot: 'bg-gray-400',   text: 'text-gray-400',   edgeColor: 'rgba(148,163,184,0.2)' },
-  uncommon:  { label: 'Uncommon',  borderColor: 'rgba(52, 211, 153, 0.6)',  glow: 'card-glow-uncommon',  bg: 'from-emerald-950/60 via-slate-800 to-slate-900', dot: 'bg-emerald-400', text: 'text-emerald-400', edgeColor: 'rgba(52,211,153,0.3)' },
-  rare:      { label: 'Rare',      borderColor: 'rgba(96, 165, 250, 0.7)',  glow: 'card-glow-rare',      bg: 'from-blue-950/60 via-slate-800 to-slate-900',    dot: 'bg-blue-400',    text: 'text-blue-400',   edgeColor: 'rgba(96,165,250,0.3)' },
-  legendary: { label: 'Legendary', borderColor: 'rgba(251, 191, 36, 0.8)', glow: 'card-glow-legendary', bg: 'from-amber-950/60 via-slate-800 to-slate-900',   dot: 'bg-amber-400',   text: 'text-amber-400',  edgeColor: 'rgba(251,191,36,0.4)' },
-  mythic:    { label: 'Mythic',    borderColor: 'rgba(244, 114, 182, 0.8)', glow: 'card-glow-legendary', bg: 'from-pink-950/60 via-slate-800 to-slate-900',    dot: 'bg-pink-400',    text: 'text-pink-400',   edgeColor: 'rgba(244,114,182,0.4)' },
-};
 
 // ── Binder skeleton ────────────────────────────────────────────────
 
@@ -111,79 +103,7 @@ const CardImage = memo(function CardImage({
   );
 });
 
-// ── Pack opening: inline CardFront (for flip animation only) ───────
-
-function CardFront({
-  card,
-  size = 'normal',
-  flipMode = false,
-  onInspect,
-}: {
-  card: CardData;
-  size?: 'normal' | 'small' | 'large';
-  flipMode?: boolean;
-  onInspect?: () => void;
-}) {
-  const r = RARITY[card.rarity];
-  const isSmall = size === 'small';
-  const isLarge = size === 'large';
-
-  return (
-    <div
-      className={`${flipMode ? 'card-face card-front' : ''} w-full h-full rounded-2xl bg-gradient-to-br ${r.bg} flex flex-col overflow-hidden relative ${r.glow} card-edge-${card.rarity}`}
-      style={{
-        padding: isSmall ? '8px' : isLarge ? '20px' : '12px',
-        border: `${card.rarity === 'legendary' ? '2.5px' : '2px'} solid ${r.borderColor}`,
-        cursor: onInspect ? 'pointer' : undefined,
-      }}
-      onClick={onInspect}
-    >
-      {card.rarity !== 'common' && <div className={`card-holo card-holo-${card.rarity}`} />}
-      <div className="text-center relative z-10" style={{ marginBottom: isSmall ? '0px' : isLarge ? '6px' : '2px' }}>
-        <span className={`font-semibold uppercase tracking-[0.2em] text-text-faint ${isSmall ? 'text-[7px]' : isLarge ? 'text-[11px]' : 'text-[9px]'}`}>
-          {card.set_name}
-        </span>
-      </div>
-      <div className="flex items-center justify-center relative z-10 overflow-hidden rounded-lg" style={{ flex: isLarge ? '1 1 auto' : '0 0 auto', margin: isSmall ? '4px 0' : isLarge ? '8px 0' : '6px 0', minHeight: isLarge ? 120 : isSmall ? 48 : 80 }}>
-        <CardImage
-          card={card}
-          className="w-full h-full object-cover rounded-lg"
-          style={{ minHeight: isLarge ? 120 : isSmall ? 48 : 80 }}
-          emojiClass={`leading-none select-none drop-shadow-lg ${isSmall ? 'text-4xl' : isLarge ? 'text-8xl' : 'text-6xl'}`}
-        />
-      </div>
-      <div className={`h-px w-3/5 mx-auto relative z-10`} style={{ marginBottom: isSmall ? '4px' : isLarge ? '12px' : '6px', background: `linear-gradient(90deg, transparent, ${r.borderColor}, transparent)` }} />
-      <div className="text-center relative z-10" style={{ marginBottom: isSmall ? '1px' : isLarge ? '4px' : '2px' }}>
-        <h3 className={`font-black text-white tracking-tight ${isSmall ? 'text-base' : isLarge ? 'text-3xl' : 'text-xl'}`}>{card.slovak}</h3>
-        <p className={`text-text-faint font-mono mt-0.5 ${isSmall ? 'text-[8px]' : isLarge ? 'text-sm' : 'text-[10px]'}`}>/{card.pronunciation}/</p>
-      </div>
-      <div className="text-center relative z-10" style={{ marginBottom: isSmall ? '4px' : isLarge ? '8px' : '4px' }}>
-        <p className={`font-semibold text-text-secondary ${isSmall ? 'text-[10px]' : isLarge ? 'text-base' : 'text-xs'}`}>{card.english}</p>
-      </div>
-      {!isSmall && (
-        <div className={`bg-black/30 rounded-xl relative z-10 ${isLarge ? 'px-4 py-3 mb-4' : 'px-2.5 py-2 mb-2'}`} style={{ minHeight: 0 }}>
-          <p className={`text-text-secondary italic leading-snug ${isLarge ? 'text-sm' : 'text-[10px]'}`} style={isLarge ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
-            &ldquo;{card.example_sk}&rdquo;
-          </p>
-        </div>
-      )}
-      <div className="flex items-center justify-between relative z-10 mt-auto">
-        <span className={`font-mono text-text-faint ${isSmall ? 'text-[7px]' : isLarge ? 'text-xs' : 'text-[9px]'}`}>
-          #{String(card.number).padStart(3, '0')}
-        </span>
-        <div className="flex items-center gap-1">
-          <div className={`rounded-full ${r.dot} ${isSmall ? 'w-1 h-1' : isLarge ? 'w-2.5 h-2.5' : 'w-1.5 h-1.5'}`} />
-          <span className={`font-bold uppercase tracking-wider ${r.text} ${isSmall ? 'text-[7px]' : isLarge ? 'text-xs' : 'text-[9px]'}`}>
-            {r.label}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CardInspectModal({ card, onClose }: { card: CardData; onClose: () => void }) {
-  const r = RARITY[card.rarity];
+function CardInspectModal({ card, setTotal, onClose }: { card: CardData; setTotal: number; onClose: () => void }) {
   return (
     <motion.div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -200,9 +120,9 @@ function CardInspectModal({ card, onClose }: { card: CardData; onClose: () => vo
         exit={{ scale: 0.7, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        style={{ perspective: 1200, width: 300, height: 480 }}
+        style={{ perspective: 1200 }}
       >
-        <CardFront card={card} size="large" />
+        <CardFrame card={card} setTotal={setTotal} size={300} />
       </motion.div>
       <motion.button
         className="absolute right-6 z-20 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center cursor-pointer text-white/80 hover:text-white hover:bg-white/20 transition-colors"
@@ -214,21 +134,6 @@ function CardInspectModal({ card, onClose }: { card: CardData; onClose: () => vo
       >
         <X size={18} />
       </motion.button>
-      <motion.div
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 text-center"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="text-lg">{card.set_emoji}</span>
-          <span className="text-sm font-medium text-white/70">{card.set_name}</span>
-        </div>
-        <div className="flex items-center justify-center gap-2">
-          <div className={`rounded-full ${r.dot} w-2 h-2`} />
-          <span className={`text-sm font-bold uppercase tracking-wider ${r.text}`}>{r.label}</span>
-        </div>
-      </motion.div>
     </motion.div>
   );
 }
@@ -394,7 +299,13 @@ function BinderTab({
                 const card = byNumber[num];
 
                 if (owned && card) {
-                  const r = RARITY[card.rarity];
+                  const rarityTextClass: Record<CardData['rarity'], string> = {
+                    common: 'text-gray-400',
+                    uncommon: 'text-emerald-400',
+                    rare: 'text-blue-400',
+                    legendary: 'text-amber-400',
+                    mythic: 'text-pink-400',
+                  };
                   const copyCount = copies[String(card.id)] ?? 1;
                   return (
                     <motion.button
@@ -414,7 +325,7 @@ function BinderTab({
                       />
                       {/* Rarity + number overlays */}
                       <div className="absolute inset-0 flex flex-col items-center justify-end p-1 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 40%, transparent)' }}>
-                        <span className={`text-[7px] font-bold uppercase ${r.text}`}>{card.rarity.charAt(0)}</span>
+                        <span className={`text-[7px] font-bold uppercase ${rarityTextClass[card.rarity]}`}>{card.rarity.charAt(0)}</span>
                         <span className="text-[7px] font-mono text-white/40">{String(num).padStart(3, '0')}</span>
                       </div>
                       {copyCount >= 2 && (
@@ -833,7 +744,13 @@ export default function Cards() {
 
       {/* Inspect modal */}
       <AnimatePresence>
-        {inspectCard && <CardInspectModal card={inspectCard} onClose={() => setInspectCard(null)} />}
+        {inspectCard && (
+          <CardInspectModal
+            card={inspectCard}
+            setTotal={catalog.find((s) => s.set_id === inspectCard.set_id)?.total_cards ?? 16}
+            onClose={() => setInspectCard(null)}
+          />
+        )}
       </AnimatePresence>
 
       {/* Confirm purchase modal */}
