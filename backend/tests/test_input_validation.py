@@ -15,7 +15,7 @@ def client(_init_schema):
 
 
 @pytest.mark.asyncio
-class TestFocusAreasLimits:
+class TestInstructionsLimits:
     async def test_instructions_over_300_chars_rejected(self, client):
         async with client as c:
             resp = await c.post("/api/sessions", json={
