@@ -118,7 +118,7 @@ function computeProgress(exercises: ExerciseData): SessionProgress | null {
   switch (exercises.type) {
     case 'vocabulary': {
       const answered = exercises.answers.filter((a) => a !== null && a !== undefined).length;
-      const total = (exercises.questions ?? exercises.answers).length;
+      const total = exercises.questions.length;
       return total > 0 ? { answered, total } : null;
     }
     case 'grammar': {

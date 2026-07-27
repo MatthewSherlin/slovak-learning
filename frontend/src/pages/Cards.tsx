@@ -5,8 +5,6 @@ import {
   ShoppingBag,
   BookOpen,
   Users,
-  RefreshCw,
-  AlertCircle,
   X,
 } from 'lucide-react';
 import PackOpening from '../components/cards/PackOpening';
@@ -17,6 +15,7 @@ import { useUser } from '../components/UserPicker';
 import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards } from '../lib/api';
 import type { CardData, CardSet, UserCardCollection, CardSocialEntry, PackPurchaseResult } from '../lib/types';
 import { getSetTheme } from '../components/cards/setThemes';
+import ErrorRetry from '../components/ErrorRetry';
 
 // Tailwind text-color per rarity for the binder mini-tile rarity letter.
 const RARITY_TEXT_CLASS: Record<CardData['rarity'], string> = {
@@ -26,12 +25,6 @@ const RARITY_TEXT_CLASS: Record<CardData['rarity'], string> = {
   legendary: 'text-amber-400',
   mythic: 'text-pink-400',
 };
-
-// Local alias so existing call-sites don't change
-function getTheme(setId: string) {
-  return getSetTheme(setId);
-}
-
 
 // ── Binder skeleton ────────────────────────────────────────────────
 
@@ -61,27 +54,6 @@ function BinderSkeleton() {
         </div>
       ))}
     </div>
-  );
-}
-
-// ── Error retry ────────────────────────────────────────────────────
-
-function ErrorRetry({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-      <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto mb-4">
-        <AlertCircle size={22} className="text-danger" />
-      </div>
-      <p className="text-text-muted text-sm mb-4">{message}</p>
-      <button
-        onClick={onRetry}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium bg-surface border border-border hover:border-accent/50 text-text-primary cursor-pointer transition-colors"
-        aria-label="Retry"
-      >
-        <RefreshCw size={13} />
-        Retry
-      </button>
-    </motion.div>
   );
 }
 
@@ -166,7 +138,7 @@ function ShopTab({
         const ownedInSet = collection?.cards.filter((c) => c.set_id === set.set_id).length ?? 0;
         const canAfford = xpAvailable >= set.cost;
         const complete = ownedInSet >= set.total_cards;
-        const theme = getTheme(set.set_id);
+        const theme = getSetTheme(set.set_id);
 
         return (
           <motion.button
@@ -269,7 +241,7 @@ function BinderTab({
         const setCards = ownedCards.filter((c) => c.set_id === set.set_id);
         const ownedIds = new Set(setCards.map((c) => c.number));
         const isComplete = setCards.length >= set.total_cards;
-        const theme = getTheme(set.set_id);
+        const theme = getSetTheme(set.set_id);
 
         // Build a lookup for owned cards by number
         const byNumber: Record<number, CardData> = {};
@@ -636,7 +608,6 @@ export default function Cards() {
           transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
           style={{ animationDelay: '0s' }}
         />
-        <style>{cardStyles}</style>
       </div>
     );
   }
@@ -650,7 +621,6 @@ export default function Cards() {
           result={purchaseResult}
           onDone={handlePackDone}
         />
-        <style>{cardStyles}</style>
       </div>
     );
   }
@@ -825,103 +795,6 @@ export default function Cards() {
         />
       )}
 
-      <style>{cardStyles}</style>
     </div>
   );
 }
-
-// ── Styles (card flip + holo effects) ─────────────────────────────
-
-const cardStyles = `
-  .card-container {
-    width: 200px;
-    height: 310px;
-  }
-  @media (min-width: 640px) {
-    .card-container {
-      width: 220px;
-      height: 340px;
-    }
-  }
-  .card-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    transform-style: preserve-3d;
-  }
-  .card-face {
-    position: absolute;
-    inset: 0;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-  .card-back { transform: rotateY(0deg); }
-  .card-front { transform: rotateY(180deg); }
-  .card-back-pattern {
-    position: absolute;
-    inset: 0;
-    background-image:
-      repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(94, 164, 247, 0.06) 10px, rgba(94, 164, 247, 0.06) 11px),
-      repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(94, 164, 247, 0.06) 10px, rgba(94, 164, 247, 0.06) 11px);
-  }
-  .card-back-foil {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, transparent 20%, rgba(94, 164, 247, 0.08) 35%, rgba(168, 85, 247, 0.06) 50%, rgba(94, 164, 247, 0.08) 65%, transparent 80%);
-    background-size: 200% 200%;
-    animation: foil-shift 6s ease infinite;
-  }
-  .card-holo {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    z-index: 1;
-  }
-  .card-holo-uncommon {
-    background: linear-gradient(125deg, transparent 0%, rgba(52, 211, 153, 0.08) 25%, rgba(255, 255, 255, 0.15) 50%, rgba(52, 211, 153, 0.08) 75%, transparent 100%);
-    background-size: 300% 300%;
-    animation: holo-shift 5s ease infinite;
-  }
-  .card-holo-rare {
-    background: linear-gradient(125deg, transparent 0%, rgba(96, 165, 250, 0.12) 20%, rgba(168, 85, 247, 0.15) 35%, rgba(255, 255, 255, 0.2) 50%, rgba(96, 165, 250, 0.15) 65%, rgba(168, 85, 247, 0.12) 80%, transparent 100%);
-    background-size: 300% 300%;
-    animation: holo-shift 4s ease infinite;
-  }
-  .card-holo-legendary {
-    background: linear-gradient(125deg, transparent 0%, rgba(251, 191, 36, 0.15) 15%, rgba(239, 68, 68, 0.12) 30%, rgba(255, 255, 255, 0.22) 45%, rgba(168, 85, 247, 0.15) 60%, rgba(251, 191, 36, 0.18) 75%, rgba(239, 68, 68, 0.12) 90%, transparent 100%);
-    background-size: 400% 400%;
-    animation: holo-shift-legendary 3s ease infinite;
-  }
-  @keyframes holo-shift {
-    0% { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
-    100% { background-position: 0% 0%; }
-  }
-  @keyframes holo-shift-legendary {
-    0% { background-position: 0% 0%; }
-    33% { background-position: 100% 50%; }
-    66% { background-position: 50% 100%; }
-    100% { background-position: 0% 0%; }
-  }
-  @keyframes foil-shift {
-    0% { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
-    100% { background-position: 0% 0%; }
-  }
-  .card-edge-common { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06); }
-  .card-edge-uncommon { box-shadow: 0 0 25px rgba(52,211,153,0.25), 0 0 50px rgba(52,211,153,0.08), 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(52,211,153,0.2); }
-  .card-edge-rare { box-shadow: 0 0 30px rgba(96,165,250,0.35), 0 0 60px rgba(96,165,250,0.12), 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(96,165,250,0.25); }
-  .card-edge-legendary { box-shadow: 0 0 35px rgba(251,191,36,0.4), 0 0 70px rgba(251,191,36,0.15), 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(251,191,36,0.3); animation: legendary-pulse 2s ease-in-out infinite; }
-  @keyframes legendary-pulse {
-    0%, 100% { box-shadow: 0 0 30px rgba(251,191,36,0.35), 0 0 60px rgba(251,191,36,0.12), 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(251,191,36,0.25); }
-    50% { box-shadow: 0 0 50px rgba(251,191,36,0.5), 0 0 100px rgba(251,191,36,0.2), 0 2px 12px rgba(0,0,0,0.3), 0 0 0 1px rgba(251,191,36,0.4); }
-  }
-  @keyframes aura-pulse {
-    0%, 100% { transform: scale(1); opacity: 0.4; }
-    50% { transform: scale(1.15); opacity: 0.7; }
-  }
-  .aura-pulse-blue { animation: aura-pulse 0.6s ease-in-out infinite; background: radial-gradient(circle, rgba(96,165,250,0.5), transparent 70%); }
-  .aura-pulse-gold { animation: aura-pulse 0.5s ease-in-out infinite; background: radial-gradient(circle, rgba(251,191,36,0.6), transparent 70%); }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
-`;
