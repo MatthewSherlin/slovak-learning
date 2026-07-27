@@ -71,6 +71,7 @@ class VocabExerciseData(BaseModel):
     credits: list[float | None] = []
     retryQueue: list[int] = []
     phase: str = "questions"  # "questions" | "retry" | "complete"
+    instructions: str | None = None
 
 
 # ── Grammar exercise types ───────────────────────────────────────────
@@ -100,6 +101,7 @@ class GrammarExerciseData(BaseModel):
     credits: list[float | None] = []
     tiers: list[str | None] = []
     phase: str = "lesson"  # "lesson" | "exercises" | "complete"
+    instructions: str | None = None
 
 
 # ── Translation exercise types ───────────────────────────────────────
@@ -123,6 +125,7 @@ class TranslationExerciseData(BaseModel):
     currentIndex: int = 0
     answers: list[TranslationAnswer | None] = []
     phase: str = "exercises"  # "exercises" | "complete"
+    instructions: str | None = None
 
 
 # ── Conversation exercise types ──────────────────────────────────────
@@ -132,6 +135,7 @@ class ConversationExerciseData(BaseModel):
     exchangeCount: int = 0
     maxExchanges: int = 10
     phase: str = "active"  # "active" | "complete"
+    instructions: str | None = None
 
 
 # ── Session ──────────────────────────────────────────────────────────
@@ -211,7 +215,7 @@ class CreateSessionRequest(BaseModel):
     mode: PracticeMode
     topic: str = "general"
     difficulty: Difficulty = Difficulty.beginner
-    focus_areas: FocusAreaList = []
+    instructions: str | None = Field(default=None, max_length=300)
 
 
 class AnswerRequest(BaseModel):

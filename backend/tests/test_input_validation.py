@@ -1,4 +1,4 @@
-"""Tests for request input hardening — focus_areas limits and user existence."""
+"""Tests for request input hardening — instructions limits and user existence."""
 
 from __future__ import annotations
 
@@ -16,23 +16,26 @@ def client(_init_schema):
 
 @pytest.mark.asyncio
 class TestFocusAreasLimits:
-    async def test_too_many_focus_areas_rejected(self, client):
+    async def test_instructions_over_300_chars_rejected(self, client):
         async with client as c:
             resp = await c.post("/api/sessions", json={
                 "user_id": "matt",
                 "mode": "vocabulary",
-                "focus_areas": [f"area {i}" for i in range(11)],
+                "instructions": "x" * 301,
             })
         assert resp.status_code == 422
 
-    async def test_oversized_focus_area_rejected(self, client):
+    async def test_focus_areas_no_longer_accepted_field(self, client):
+        # Unknown fields are ignored by pydantic; the request must still succeed
+        # without focus_areas influencing anything (no 422).
         async with client as c:
             resp = await c.post("/api/sessions", json={
-                "user_id": "matt",
+                "user_id": "does-not-exist",
                 "mode": "vocabulary",
-                "focus_areas": ["x" * 101],
+                "focus_areas": ["x"],
             })
-        assert resp.status_code == 422
+        # 404 (unknown user) proves validation passed and focus_areas was ignored
+        assert resp.status_code == 404
 
     async def test_preferences_focus_areas_limited(self, client):
         async with client as c:
