@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Home from '../Home';
 import type { Recommendations, DashboardStats, LeaderboardEntry, Session } from '../../lib/types';
@@ -220,6 +220,22 @@ describe('Home', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('3/10')).not.toBeNull();
+    });
+  });
+
+  it('clicking the gear button opens the settings modal', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(baseRecs());
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Vocabulary')).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^settings$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /^settings$/i })).not.toBeNull();
     });
   });
 

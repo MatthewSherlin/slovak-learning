@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { WifiOff, RefreshCw, Play } from 'lucide-react';
+import { WifiOff, RefreshCw, Play, Settings } from 'lucide-react';
 import HomeSkeleton from '../components/HomeSkeleton';
 import ConfigSheet from '../components/ConfigSheet';
+import SettingsModal from '../components/SettingsModal';
 import { useUser } from '../components/UserPicker';
 import {
   getRecommendations,
@@ -152,6 +153,9 @@ export default function Home() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [streak, setStreak] = useState<number>(0);
   const [inProgressSession, setInProgressSession] = useState<Session | null>(null);
+
+  // Settings modal state
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Config sheet state
   const [sheetMode, setSheetMode] = useState<LearningMode | null>(null);
@@ -303,6 +307,14 @@ export default function Home() {
               </span>
             </div>
           )}
+          {/* Settings gear */}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            className="w-9 h-9 rounded-[12px] flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors duration-150"
+          >
+            <Settings size={17} strokeWidth={1.8} />
+          </button>
           {/* Avatar */}
           {user && (
             <div
@@ -479,6 +491,12 @@ export default function Home() {
           onClose={() => setSheetMode(null)}
         />
       )}
+
+      {/* ── Settings modal ── */}
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </motion.div>
   );
 }
