@@ -16,9 +16,7 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const modeLabel = session.mode.charAt(0).toUpperCase() + session.mode.slice(1);
-  const topicDisplay = session.focus_areas?.length
-    ? session.focus_areas.join(', ')
-    : session.topic.replace(/_/g, ' ');
+  const topicDisplay = session.topic.replace(/_/g, ' ');
 
   return (
     <div className="border-b border-border-subtle glass px-6 py-2.5 relative">

@@ -66,6 +66,7 @@ export interface VocabExerciseData {
   retryQueue: number[];
   phase: 'questions' | 'retry' | 'complete';
   credits?: (number | null)[];
+  instructions?: string;
 }
 
 // -- Grammar exercise types --
@@ -94,6 +95,7 @@ export interface GrammarExerciseData {
   phase: 'lesson' | 'exercises' | 'complete';
   credits?: (number | null)[];
   tiers?: (string | null)[];
+  instructions?: string;
 }
 
 // -- Translation exercise types --
@@ -116,6 +118,7 @@ export interface TranslationExerciseData {
   currentIndex: number;
   answers: (TranslationAnswer | null)[];
   phase: 'exercises' | 'complete';
+  instructions?: string;
 }
 
 // -- Conversation exercise types --
@@ -125,6 +128,7 @@ export interface ConversationExerciseData {
   maxExchanges: number;
   phase: 'active' | 'complete';
   scenario?: string;
+  instructions?: string;
 }
 
 // -- Discriminated union --
@@ -145,7 +149,6 @@ export interface Session {
   created_at: string;
   feedback: SessionFeedback | null;
   exercises?: ExerciseData;
-  focus_areas?: string[];
 }
 
 export interface SessionSummary {

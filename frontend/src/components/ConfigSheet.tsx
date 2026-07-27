@@ -71,14 +71,7 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'advanced', label: 'Advanced' },
 ];
 
-// Limits enforced by backend
-const MAX_FOCUS_CHARS = 100;
-const MAX_FOCUS_AREAS = 10;
-
-/** Parse the textarea into trimmed, non-empty items. */
-function parseFocusAreas(text: string): string[] {
-  return text.split(',').map((s) => s.trim()).filter(Boolean);
-}
+const MAX_INSTRUCTIONS_CHARS = 300;
 
 // ── Props ──────────────────────────────────────────────────────────────
 
@@ -130,18 +123,10 @@ export default function ConfigSheet({
   }, [open, mode, recommendedTopic]);
 
   const handleStart = useCallback(async () => {
-    const focusAreas = parseFocusAreas(focusText);
+    const instructions = focusText.trim();
 
-    // Validate: max 10 items
-    if (focusAreas.length > MAX_FOCUS_AREAS) {
-      setFocusError(`Max ${MAX_FOCUS_AREAS} focus areas.`);
-      return;
-    }
-
-    // Validate: each item ≤ 100 chars
-    const tooLong = focusAreas.find((item) => item.length > MAX_FOCUS_CHARS);
-    if (tooLong) {
-      setFocusError(`Each focus area must be ${MAX_FOCUS_CHARS} characters or fewer.`);
+    if (instructions.length > MAX_INSTRUCTIONS_CHARS) {
+      setFocusError(`Keep it under ${MAX_INSTRUCTIONS_CHARS} characters.`);
       return;
     }
 
@@ -154,7 +139,7 @@ export default function ConfigSheet({
         mode,
         difficulty,
         topic: selectedTopic ?? undefined,
-        focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
+        instructions: instructions || undefined,
       });
       navigate(`/session/${session.id}`);
     } catch {
@@ -352,7 +337,7 @@ export default function ConfigSheet({
               Tell the tutor what to focus on
             </p>
             <textarea
-              placeholder="e.g. restaurant vocabulary…"
+              placeholder="e.g. restaurant vocabulary — or 'harder words than last time'"
               value={focusText}
               onChange={(e) => {
                 setFocusText(e.target.value);
@@ -374,20 +359,16 @@ export default function ConfigSheet({
                 fontFamily: 'Inter, sans-serif',
               }}
             />
-            {/* N/10 counter — only shown when 2+ items are entered */}
-            {(() => {
-              const count = parseFocusAreas(focusText).length;
-              return count >= 2 ? (
-                <p style={{
-                  fontSize: '11px',
-                  color: count > MAX_FOCUS_AREAS ? '#ef4444' : '#6b7289',
-                  margin: focusError ? '0 0 4px 0' : '-16px 0 8px 0',
-                  textAlign: 'right',
-                }}>
-                  {count}/{MAX_FOCUS_AREAS}
-                </p>
-              ) : null;
-            })()}
+            {focusText.trim().length > 240 && (
+              <p style={{
+                fontSize: '11px',
+                color: focusText.trim().length > MAX_INSTRUCTIONS_CHARS ? '#ef4444' : '#6b7289',
+                margin: focusError ? '0 0 4px 0' : '-16px 0 8px 0',
+                textAlign: 'right',
+              }}>
+                {focusText.trim().length}/{MAX_INSTRUCTIONS_CHARS}
+              </p>
+            )}
             {focusError && (
               <p style={{
                 fontSize: '12px',

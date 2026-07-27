@@ -59,7 +59,7 @@ export const createSession = (data: {
   mode: LearningMode;
   topic?: string;
   difficulty: Difficulty;
-  focus_areas?: string[];
+  instructions?: string;
 }): Promise<Session> =>
   apiFetch('/api/sessions', {
     method: 'POST',
