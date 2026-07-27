@@ -124,16 +124,6 @@
 
 /* -- Card frame keyframes ---------------- */
 
-@keyframes shimmer-sweep {
-  0%   { background-position: 130% 0; }
-  100% { background-position: -130% 0; }
-}
-
-@keyframes holo-shift {
-  0%   { background-position: 0% 0%; }
-  50%  { background-position: 100% 100%; }
-  100% { background-position: 0% 0%; }
-}
 
 @keyframes mythic-shift {
   0%   { background-position: 0% 50%; }

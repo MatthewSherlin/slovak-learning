@@ -112,7 +112,7 @@ Rules:
 - Only use words you are absolutely certain about. Common, well-known vocabulary only. Do not guess.
 
 SELF-REVIEW (do this before outputting):
-After generating all 10 questions, review each one and verify:
+After generating all questions, review each one and verify:
 1. The correct answer at correctIndex actually matches the word's real meaning
 2. No two choices within a question are the same word
 3. No two questions use the same word
