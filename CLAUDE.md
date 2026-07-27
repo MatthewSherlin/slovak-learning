@@ -46,6 +46,7 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 - Ports: backend 8888, frontend 5173
 - Exercise data stored as JSON columns in SQLite (mirrors frontend type shapes)
 - Backend is source of truth for all scoring — no client-side evaluation
+- Session create takes a free-text 'instructions' field (max 300 chars) — passed to LLM prompts and persisted in the exercises JSON blob; vocab word selection is deterministic (SRS slots + exclusion list) in app/composition.py
 
 ## Environment
 Copy `backend/.env.example` to `backend/.env` and set:
