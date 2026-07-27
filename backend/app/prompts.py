@@ -80,7 +80,7 @@ Rules:
 
 VOCAB_BATCH_PROMPT = f"""{ACCURACY}
 
-Generate exactly 10 vocabulary quiz questions for a Slovak language learner.
+Generate vocabulary quiz questions (the user message says how many; default 10) for a Slovak language learner.
 
 Alternate between "sk-en" (show a Slovak word, pick the correct English meaning) and "en-sk" (show an English word, pick the correct Slovak translation).
 
@@ -119,7 +119,7 @@ After generating all 10 questions, review each one and verify:
 4. All Slovak words have correct diacritics
 If any check fails, fix the question before outputting.
 
-Custom focus areas: If the student's message specifies custom focus areas, ALWAYS prioritize those areas when choosing vocabulary. Use words from their requested domains even if they differ from the default topic categories below. Adapt the difficulty level to their focus area.
+Required review words: If the user message lists REQUIRED REVIEW WORDS, create one question for each exact word listed — do not substitute or skip them. Fill the remaining slots with NEW words that are not on the do-not-use list.
 
 Difficulty adaptation — adjust word complexity to match the student's level:
 - Beginner (A1-A2): Basic words within the topic or focus area. Short, simple choices. All distractors should be clearly different.

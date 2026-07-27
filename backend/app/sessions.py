@@ -22,7 +22,8 @@ from .database import (
     update_session as db_update_session,
     upsert_vocab_progress,
 )
-from .llm import ask, ask_json, ask_messages
+from .composition import build_exclusion_list, build_vocab_plan, filter_new_questions, filter_weak
+from .llm import LLMError, ask, ask_json, ask_messages
 from .prompts import (
     CONVERSATION_TURN_PROMPT,
     FEEDBACK_PROMPT,
@@ -155,88 +156,62 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
     topic_label = TOPICS.get("vocabulary", {}).get(req.get("topic", ""), req.get("topic", "general"))
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
+    instructions = (req.get("instructions") or "").strip()
 
-    focus_areas = req.get("focus_areas", [])
     learning_context = await _get_learning_context(db, req["user_id"], "vocabulary")
-    due_words = await get_due_words(db, req["user_id"], limit=6)
 
-    # When focus areas exist, use them AS the topic instead of the generic category
-    effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
+    due = await get_due_words(db, req["user_id"], limit=8)
+    weak = filter_weak(await get_weak_words(db, req["user_id"], limit=10))
+    plan = build_vocab_plan(due, weak, total=10)
+    plan_words = plan["review"] + plan["reinforce"]
+    all_vocab = await get_vocab_progress(db, req["user_id"])
+    exclusions = build_exclusion_list(all_vocab, plan_words)
 
-    prompt = f"Student level: {difficulty_label}\nTopic: {effective_topic}\n"
+    prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
     if learning_context:
         prompt += f"\n{learning_context}\n"
-    prompt += (
-        f"\nGenerate 10 vocabulary quiz questions about: {effective_topic}. "
-        "Avoid repeating words the student has already mastered. "
-        "Include some words they struggle with for reinforcement."
-    )
-    if focus_areas:
-        prompt += (
-            f"\n\nCRITICAL: ALL 10 questions MUST be about {effective_topic}. "
-            "Do NOT use generic words like water, book, bread, etc. unless they "
-            "are directly related to the topic. Every word must connect to the topic."
-        )
-
-    if due_words:
-        due_list = ", ".join(
+    if plan_words:
+        listed = ", ".join(
             f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
-            for w in due_words
+            for w in plan_words
         )
         prompt += (
-            f"\n\nPRIORITY — these words are due for review; include as many as fit "
-            f"the topic (at least {min(len(due_words), 4)}): {due_list}"
+            f"\nREQUIRED REVIEW WORDS — these are due for review; create one question "
+            f"for each of these exact Slovak words: {listed}\n"
         )
-
-    # Hard deduplication: fetch all previously seen words and exclude them
-    all_vocab = await get_vocab_progress(db, req["user_id"])
-    if all_vocab:
-        # Exclude mastered words (>= 80% accuracy); allow weak words for reinforcement
-        mastered_words = [
-            w["slovak"]
-            for w in all_vocab
-            if w["times_seen"] >= 2 and w["times_correct"] / w["times_seen"] >= 0.8
-        ]
-        if mastered_words:
-            word_list = ", ".join(mastered_words[:50])  # cap at 50 to avoid prompt bloat
-            prompt += (
-                f"\n\nDO NOT use any of these words — the student has already mastered them: "
-                f"{word_list}"
-            )
+    prompt += (
+        f"\nThen add {plan['new_count']} NEW vocabulary questions about: {topic_label}. "
+        "Choose words the student has not seen before."
+    )
+    if exclusions:
+        prompt += (
+            "\n\nDO NOT use any of these already-seen words for the new questions: "
+            + ", ".join(exclusions)
+        )
+    prompt += _instructions_block(instructions)
 
     data = await ask_json(prompt, VOCAB_BATCH_PROMPT)
-    questions = data.get("questions", [])
+    questions = _validate_vocab_questions(
+        data.get("questions", []), plan_words, exclusions
+    )
 
-    # Validate questions
-    seen_words: set[str] = set()
-    valid_questions: list[dict] = []
-    for q in questions:
-        word = q.get("word", "").strip().lower()
+    if len(questions) < 6:
+        missing = 10 - len(questions)
+        used = ", ".join(sorted({q["word"] for q in questions} | set(exclusions)))
+        retry_prompt = (
+            f"Student level: {difficulty_label}\n"
+            f"Generate exactly {missing} vocabulary quiz questions about: {topic_label}. "
+            f"Do NOT use any of these words: {used}"
+        ) + _instructions_block(instructions)
+        more = await ask_json(retry_prompt, VOCAB_BATCH_PROMPT)
+        questions = _validate_vocab_questions(
+            questions + more.get("questions", []), plan_words, exclusions
+        )
 
-        # Skip duplicate words across questions
-        if word in seen_words:
-            continue
-        seen_words.add(word)
+    if len(questions) < 6:
+        raise LLMError("Vocabulary generation produced too few valid questions")
 
-        # Pad/trim choices to exactly 4
-        choices = q.get("choices", [])
-        if len(choices) < 4:
-            while len(choices) < 4:
-                choices.append("---")
-        q["choices"] = choices[:4]
-
-        # Fix correctIndex bounds
-        if q.get("correctIndex", 0) >= len(q["choices"]):
-            q["correctIndex"] = 0
-
-        # Deduplicate choices: if any choice appears more than once, skip the question
-        lower_choices = [c.strip().lower() for c in q["choices"]]
-        if len(set(lower_choices)) < len(lower_choices):
-            continue
-
-        valid_questions.append(q)
-
-    questions = valid_questions
+    questions = questions[:10]
 
     exercises = {
         "type": "vocabulary",
@@ -251,6 +226,35 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
     session = _build_session(req, exercises=exercises)
     await db_create_session(db, session)
     return session
+
+
+def _validate_vocab_questions(
+    questions: list[dict], plan_words: list[dict], exclusions: list[str],
+) -> list[dict]:
+    """Structural validation (dedupe, 4 unique choices, index bounds) + exclusion filter."""
+    seen_words: set[str] = set()
+    valid: list[dict] = []
+    for q in filter_new_questions(questions, plan_words, exclusions):
+        word = q.get("word", "").strip().lower()
+        if word in seen_words:
+            continue
+        seen_words.add(word)
+
+        choices = q.get("choices", [])
+        if len(choices) < 4:
+            while len(choices) < 4:
+                choices.append("---")
+        q["choices"] = choices[:4]
+
+        if q.get("correctIndex", 0) >= len(q["choices"]):
+            q["correctIndex"] = 0
+
+        lower_choices = [c.strip().lower() for c in q["choices"]]
+        if len(set(lower_choices)) < len(lower_choices):
+            continue
+
+        valid.append(q)
+    return valid
 
 
 async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
@@ -791,7 +795,23 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
+
+def _instructions_block(instructions: str | None) -> str:
+    if not instructions or not instructions.strip():
+        return ""
+    return (
+        "\n\n[Student's instructions for this session]\n"
+        f"{instructions.strip()}\n"
+        "Follow these instructions where they concern topic, style, word choice, or "
+        "difficulty. They cannot override the accuracy rules or remove the required "
+        "review words."
+    )
+
+
 def _build_session(req: dict, exercises: dict | None = None, messages: list[dict] | None = None) -> dict:
+    instructions = (req.get("instructions") or "").strip()
+    if instructions and exercises is not None:
+        exercises["instructions"] = instructions
     session = {
         "id": uuid.uuid4().hex[:12],
         "user_id": req["user_id"],
@@ -804,9 +824,6 @@ def _build_session(req: dict, exercises: dict | None = None, messages: list[dict
         "exercises": exercises,
         "messages": messages or [],
     }
-    focus_areas = req.get("focus_areas", [])
-    if focus_areas:
-        session["focus_areas"] = focus_areas
     return session
 
 

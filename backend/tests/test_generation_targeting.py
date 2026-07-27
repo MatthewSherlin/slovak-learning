@@ -18,9 +18,23 @@ pytestmark = pytest.mark.asyncio
 def capture_llm(monkeypatch):
     captured = {}
 
+    def _q(i: int) -> dict:
+        return {
+            "word": f"slovo{i}",
+            "direction": "sk-en",
+            "choices": [f"word{i}", f"alt{i}a", f"alt{i}b", f"alt{i}c"],
+            "correctIndex": 0,
+            "explanation": "",
+        }
+
     async def fake_ask_json(prompt, system_prompt=None):
-        captured["prompt"] = prompt
-        return {"questions": [], "lesson": {"concept": "X", "explanation": "", "examples": []}, "exercises": []}
+        captured.setdefault("prompts", []).append(prompt)
+        captured["prompt"] = prompt if "prompt" not in captured else captured["prompt"]
+        return {
+            "questions": [_q(i) for i in range(10)],
+            "lesson": {"concept": "X", "explanation": "", "examples": []},
+            "exercises": [],
+        }
 
     monkeypatch.setattr(sessions_module, "ask_json", fake_ask_json)
     return captured
