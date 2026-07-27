@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import TabBar from './components/TabBar';
-import Navbar from './components/Navbar';
 import UserPicker, { useUser, UserProvider } from './components/UserPicker';
-import SettingsModal from './components/SettingsModal';
 import PinEntry from './components/PinEntry';
 import { ThemeProvider } from './components/ThemeProvider';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -28,21 +26,12 @@ function useIsTabBarVisible() {
 function AppShell() {
   const { user, setUser } = useUser();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const showTabBar = useIsTabBarVisible();
 
   useEffect(() => {
     if (!user) setPickerOpen(true);
   }, [user]);
-
-  const handleSignOut = () => {
-    setUser(null);
-  };
-
-  const handleOpenSettings = () => {
-    setSettingsOpen(true);
-  };
 
   const handleUserSelect = (u: User) => {
     if (u.has_pin) {
@@ -56,24 +45,12 @@ function AppShell() {
   return (
     <>
       <SlovakiaMap />
-      {/* Navbar shown only on session route (full-screen needs user access) */}
-      {!showTabBar && (
-        <Navbar
-          onUserClick={() => setPickerOpen(true)}
-          onSignOut={handleSignOut}
-          onOpenSettings={handleOpenSettings}
-        />
-      )}
       {/* Bottom tab bar shown on all main tab routes */}
       {showTabBar && <TabBar />}
       <UserPicker
         open={pickerOpen}
         onClose={() => { if (user) setPickerOpen(false); }}
         onSelect={handleUserSelect}
-      />
-      <SettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
       />
       <AnimatePresence>
         {pendingUser && (
