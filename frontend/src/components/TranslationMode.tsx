@@ -122,7 +122,7 @@ export default function TranslationMode({ session, setSession }: TranslationMode
       : 0;
 
     return (
-      <div className="flex flex-col h-screen pt-18">
+      <div className="flex flex-col h-screen">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} />
         <div className="flex-1 overflow-y-auto px-6 py-10">
           <div className="max-w-lg mx-auto text-center">
@@ -236,7 +236,7 @@ export default function TranslationMode({ session, setSession }: TranslationMode
     : 'Translate to English';
 
   return (
-    <div className="flex flex-col h-screen pt-18">
+    <div className="flex flex-col h-screen">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={ex.currentIndex > 0 || showResult}>
         {streak >= 3 && (
           <motion.div
