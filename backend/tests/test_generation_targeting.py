@@ -130,3 +130,44 @@ async def test_grammar_lists_recently_covered_concepts(db, capture_llm):
     await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "verb_conjugation"})
     assert "Recently covered concepts" in capture_llm["prompt"]
     assert "Accusative Case" in capture_llm["prompt"]
+
+
+@pytest.fixture
+def capture_messages(monkeypatch):
+    captured = {}
+
+    async def fake_ask_messages(messages, system_prompt=None):
+        captured.setdefault("system_prompts", []).append(system_prompt)
+        captured["messages"] = messages
+        return "Ahoj!"
+
+    monkeypatch.setattr(sessions_module, "ask_messages", fake_ask_messages)
+    return captured
+
+
+async def test_conversation_opener_includes_instructions(db, capture_messages):
+    from app.sessions import _create_conversation_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    session = await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "daily_life",
+        "instructions": "correct all my mistakes strictly",
+    })
+    opener_user_msg = capture_messages["messages"][0]["content"]
+    assert "correct all my mistakes strictly" in opener_user_msg
+    assert session["exercises"]["instructions"] == "correct all my mistakes strictly"
+
+
+async def test_conversation_turn_includes_instructions(db, capture_messages):
+    from app.sessions import _create_conversation_session, submit_conversation_answer
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    session = await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "daily_life",
+        "instructions": "correct all my mistakes strictly",
+    })
+    await submit_conversation_answer(db, session["id"], "Ahoj, ako sa máš?")
+    turn_system = capture_messages["system_prompts"][-1]
+    assert "correct all my mistakes strictly" in turn_system

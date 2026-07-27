@@ -406,28 +406,24 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
 
-    focus_areas = req.get("focus_areas", [])
+    instructions = (req.get("instructions") or "").strip()
     learning_context = await _get_learning_context(db, req["user_id"], "conversation")
 
     mode_questions = QUESTIONS.get("conversation", {})
     topic_questions = mode_questions.get(topic, [])
 
-    if focus_areas:
-        # Use focus areas as the conversation theme
-        question = f"Let's have a conversation about {', '.join(focus_areas)}."
-    elif topic_questions:
+    if topic_questions:
         question = random.choice(topic_questions)
     else:
         question = f"Let's have a conversation about {topic.replace('_', ' ')}."
 
     topic_label = TOPICS.get("conversation", {}).get(topic, topic)
-    effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
     user = await get_user(db, req["user_id"])
     student_name = user["name"] if user else "Student"
 
     prompt = (
         f"The student's name is {student_name} and they are at {difficulty_label} level.\n"
-        f"Topic: {effective_topic}\n"
+        f"Topic: {topic_label}\n"
     )
     if learning_context:
         prompt += f"\n{learning_context}\n"
@@ -436,6 +432,7 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
         f"Begin now — greet {student_name} and start the conversation. "
         f"Remember: ONLY 2-3 sentences maximum for your first message."
     )
+    prompt += _instructions_block(instructions)
 
     messages = [{"role": "user", "content": prompt}]
     response = await ask_messages(messages, CONVERSATION_TURN_PROMPT)
@@ -666,7 +663,7 @@ async def submit_conversation_answer(db: aiosqlite.Connection, session_id: str, 
         f"Student level: {difficulty_label}\n"
         f"Topic: {topic_label}\n"
         f"Scenario: {scenario}"
-    )
+    ) + _instructions_block(ex.get("instructions"))
 
     anthropic_messages: list[dict] = []
     for msg in session["messages"]:
