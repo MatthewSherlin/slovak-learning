@@ -8,11 +8,8 @@ import type {
   CardSet,
   DashboardStats,
   Difficulty,
-  FarmItem,
-  FarmState,
   LeaderboardEntry,
   LearningMode,
-  Mode,
   PackPurchaseResult,
   Recommendations,
   Session,
@@ -22,9 +19,6 @@ import type {
   TradeInResult,
   User,
   UserCardCollection,
-  UserPreferences,
-  VocabProgressEntry,
-  VocabProgressStats,
 } from './types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8888';
@@ -45,9 +39,6 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const getUsers = (): Promise<User[]> =>
   apiFetch('/api/users');
-
-export const getModes = (): Promise<Mode[]> =>
-  apiFetch('/api/modes');
 
 export const getTopics = (mode: string): Promise<Topic[]> =>
   apiFetch(`/api/topics/${mode}`);
@@ -118,20 +109,6 @@ export const getDashboard = (userId: string): Promise<DashboardStats> =>
 export const getLeaderboard = (): Promise<LeaderboardEntry[]> =>
   apiFetch('/api/leaderboard');
 
-// ── User preferences ─────────────────────────────────────────────────
-
-export const getUserPreferences = (userId: string): Promise<UserPreferences> =>
-  apiFetch(`/api/users/${userId}/preferences`);
-
-export const updateUserPreferences = (
-  userId: string,
-  data: { custom_focus_areas: string[] }
-): Promise<UserPreferences> =>
-  apiFetch(`/api/users/${userId}/preferences`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
-
 // ── PIN management ──────────────────────────────────────────────────
 
 export const setPin = (userId: string, pin: string): Promise<void> =>
@@ -153,46 +130,6 @@ export const removePin = (userId: string, pin: string): Promise<void> =>
     method: 'DELETE',
     body: JSON.stringify({ pin }),
   });
-
-// ── Vocabulary progress ──────────────────────────────────────────────
-
-export const getVocabularyProgress = (
-  userId: string
-): Promise<{ words: VocabProgressEntry[]; stats: VocabProgressStats; weak_words: VocabProgressEntry[] }> =>
-  apiFetch(`/api/users/${userId}/vocabulary`);
-
-// ── Farm / Orchard ──────────────────────────────────────────────────
-
-export const getFarm = (userId: string): Promise<FarmState> =>
-  apiFetch(`/api/users/${userId}/farm`);
-
-export const purchaseFarmItem = (
-  userId: string,
-  itemType: string,
-  gridX: number,
-  gridY: number
-): Promise<FarmItem> =>
-  apiFetch(`/api/users/${userId}/farm/purchase`, {
-    method: 'POST',
-    body: JSON.stringify({ item_type: itemType, grid_x: gridX, grid_y: gridY }),
-  });
-
-export const moveFarmItem = (
-  userId: string,
-  itemId: number,
-  gridX: number,
-  gridY: number
-): Promise<FarmItem> =>
-  apiFetch(`/api/users/${userId}/farm/move`, {
-    method: 'PUT',
-    body: JSON.stringify({ item_id: itemId, grid_x: gridX, grid_y: gridY }),
-  });
-
-export const removeFarmItem = (
-  userId: string,
-  itemId: number
-): Promise<{ ok: boolean }> =>
-  apiFetch(`/api/users/${userId}/farm/${itemId}`, { method: 'DELETE' });
 
 // ── Card Collection ─────────────────────────────────────────────
 

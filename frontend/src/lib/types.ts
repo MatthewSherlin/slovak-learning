@@ -9,13 +9,6 @@ export interface User {
   has_pin: boolean;
 }
 
-export interface Mode {
-  id: LearningMode;
-  label: string;
-  description: string;
-  question_count: number;
-}
-
 export interface Topic {
   id: string;
   label: string;
@@ -163,32 +156,6 @@ export interface SessionSummary {
   created_at: string;
 }
 
-// -- Vocabulary progress types --
-export interface VocabProgressEntry {
-  slovak: string;
-  english: string;
-  times_seen: number;
-  times_correct: number;
-  last_seen_at: string;
-  source_mode: string;
-}
-
-export interface VocabProgressStats {
-  total_words: number;
-  mastered: number;
-  learning: number;
-  new_or_weak: number;
-  weak_words: VocabProgressEntry[];
-  recent_words: VocabProgressEntry[];
-}
-
-// -- User preferences types --
-export interface UserPreferences {
-  user_id: string;
-  custom_focus_areas: string[];
-  updated_at: string | null;
-}
-
 export interface DashboardStats {
   total_sessions: number;
   completed_sessions: number;
@@ -198,7 +165,6 @@ export interface DashboardStats {
   weak_areas: string[];
   recent_sessions: SessionSummary[];
   vocab_count: number;
-  vocab_stats?: VocabProgressStats;
 }
 
 export interface LeaderboardEntry {
@@ -212,30 +178,6 @@ export interface LeaderboardEntry {
   total_vocab: number;
   streak_days: number;
   xp: number;
-}
-
-// -- Farm / Orchard types --
-export interface FarmItem {
-  id: number;
-  item_type: string;
-  grid_x: number;
-  grid_y: number;
-  xp_cost: number;
-  purchased_at: string;
-}
-
-export interface FarmCatalogItem {
-  name: string;
-  cost: number;
-  category: string;
-}
-
-export interface FarmState {
-  items: FarmItem[];
-  xp_earned: number;
-  xp_spent: number;
-  xp_available: number;
-  catalog: Record<string, FarmCatalogItem>;
 }
 
 // -- Card Collection types --

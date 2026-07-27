@@ -11,7 +11,6 @@ import Home from './pages/Home';
 import Session from './pages/Session';
 import Stats from './pages/Stats';
 import Guides from './pages/Guides';
-import Farm from './pages/Farm';
 import Cards from './pages/Cards';
 import type { User } from './lib/types';
 
@@ -74,9 +73,6 @@ function AppShell() {
 
         {/* Full-screen session — no tab bar */}
         <Route path="/session/:id" element={<Session />} />
-
-        {/* Farm reachable directly (linked from Cards screen) */}
-        <Route path="/farm" element={<Farm />} />
 
         {/* Legacy routes — redirect to stats hub with tab hint */}
         <Route path="/dashboard" element={<Navigate to="/stats?tab=overview" replace />} />
