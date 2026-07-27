@@ -80,3 +80,36 @@ async def test_grammar_explicit_topic_not_overridden(db, capture_llm):
     await record_concept_result(db, uid, "Accusative case", [0.0, 0.0, 1.0])
     await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "verb_conjugation"})
     assert "Accusative case" not in capture_llm["prompt"]
+
+
+async def test_grammar_instructions_in_prompt(db, capture_llm):
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_grammar_session(db, {
+        "user_id": uid, "mode": "grammar", "topic": "noun_cases",
+        "instructions": "use food vocabulary in examples",
+    })
+    assert "[Student's instructions for this session]" in capture_llm["prompt"]
+    assert "use food vocabulary in examples" in capture_llm["prompt"]
+
+
+async def test_grammar_lists_recently_covered_concepts(db, capture_llm):
+    from app.database import create_session as db_create_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await db_create_session(db, {
+        "id": f"gt-prev-{uuid.uuid4().hex[:8]}",
+        "user_id": uid, "mode": "grammar", "topic": "noun_cases",
+        "difficulty": "beginner", "completed": True,
+        "created_at": "2026-07-20T10:00:00+00:00",
+        "exercises": {
+            "type": "grammar",
+            "lesson": {"concept": "Accusative Case", "explanation": "", "examples": [], "table": None},
+            "exercises": [], "currentIndex": 0, "answers": [], "correct": [], "phase": "complete",
+        },
+        "feedback": None, "messages": [],
+    })
+    await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "verb_conjugation"})
+    assert "Recently covered concepts" in capture_llm["prompt"]
+    assert "Accusative Case" in capture_llm["prompt"]

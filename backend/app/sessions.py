@@ -271,35 +271,45 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     topic_label = TOPICS.get("grammar", {}).get(req.get("topic", ""), req.get("topic", "general"))
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
+    instructions = (req.get("instructions") or "").strip()
 
-    focus_areas = req.get("focus_areas", [])
     target_concept = None
-    if req.get("topic", "general") == "general" and not focus_areas:
+    if req.get("topic", "general") == "general":
         weakest = await get_weakest_concepts(db, req["user_id"], limit=1)
         if weakest and weakest[0]["accuracy"] < 0.7:
             target_concept = weakest[0]["concept"]
     learning_context = await _get_learning_context(db, req["user_id"], "grammar")
 
-    effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
+    all_sessions = await list_sessions(db, req["user_id"])
+    recent_concepts: list[str] = []
+    for s in all_sessions:
+        if s["mode"] == "grammar" and s["completed"]:
+            concept = ((s.get("exercises") or {}).get("lesson") or {}).get("concept")
+            if concept and concept not in recent_concepts:
+                recent_concepts.append(concept)
+        if len(recent_concepts) >= 5:
+            break
 
-    prompt = f"Student level: {difficulty_label}\nTopic: {effective_topic}\n"
+    prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
     if learning_context:
         prompt += f"\n{learning_context}\n"
     prompt += (
-        f"\nCreate a grammar lesson and exercises about: {effective_topic}. "
+        f"\nCreate a grammar lesson and exercises about: {topic_label}. "
         "Build on concepts the student has already covered."
     )
-    if focus_areas:
+    if recent_concepts:
         prompt += (
-            f"\n\nCRITICAL: Use example sentences and vocabulary related to {effective_topic}. "
-            "All exercises must use vocabulary from this domain."
+            "\n\nRecently covered concepts: " + ", ".join(recent_concepts) + ". "
+            "Teach a different concept or a deeper aspect, unless a TARGET CONCEPT "
+            "is set or the student's instructions ask otherwise."
         )
-
     if target_concept:
         prompt += (
             f"\n\nTARGET CONCEPT: The student's weakest concept is '{target_concept}' "
-            f"— build this lesson on that concept."
+            f"— build this lesson on that concept unless the student's instructions "
+            f"request a different one."
         )
+    prompt += _instructions_block(instructions)
 
     data = await ask_json(prompt, GRAMMAR_LESSON_PROMPT)
 
