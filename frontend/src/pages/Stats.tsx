@@ -127,7 +127,7 @@ function OverviewPanel() {
         setError("Couldn't load your overview. Check your connection.");
       })
       .finally(() => setLoading(false));
-  }, [user, retryKey]);
+  }, [user, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps -- retryKey is a retry trigger, not read in the body
 
   useEffect(() => {
     load();
@@ -382,7 +382,7 @@ function HistoryPanel() {
         setError("Couldn't load your session history. Check your connection.");
       })
       .finally(() => setLoading(false));
-  }, [user, retryKey]);
+  }, [user, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps -- retryKey is a retry trigger, not read in the body
 
   useEffect(() => {
     load();
@@ -668,7 +668,7 @@ function FriendsPanel() {
         setError("Couldn't load the leaderboard. Check your connection.");
       })
       .finally(() => setLoading(false));
-  }, [retryKey]);
+  }, [retryKey]); // eslint-disable-line react-hooks/exhaustive-deps -- retryKey is a retry trigger, not read in the body
 
   useEffect(() => {
     load();
