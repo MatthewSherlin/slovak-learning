@@ -461,4 +461,3 @@ select {
 .aura-pulse-blue { animation: aura-pulse 0.6s ease-in-out infinite; background: radial-gradient(circle, rgba(96,165,250,0.5), transparent 70%); }
 .aura-pulse-gold { animation: aura-pulse 0.5s ease-in-out infinite; background: radial-gradient(circle, rgba(251,191,36,0.6), transparent 70%); }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
-}
