@@ -22,7 +22,7 @@ from .database import (
     update_session as db_update_session,
     upsert_vocab_progress,
 )
-from .composition import build_exclusion_list, build_vocab_plan, filter_new_questions, filter_weak
+from .composition import build_exclusion_list, build_vocab_plan, filter_new_questions, filter_weak, normalize_word
 from .llm import LLMError, ask, ask_json, ask_messages
 from .prompts import (
     CONVERSATION_TURN_PROMPT,
@@ -197,7 +197,14 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
 
     if len(questions) < 6:
         missing = 10 - len(questions)
-        used = ", ".join(sorted({q["word"] for q in questions} | set(exclusions)))
+        seen_norm: set[str] = set()
+        used_words: list[str] = []
+        for w in list({q["word"] for q in questions}) + list(exclusions):
+            nw = normalize_word(w)
+            if nw not in seen_norm:
+                seen_norm.add(nw)
+                used_words.append(w)
+        used = ", ".join(sorted(used_words))
         retry_prompt = (
             f"Student level: {difficulty_label}\n"
             f"Generate exactly {missing} vocabulary quiz questions about: {topic_label}. "
@@ -210,6 +217,9 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
 
     if len(questions) < 6:
         raise LLMError("Vocabulary generation produced too few valid questions")
+
+    if len(questions) < 10:
+        log.warning("Vocab session generated %d/10 questions for user %s", len(questions), req["user_id"])
 
     questions = questions[:10]
 
