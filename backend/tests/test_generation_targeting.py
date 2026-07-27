@@ -93,6 +93,23 @@ async def test_grammar_instructions_in_prompt(db, capture_llm):
     assert "use food vocabulary in examples" in capture_llm["prompt"]
 
 
+async def test_translation_instructions_and_review_words(db, capture_llm):
+    from app.sessions import _create_translation_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+    ])
+    await _create_translation_session(db, {
+        "user_id": uid, "mode": "translation", "topic": "english_to_slovak",
+        "instructions": "short sentences only",
+    })
+    assert "short sentences only" in capture_llm["prompt"]
+    assert "Weave these review words" in capture_llm["prompt"]
+    assert "hrad" in capture_llm["prompt"]
+
+
 async def test_grammar_lists_recently_covered_concepts(db, capture_llm):
     from app.database import create_session as db_create_session
 

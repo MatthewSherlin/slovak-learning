@@ -351,25 +351,31 @@ async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> di
     topic_label = TOPICS.get("translation", {}).get(req.get("topic", ""), req.get("topic", "general"))
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
-
-    focus_areas = req.get("focus_areas", [])
+    instructions = (req.get("instructions") or "").strip()
     learning_context = await _get_learning_context(db, req["user_id"], "translation")
 
-    effective_topic = ", ".join(focus_areas) if focus_areas else topic_label
+    due = await get_due_words(db, req["user_id"], limit=6)
+    weak = filter_weak(await get_weak_words(db, req["user_id"], limit=6))
+    seen_keys = {w["slovak"] for w in due}
+    review_words = (due + [w for w in weak if w["slovak"] not in seen_keys])[:6]
 
-    prompt = f"Student level: {difficulty_label}\nTopic: {effective_topic}\n"
+    prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
     if learning_context:
         prompt += f"\n{learning_context}\n"
     prompt += (
-        f"\nGenerate 10 translation exercises about: {effective_topic}. "
+        f"\nGenerate 10 translation exercises about: {topic_label}. "
         "Incorporate vocabulary the student has learned and introduce new words."
     )
-    if focus_areas:
-        prompt += (
-            f"\n\nCRITICAL: ALL 10 sentences MUST be themed around {effective_topic}. "
-            "Every sentence must use vocabulary and scenarios directly related to this topic. "
-            "Do NOT use generic unrelated sentences like 'Where is the library?' unless it connects to the topic."
+    if review_words:
+        listed = ", ".join(
+            f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
+            for w in review_words
         )
+        prompt += (
+            f"\n\nWeave these review words into the sentences where natural "
+            f"(they are due for reinforcement): {listed}"
+        )
+    prompt += _instructions_block(instructions)
 
     data = await ask_json(prompt, TRANSLATION_BATCH_PROMPT)
     exercise_list = data.get("exercises", [])
