@@ -15,7 +15,7 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 
 ## Key Backend Files
 - `app/main.py` — FastAPI routes with lifespan, CORS
-- `app/sessions.py` — Session creation, answer submission, feedback generation
+- `app/sessions.py` — Session creation, answer submission, end-of-lesson results
 - `app/llm.py` — Model client for OpenRouter, with a direct Anthropic path kept as a fallback (`ask()`, `ask_messages()`, `ask_json()`)
 - `app/database.py` — SQLite schema, CRUD, dashboard/leaderboard aggregation
 - `app/questions.py` — Slovak question banks by mode/topic
@@ -33,7 +33,9 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 - `src/components/UserPicker.tsx` — User selection + `useUser` hook
 - `src/components/VocabMode.tsx` — Flashcard 4-choice quiz game
 - `src/components/GrammarMode.tsx` — Fill-in-the-blank exercises
-- `src/components/FeedbackView.tsx` — Animated score ring + detailed feedback
+- `src/components/FeedbackView.tsx` — Results page: score ring, breakdown bars, one row per answer
+- `src/lib/results.ts` — Builds the results page's rows from a session's exercises
+- `src/lib/pacing.ts`, `src/lib/sounds.ts`, `src/lib/speech.ts` — Lesson timings, answer sounds, spoken pronunciation
 - `src/pages/` — Home, Session, History, Dashboard, Leaderboard, Guides
 
 ## Learning Modes
@@ -54,6 +56,9 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 - Review words appear only when `include_review` is true, and only words learned in vocabulary mode with an English meaning are eligible.
 - Vocabulary progress is saved as each first answer arrives, not at the end of the session.
 - Translation topics choose the exercise kind: `translate`, `fill_blank`, `error_correction`.
+- Ending a lesson makes no model call. The results are counted from the answers; conversation lessons have no score. Stored feedback from before this has no `items_answered`, and the results page ignores its AI-written text.
+- The app is used as a home-screen web app on iPhones and Android phones: tap targets at least 44 by 44 (`.tap-target` adds an invisible box), text fields at least 16px, `env(safe-area-inset-*)` on top and bottom edges, nothing wider than 360px.
+- Colours come from the `--color-*` tokens in `src/index.css`, defined for both themes. `colorTokens.test.ts` fails on a hex literal in the files it lists.
 
 ## Environment
 Copy `backend/.env.example` to `backend/.env` and set:
