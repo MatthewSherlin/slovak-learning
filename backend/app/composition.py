@@ -50,10 +50,10 @@ def build_exclusion_list(
     ]
 
 
-def filter_new_questions(
+def partition_seen_questions(
     questions: list[dict], plan_words: list[dict], exclusions: list[str],
-) -> list[dict]:
-    """Drop questions whose word (or correct choice) is excluded and not planned."""
+) -> tuple[list[dict], list[dict]]:
+    """Split questions into (kept, seen): seen ones have an excluded, unplanned word."""
     allowed: set[str] = set()
     for w in plan_words:
         allowed.add(normalize_word(w["slovak"]))
@@ -62,6 +62,7 @@ def filter_new_questions(
     excluded = {normalize_word(x) for x in exclusions}
 
     kept: list[dict] = []
+    seen: list[dict] = []
     for q in questions:
         keys = {normalize_word(q.get("word", ""))}
         choices = q.get("choices", [])
@@ -69,9 +70,17 @@ def filter_new_questions(
         if 0 <= idx < len(choices):
             keys.add(normalize_word(choices[idx]))
         if keys & excluded and not keys & allowed:
+            seen.append(q)
             continue
         kept.append(q)
-    return kept
+    return kept, seen
+
+
+def filter_new_questions(
+    questions: list[dict], plan_words: list[dict], exclusions: list[str],
+) -> list[dict]:
+    """Drop questions whose word (or correct choice) is excluded and not planned."""
+    return partition_seen_questions(questions, plan_words, exclusions)[0]
 
 
 META_ANSWERS = frozenset({

@@ -262,3 +262,83 @@ async def test_no_retry_when_full_batch(db, llm):
     session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
     assert len(llm["prompts"]) == 1
     assert len(session["exercises"]["questions"]) == 10
+
+
+_DAYS = [
+    ("pondelok", "Monday"), ("utorok", "Tuesday"), ("streda", "Wednesday"),
+    ("stvrtok", "Thursday"), ("piatok", "Friday"), ("sobota", "Saturday"),
+    ("nedela", "Sunday"),
+]
+
+
+async def test_used_up_focus_fills_with_seen_words_as_review(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": sk, "english": en, "correct": True, "source_mode": "vocabulary"}
+        for sk, en in _DAYS
+    ])
+    reply = [_q(sk, en) for sk, en in _DAYS] + [_q(f"n{i}") for i in range(3)]
+    llm["responses"] = [
+        {"questions": [dict(q) for q in reply]},
+        {"questions": [dict(q) for q in reply]},
+    ]
+    session = await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general",
+        "instructions": "the seven days of the week",
+    })
+    questions = session["exercises"]["questions"]
+    assert len(questions) == 10
+    flags = {q["word"]: q["review"] for q in questions}
+    assert all(flags[f"n{i}"] is False for i in range(3))
+    assert all(flags[sk] is True for sk, _ in _DAYS)
+
+
+async def test_seen_words_from_first_reply_fill_before_top_up_reply(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": sk, "english": en, "correct": True, "source_mode": "vocabulary"}
+        for sk, en in _DAYS
+    ])
+    first = [_q(sk, en) for sk, en in _DAYS[:4]] + [_q(f"n{i}") for i in range(4)]
+    second = [_q(sk, en) for sk, en in _DAYS[4:]] + [_q(f"m{i}") for i in range(1)]
+    llm["responses"] = [{"questions": first}, {"questions": second}]
+    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    words = [q["word"] for q in session["exercises"]["questions"]]
+    assert words[:5] == ["n0", "n1", "n2", "n3", "m0"]
+    assert words[5:] == [sk for sk, _ in _DAYS[:5]]
+
+
+async def test_no_seen_word_added_when_new_words_suffice(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": sk, "english": en, "correct": True, "source_mode": "vocabulary"}
+        for sk, en in _DAYS
+    ])
+    llm["responses"] = [
+        {"questions": [_q(sk, en) for sk, en in _DAYS] + [_q(f"n{i}") for i in range(3)]},
+        {"questions": [_q(f"m{i}") for i in range(7)]},
+    ]
+    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    words = [q["word"] for q in session["exercises"]["questions"]]
+    assert len(words) == 10
+    assert not set(words) & {sk for sk, _ in _DAYS}
+    assert all(q["review"] is False for q in session["exercises"]["questions"])
+
+
+async def test_too_few_questions_of_any_kind_still_raises(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": sk, "english": en, "correct": True, "source_mode": "vocabulary"}
+        for sk, en in _DAYS[:2]
+    ])
+    reply = [_q(sk, en) for sk, en in _DAYS[:2]] + [_q(f"n{i}") for i in range(3)]
+    llm["responses"] = [
+        {"questions": [dict(q) for q in reply]},
+        {"questions": [dict(q) for q in reply]},
+    ]
+    with pytest.raises(LLMError):
+        await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})

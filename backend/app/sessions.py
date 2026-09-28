@@ -27,9 +27,9 @@ from .composition import (
     build_exclusion_list,
     build_focus_block,
     build_vocab_plan,
-    filter_new_questions,
     filter_translation_items,
     normalize_word,
+    partition_seen_questions,
     question_defect,
     resolve_topic_label,
 )
@@ -240,7 +240,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
         schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
         effort="medium", max_tokens=16000,
     )
-    questions = _validate_vocab_questions(
+    questions, spare = _split_vocab_questions(
         data.get("questions", []), plan_words, exclusions
     )
 
@@ -264,9 +264,12 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
             schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
             effort="medium", max_tokens=16000,
         )
-        questions = _validate_vocab_questions(
+        questions, more_spare = _split_vocab_questions(
             questions + more.get("questions", []), plan_words, exclusions
         )
+        # A focus the learner has used up (a closed set such as the days of
+        # the week) has no new words left; seen words on the focus fill in.
+        questions = _fill_with_seen(questions, spare + more_spare, total=10)
 
     if len(questions) < 6:
         raise LLMError("Vocabulary generation produced too few valid questions")
@@ -296,31 +299,72 @@ def _validate_vocab_questions(
     questions: list[dict], plan_words: list[dict], exclusions: list[str],
 ) -> list[dict]:
     """Drop defective, excluded and duplicate questions; flag the review ones."""
+    return _split_vocab_questions(questions, plan_words, exclusions)[0]
+
+
+def _split_vocab_questions(
+    questions: list[dict], plan_words: list[dict], exclusions: list[str],
+) -> tuple[list[dict], list[dict]]:
+    """(valid questions, questions set aside only because their word was seen).
+
+    The set-aside questions are not yet checked for defects or duplicates;
+    _fill_with_seen does that when it uses them.
+    """
     plan_keys: set[str] = set()
     for w in plan_words:
         plan_keys.add(normalize_word(w["slovak"]))
         if w.get("english"):
             plan_keys.add(normalize_word(w["english"]))
 
-    seen_words: set[str] = set()
+    candidates, seen = partition_seen_questions(questions, plan_words, exclusions)
+    taken: set[str] = set()
     valid: list[dict] = []
-    for q in filter_new_questions(questions, plan_words, exclusions):
-        defect = question_defect(q)
-        if defect:
-            log.info("Dropping vocab question %r: %s", q.get("word"), defect)
+    for q in candidates:
+        keys = _usable_question_keys(q, taken)
+        if keys is None:
             continue
-        # Dedupe on both the display word and the correct answer so the same
-        # pair can't appear twice via opposite directions (mäso→meat, meat→mäso).
-        keys = {normalize_word(q["word"]), normalize_word(q["choices"][q["correctIndex"]])}
-        if keys & seen_words:
-            continue
-        lower_choices = [c.strip().lower() for c in q["choices"]]
-        if len(set(lower_choices)) < len(lower_choices):
-            continue
-        seen_words |= keys
+        taken |= keys
         q["review"] = bool(keys & plan_keys)
         valid.append(q)
-    return valid
+    return valid, seen
+
+
+def _fill_with_seen(questions: list[dict], seen: list[dict], total: int) -> list[dict]:
+    """Top up a short lesson with usable seen-word questions, flagged as review."""
+    taken: set[str] = set()
+    for q in questions:
+        taken |= _question_keys(q)
+    filled = list(questions)
+    for q in seen:
+        if len(filled) >= total:
+            break
+        keys = _usable_question_keys(q, taken)
+        if keys is None:
+            continue
+        taken |= keys
+        filled.append({**q, "review": True})
+    return filled
+
+
+def _question_keys(q: dict) -> set[str]:
+    # Both the display word and the correct answer, so the same pair can't
+    # appear twice via opposite directions (mäso→meat, meat→mäso).
+    return {normalize_word(q["word"]), normalize_word(q["choices"][q["correctIndex"]])}
+
+
+def _usable_question_keys(q: dict, taken: set[str]) -> set[str] | None:
+    """The question's dedupe keys, or None when it is defective or a duplicate."""
+    defect = question_defect(q)
+    if defect:
+        log.info("Dropping vocab question %r: %s", q.get("word"), defect)
+        return None
+    keys = _question_keys(q)
+    if keys & taken:
+        return None
+    lower_choices = [c.strip().lower() for c in q["choices"]]
+    if len(set(lower_choices)) < len(lower_choices):
+        return None
+    return keys
 
 
 async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
