@@ -35,6 +35,10 @@ class LLMCreditsError(LLMError):
     """The provider account has no credits left. Retrying will not help."""
 
 
+class LLMTruncatedError(LLMError):
+    """The reply was cut off at max_tokens. The same request would be cut off again."""
+
+
 class _TransientLLMError(Exception):
     """Internal: a retryable failure (rate limit, connection, 5xx)."""
 
@@ -115,7 +119,7 @@ def _parse_openrouter_response(data: dict) -> str:
     if not choices:
         raise LLMError("Empty response from LLM")
     if choices[0].get("finish_reason") == "length":
-        raise LLMError("LLM response truncated at max_tokens")
+        raise LLMTruncatedError("LLM response truncated at max_tokens")
     content = choices[0].get("message", {}).get("content")
     if not content:
         raise LLMError("Empty response from LLM")
@@ -167,7 +171,11 @@ async def _openrouter_chat(
         raise _TransientLLMError(f"OpenRouter HTTP {resp.status_code}")
     if resp.status_code != 200:
         raise LLMError(f"OpenRouter HTTP {resp.status_code}: {resp.text[:200]}")
-    return _parse_openrouter_response(resp.json())
+    try:
+        data = resp.json()
+    except ValueError as e:
+        raise LLMError("OpenRouter returned a non-JSON reply") from e
+    return _parse_openrouter_response(data)
 
 
 async def _chat(
@@ -308,8 +316,9 @@ async def ask_json(
     """Send a prompt to the LLM and parse the JSON response.
 
     With a schema the provider enforces the shape. If that call is rejected
-    (a provider that refuses the schema, a truncated reply), the request is
-    repeated as plain text JSON. An unparseable plain reply is retried once
+    (a provider that refuses the schema), the request is repeated as plain
+    text JSON. A truncated reply is not repeated: the same budget would cut
+    it off again. An unparseable plain reply is retried once
     with an explicit JSON-only instruction.
     """
     if schema is not None:
@@ -319,7 +328,7 @@ async def ask_json(
                 effort=effort, schema=schema, schema_name=schema_name,
             )
             return _extract_json(raw)
-        except (LLMCreditsError, LLMUnavailableError):
+        except (LLMCreditsError, LLMUnavailableError, LLMTruncatedError):
             raise
         except LLMError as e:
             log.warning("Structured output call failed (%s); using text JSON", e)

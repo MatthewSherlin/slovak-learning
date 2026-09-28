@@ -7,7 +7,13 @@ import pytest
 
 from app import llm
 from app.config import Settings, settings
-from app.llm import LLMCreditsError, LLMError, LLMUnavailableError, _parse_openrouter_response
+from app.llm import (
+    LLMCreditsError,
+    LLMError,
+    LLMTruncatedError,
+    LLMUnavailableError,
+    _parse_openrouter_response,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -179,6 +185,13 @@ class _FakeResponse:
         return self._body
 
 
+class _NonJsonResponse(_FakeResponse):
+    """A 200 whose body is not JSON (a proxy's HTML error page)."""
+
+    def json(self) -> dict:
+        raise ValueError("Expecting value: line 1 column 1 (char 0)")
+
+
 class _FakeHttp:
     def __init__(self, responses: list[_FakeResponse]):
         self.responses = responses
@@ -285,3 +298,19 @@ class TestOpenRouterPayload:
         with pytest.raises(LLMUnavailableError):
             await llm.ask_json("p", schema=SCHEMA)
         assert fake.attempts == 3
+
+    async def test_truncated_schema_reply_is_not_regenerated(self, openrouter):
+        fake = openrouter([
+            _FakeResponse(body={
+                "choices": [{"finish_reason": "length", "message": {"content": '{"ok": tr'}}]
+            }),
+            _FakeResponse(),
+        ])
+        with pytest.raises(LLMTruncatedError, match="truncated"):
+            await llm.ask_json("p", schema=SCHEMA, max_tokens=16000)
+        assert len(fake.payloads) == 1
+
+    async def test_non_json_200_is_llm_error(self, openrouter):
+        openrouter([_NonJsonResponse(text="<html>Bad gateway</html>")])
+        with pytest.raises(LLMError, match="non-JSON"):
+            await llm.ask("p")
