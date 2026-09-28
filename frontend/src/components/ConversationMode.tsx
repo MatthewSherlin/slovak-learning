@@ -17,6 +17,7 @@ import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { submitAnswer, requestHint, endSession, getSession } from '../lib/api';
+import { listItemFade } from '../lib/pacing';
 import type { Session, SessionFeedback, Difficulty, ConversationExerciseData } from '../lib/types';
 
 interface ConversationModeProps {
@@ -224,9 +225,7 @@ function ConversationModeInner({
                   {corrections.map((c, i) => (
                     <motion.div
                       key={i}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
+                      {...listItemFade(i, reduceMotion)}
                       className="text-[12px] text-text-secondary leading-relaxed pl-3 border-l-2 border-warning/30"
                     >
                       {c.text.replace(/^\u{1F4DD}\s*/u, '')}

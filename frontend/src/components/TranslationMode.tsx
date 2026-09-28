@@ -10,7 +10,7 @@ import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitTranslation, endSession, getSession } from '../lib/api';
 import { tutorErrorMessage } from '../lib/errors';
 import { playCorrect, playIncorrect } from '../lib/sounds';
-import { ADVANCE_AFTER_ACCENT_MS, ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S } from '../lib/pacing';
+import { ADVANCE_AFTER_ACCENT_MS, ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S, listItemFade } from '../lib/pacing';
 import { renderInlineMd } from '../lib/mdlite';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import {
@@ -206,9 +206,7 @@ function TranslationModeInner({
                     return (
                       <motion.div
                         key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 * i }}
+                        {...listItemFade(i, reduceMotion)}
                         className="bg-surface border border-border rounded-xl p-4"
                       >
                         <div className="flex items-center justify-between mb-2">
