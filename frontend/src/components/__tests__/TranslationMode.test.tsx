@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TranslationMode from '../TranslationMode';
+import * as api from '../../lib/api';
 import type { Session, TranslationExercise } from '../../lib/types';
 
 vi.mock('../../lib/api', () => ({
@@ -113,5 +114,35 @@ describe('TranslationMode', () => {
   it('shows no meaning line for a plain translation', () => {
     renderMode({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
     expect(screen.queryByText(/^Meaning/)).toBeNull();
+  });
+
+  it('shows a sentence, not the response body, when checking fails', async () => {
+    const body = '{"detail":"Session not found"}';
+    vi.mocked(api.submitTranslation).mockRejectedValue(new Error(body));
+    renderMode({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
+    fireEvent.change(screen.getByPlaceholderText('Type your translation...'), {
+      target: { value: 'Mam vodu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /check translation/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Could not check that answer. Please try again.')).not.toBeNull();
+    });
+    expect(screen.queryByText(body)).toBeNull();
+  });
+
+  it('names an empty AI account when checking fails for that reason', async () => {
+    vi.mocked(api.submitTranslation).mockRejectedValue(
+      new Error('{"detail":"The tutor is out of AI credits.","code":"tutor_out_of_credits"}'),
+    );
+    renderMode({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
+    fireEvent.change(screen.getByPlaceholderText('Type your translation...'), {
+      target: { value: 'Mam vodu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /check translation/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('The tutor is out of AI credits.')).not.toBeNull();
+    });
   });
 });

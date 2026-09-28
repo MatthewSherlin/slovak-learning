@@ -8,6 +8,7 @@ import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitTranslation, endSession, getSession } from '../lib/api';
+import { tutorErrorMessage } from '../lib/errors';
 import { playCorrect, playIncorrect } from '../lib/sounds';
 import { renderInlineMd } from '../lib/mdlite';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
@@ -75,7 +76,7 @@ function TranslationModeInner({
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to evaluate translation. Please try again.');
+      setError(tutorErrorMessage(e) ?? 'Could not check that answer. Please try again.');
     } finally {
       setSubmitting(false);
     }
