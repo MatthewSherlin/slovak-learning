@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import FeedbackView from '../FeedbackView';
-import type { Session, SessionFeedback } from '../../lib/types';
+import type { GrammarExerciseData, Session, SessionFeedback, VocabExerciseData } from '../../lib/types';
 
 // Mock useNavigate so tests don't need a Router
 vi.mock('react-router-dom', () => ({
@@ -146,10 +146,13 @@ const conversationSession: Session = {
 describe('FeedbackView', () => {
   describe('category breakdown bars', () => {
     it('renders a bar row for each score entry', () => {
-      const feedback = makeFeedback(7, [
-        { category: 'Word recognition', score: 8, comment: 'Great job.' },
-        { category: 'Diacritics', score: 5, comment: 'Review long vowels.' },
-      ]);
+      const feedback = {
+        ...makeFeedback(7, [
+          { category: 'Word recognition', score: 8, comment: 'Great job.' },
+          { category: 'Diacritics', score: 5, comment: 'Review long vowels.' },
+        ]),
+        items_answered: 3,
+      };
 
       render(<FeedbackView session={baseSession} feedback={feedback} />);
 
@@ -331,6 +334,85 @@ describe('FeedbackView', () => {
       expect(screen.queryByText('Breakdown')).toBeNull();
       expect(screen.queryByText('Your answers')).toBeNull();
       expect(screen.queryByText('Great recall of food words')).toBeNull();
+    });
+  });
+
+  describe('breakdown of a lesson ended before results were counted', () => {
+    it('drops categories and comments the model wrote, keeps computed categories', () => {
+      const feedback = makeFeedback(6, [
+        { category: 'Diacritics & Spelling', score: 4, comment: 'You keep missing the accents on á and é.' },
+        { category: 'Recall (EN→SK)', score: 8, comment: 'Strong recall of food words.' },
+      ]);
+      render(<FeedbackView session={baseSession} feedback={feedback} />);
+      expect(screen.queryByText('Diacritics & Spelling')).toBeNull();
+      expect(screen.queryByText(/missing the accents/)).toBeNull();
+      expect(screen.getByText('Breakdown')).toBeTruthy();
+      expect(screen.getByText('Recall (EN→SK)')).toBeTruthy();
+      expect(screen.queryByText('Strong recall of food words.')).toBeNull();
+    });
+
+    it('shows no breakdown when no computed category is left', () => {
+      const feedback = makeFeedback(6, [{ category: 'Fluency', score: 6, comment: 'ok' }]);
+      render(<FeedbackView session={baseSession} feedback={feedback} />);
+      expect(screen.queryByText('Breakdown')).toBeNull();
+    });
+
+    it('keeps the comment of a new lesson', () => {
+      const feedback = {
+        ...makeFeedback(6, [{ category: 'Retry recovery', score: 5, comment: 'Recovered 1 of 2 missed word(s) on retry.' }]),
+        items_answered: 3,
+      };
+      render(<FeedbackView session={baseSession} feedback={feedback} />);
+      expect(screen.getByText('Recovered 1 of 2 missed word(s) on retry.')).toBeTruthy();
+    });
+  });
+
+  describe('grammar lesson begun before credits existed', () => {
+    it('judges items without a credit by whether they were right', () => {
+      const ex = grammarSession.exercises as GrammarExerciseData;
+      const exercises = Array.from({ length: 10 }, (_, i) => ({ sentence: `Veta ${i} ____.`, blank: `slovo${i}`, explanation: '' }));
+      const session: Session = {
+        ...grammarSession,
+        exercises: {
+          ...ex,
+          exercises,
+          currentIndex: 10,
+          answers: exercises.map((e) => e.blank),
+          correct: [true, false, true, false, true, false, false, true, false, true],
+          credits: [null, null, null, null, null, null, null, 1, 0, 1],
+          tiers: undefined,
+        },
+      };
+      render(<FeedbackView session={session} feedback={makeFeedback(5)} />);
+      expect(screen.getAllByText('Right')).toHaveLength(5);
+      expect(screen.getAllByText('Wrong')).toHaveLength(5);
+    });
+  });
+
+  describe('answered count', () => {
+    it('says how many were answered when the lesson ended early', () => {
+      render(<FeedbackView session={baseSession} feedback={makeFeedback(5)} />);
+      expect(screen.getByText('3 of 4 answered')).toBeTruthy();
+    });
+
+    it('says it for grammar and translation too', () => {
+      const { unmount } = render(<FeedbackView session={grammarSession} feedback={makeFeedback(5)} />);
+      expect(screen.getByText('3 of 4 answered')).toBeTruthy();
+      unmount();
+      render(<FeedbackView session={translationSession} feedback={makeFeedback(5)} />);
+      expect(screen.getByText('2 of 3 answered')).toBeTruthy();
+    });
+
+    it('says nothing when everything was answered', () => {
+      const ex = baseSession.exercises as VocabExerciseData;
+      const session: Session = { ...baseSession, exercises: { ...ex, answers: [0, 1, 1, 0], credits: [1, 0.5, 0, 1] } };
+      render(<FeedbackView session={session} feedback={makeFeedback(6)} />);
+      expect(screen.queryByText(/answered$/)).toBeNull();
+    });
+
+    it('is not shown for a conversation', () => {
+      render(<FeedbackView session={conversationSession} feedback={makeFeedback(null)} />);
+      expect(screen.queryByText(/answered$/)).toBeNull();
     });
   });
 });

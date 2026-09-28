@@ -3,11 +3,13 @@
 
 import type {
   ConversationExerciseData,
+  FeedbackScore,
   GrammarExerciseData,
   Message,
   TranslationExerciseData,
   VocabExerciseData,
   VocabQuestion,
+  SessionFeedback,
 } from './types';
 
 export type VocabOutcome = 'first_try' | 'retry' | 'missed';
@@ -36,6 +38,27 @@ export interface ConversationSummary {
   sent: number;
   max: number;
   corrections: string[];
+}
+
+/** Every category `compute_category_scores` in backend/app/scoring.py can return. */
+export const COMPUTED_CATEGORIES: readonly string[] = [
+  'Word recognition (SK\u2192EN)',
+  'Recall (EN\u2192SK)',
+  'Retry recovery',
+  'Accuracy',
+  'Translation quality',
+];
+
+/**
+ * The breakdown bars to draw. Feedback stored before results were counted
+ * (no `items_answered`) may hold categories and comments a model wrote: keep
+ * only the computed categories, without comments.
+ */
+export function breakdownScores(feedback: SessionFeedback): FeedbackScore[] {
+  if (feedback.items_answered !== undefined) return feedback.scores;
+  return feedback.scores
+    .filter((s) => COMPUTED_CATEGORIES.includes(s.category))
+    .map((s) => ({ ...s, comment: '' }));
 }
 
 /** The tutor marks a correction by starting a line with the memo emoji. */
@@ -70,6 +93,14 @@ export function vocabRows(ex: VocabExerciseData): VocabRow[] {
   return rows;
 }
 
+/** Credit first; an item answered before credits existed falls back to `correct`,
+ *  as the backend's score does. */
+function grammarItemRight(ex: GrammarExerciseData, i: number): boolean {
+  const credit = ex.credits?.[i];
+  if (credit !== null && credit !== undefined) return credit >= 1;
+  return ex.correct[i] === true;
+}
+
 /** One row per answered exercise. An answer right but for its accents is right. */
 export function grammarRows(ex: GrammarExerciseData): GrammarRow[] {
   const rows: GrammarRow[] = [];
@@ -79,7 +110,7 @@ export function grammarRows(ex: GrammarExerciseData): GrammarRow[] {
     rows.push({
       sentence: exercise.sentence.replace(/_{2,}/, exercise.blank),
       typed,
-      right: ex.correct[i] === true,
+      right: grammarItemRight(ex, i),
     });
   });
   return rows;

@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import type { Session, SessionFeedback } from '../lib/types';
 import { listItemFade } from '../lib/pacing';
 import {
+  breakdownScores,
   conversationSummary,
   grammarRows,
   translationRows,
@@ -88,6 +89,19 @@ const rowStatusStyle = {
   fontVariantNumeric: 'tabular-nums' as const,
 };
 
+/** "Your answers", with how many were answered when the lesson ended early. */
+function AnswersHeading({ shown, total }: { shown: number; total: number }) {
+  if (shown >= total) return <h3 style={sectionTitleStyle}>Your answers</h3>;
+  return (
+    <>
+      <h3 style={{ ...sectionTitleStyle, margin: '0 0 4px 0' }}>Your answers</h3>
+      <p style={{ fontSize: 12.5, color: '#a3aabe', margin: '0 0 14px 0' }}>
+        {shown} of {total} answered
+      </p>
+    </>
+  );
+}
+
 const RING_R = 58;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
 
@@ -103,7 +117,11 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
   const translation = ex?.type === 'translation' ? translationRows(ex) : [];
   const score = conversation ? null : feedback.overall_score;
   // A lesson from before exercises existed shows its score card alone.
-  const showBreakdown = !!ex && !conversation && feedback.scores.length > 0;
+  const itemTotal = ex?.type === 'vocabulary' ? ex.questions.length
+    : ex?.type === 'grammar' || ex?.type === 'translation' ? ex.exercises.length
+    : 0;
+  const breakdown = breakdownScores(feedback);
+  const showBreakdown = !!ex && !conversation && breakdown.length > 0;
 
   return (
     <div className="min-h-dvh">
@@ -303,7 +321,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               Breakdown
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {feedback.scores.map((s, i) => (
+              {breakdown.map((s, i) => (
                 <div key={i}>
                   <div
                     style={{
@@ -377,11 +395,11 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             transition={{ delay: 0.15 }}
             style={sectionStyle}
           >
-            <h3 style={sectionTitleStyle}>Your answers</h3>
+            <AnswersHeading shown={vocab.length} total={itemTotal} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {vocab.map((row, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#5de4a5' }}>{row.slovak}</span>
                     <span style={{ fontSize: 13, color: '#a3aabe', marginLeft: 10 }}>{row.english}</span>
                   </div>
@@ -402,11 +420,11 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             transition={{ delay: 0.15 }}
             style={sectionStyle}
           >
-            <h3 style={sectionTitleStyle}>Your answers</h3>
+            <AnswersHeading shown={grammar.length} total={itemTotal} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {grammar.map((row, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: '#eef1f8', margin: 0, lineHeight: 1.45 }}>
                       {row.sentence}
                     </p>
@@ -431,11 +449,11 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             transition={{ delay: 0.15 }}
             style={sectionStyle}
           >
-            <h3 style={sectionTitleStyle}>Your answers</h3>
+            <AnswersHeading shown={translation.length} total={itemTotal} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {translation.map((row, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: '#eef1f8', margin: 0, lineHeight: 1.45 }}>
                       {row.source}
                     </p>
