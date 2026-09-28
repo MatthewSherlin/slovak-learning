@@ -19,15 +19,20 @@ vi.mock('../../lib/sounds', () => ({
   playIncorrect: vi.fn(),
 }));
 
-// Mock framer-motion to avoid animation noise in tests
+// Tests flip this to see the screen as a learner who prefers reduced motion does.
+const motionPrefs = vi.hoisted(() => ({ reduced: false }));
+
+// Mock framer-motion to avoid animation noise in tests. Each element's
+// transition is exposed as data-transition so tests can read its duration.
 vi.mock('framer-motion', async () => {
   const React = await import('react');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const motion = new Proxy({} as any, {
     get: (_target: unknown, tag: string) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return React.forwardRef(({ children, ...props }: any, ref: any) => {
-        return React.createElement(tag, { ...props, ref }, children);
+      return React.forwardRef(({ children, transition, ...props }: any, ref: any) => {
+        const dataTransition = transition ? JSON.stringify(transition) : undefined;
+        return React.createElement(tag, { ...props, 'data-transition': dataTransition, ref }, children);
       });
     },
   });
@@ -35,7 +40,7 @@ vi.mock('framer-motion', async () => {
     motion,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
-    useReducedMotion: () => false,
+    useReducedMotion: () => motionPrefs.reduced,
   };
 });
 
@@ -93,6 +98,7 @@ describe('VocabMode', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    motionPrefs.reduced = false;
   });
 
   // --- Bug fix #8: discriminant narrowing ---
@@ -349,6 +355,29 @@ describe('VocabMode', () => {
     expect(api.getSession).toHaveBeenCalledWith('test-session-1');
     expect(screen.queryByText(/not saved/i)).toBeNull();
     expect(screen.queryByText(/already answered/i)).toBeNull();
+  });
+
+  // --- Reduced motion: the result panel appears without moving ---
+  it('shows the result panel with no animation when reduced motion is on', async () => {
+    motionPrefs.reduced = true;
+    const session = makeVocabSession({ currentIndex: 0 });
+    vi.mocked(api.submitVocabAnswer).mockResolvedValue(session);
+    render(<VocabMode session={session} setSession={noop} />);
+    fireEvent.click(screen.getByText('thank you'));
+
+    const panel = (await screen.findByText('Správne!')).closest('[data-transition]') as HTMLElement;
+    // The nearest animated ancestor of the heading is the panel itself.
+    expect(JSON.parse(panel.dataset.transition!).duration).toBe(0);
+  });
+
+  it('slides the result panel in when reduced motion is off', async () => {
+    const session = makeVocabSession({ currentIndex: 0 });
+    vi.mocked(api.submitVocabAnswer).mockResolvedValue(session);
+    render(<VocabMode session={session} setSession={noop} />);
+    fireEvent.click(screen.getByText('thank you'));
+
+    const panel = (await screen.findByText('Správne!')).closest('[data-transition]') as HTMLElement;
+    expect(JSON.parse(panel.dataset.transition!).duration).toBeGreaterThan(0);
   });
 
   // --- Pacing: a correct answer moves on quickly ---

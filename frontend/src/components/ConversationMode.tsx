@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Send,
   Lightbulb,
@@ -61,6 +61,7 @@ function ConversationModeInner({
   ex,
   setSession,
 }: ConversationModeProps & { ex: ConversationExerciseData }) {
+  const reduceMotion = useReducedMotion();
   const [input, setInput] = useState('');
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -208,7 +209,7 @@ function ConversationModeInner({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: reduceMotion ? 0 : 0.25, ease: 'easeInOut' }}
             className="overflow-hidden border-b border-border-subtle"
           >
             <div className="bg-warning/5 px-5 py-3">
@@ -275,7 +276,7 @@ function ConversationModeInner({
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      transition={{ duration: reduceMotion ? 0 : 0.25, ease: 'easeInOut' }}
                       className="overflow-hidden"
                     >
                       <div className="px-5 pb-4">
@@ -396,7 +397,7 @@ function ConversationModeInner({
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.2 }}
                       className="overflow-hidden"
                     >
                       <div className="flex flex-wrap gap-1.5 mb-3">

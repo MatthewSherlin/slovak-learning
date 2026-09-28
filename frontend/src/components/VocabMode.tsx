@@ -411,7 +411,7 @@ function VocabModeInner({
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
+            transition={{ duration: reduceMotion ? 0 : 0.25, ease: 'easeOut' }}
             style={{
               background: isCorrect ? 'rgba(93,228,165,0.1)' : 'rgba(240,112,112,0.08)',
               borderTop: isCorrect

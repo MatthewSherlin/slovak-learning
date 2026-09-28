@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import type { Session, SessionFeedback } from '../lib/types';
 import { renderInlineMd } from '../lib/mdlite';
@@ -48,6 +48,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
 
 export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
 
   const score = feedback.overall_score;
   const fillOffset = RING_CIRCUMFERENCE * (1 - score / 10);
@@ -93,7 +94,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                 strokeDasharray={RING_CIRCUMFERENCE}
                 initial={{ strokeDashoffset: RING_CIRCUMFERENCE }}
                 animate={{ strokeDashoffset: fillOffset }}
-                transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.3 }}
               />
             </svg>
             <div
@@ -259,7 +260,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${s.score * 10}%` }}
-                      transition={{
+                      transition={reduceMotion ? { duration: 0 } : {
                         delay: 0.2 + i * 0.12,
                         duration: 0.8,
                         ease: 'easeOut',

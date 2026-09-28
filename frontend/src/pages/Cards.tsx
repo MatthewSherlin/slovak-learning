@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Zap,
   ShoppingBag,
@@ -10,6 +10,7 @@ import {
 import PackOpening from '../components/cards/PackOpening';
 import TradeInSheet from '../components/cards/TradeInSheet';
 import ShowcasePicker from '../components/cards/ShowcasePicker';
+import { SCREEN_FADE_S } from '../lib/pacing';
 import CardFrame from '../components/cards/CardFrame';
 import { useUser } from '../components/UserPicker';
 import { getUserCards, getCardCatalog, purchasePack, getCardsSocial, getAllCards } from '../lib/api';
@@ -457,6 +458,7 @@ type Tab = 'shop' | 'binder' | 'friends';
 export default function Cards() {
   const { user } = useUser();
   const [tab, setTab] = useState<Tab>('shop');
+  const reduceMotion = useReducedMotion();
   const [inspectCard, setInspectCard] = useState<CardData | null>(null);
 
   // Data
@@ -685,12 +687,12 @@ export default function Cards() {
       {/* Tab content */}
       <AnimatePresence mode="wait">
         {tab === 'shop' && (
-          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : SCREEN_FADE_S }}>
             <ShopTab catalog={catalog} collection={collection} xpAvailable={xpAvailable} onBuy={(set) => setConfirmSet(set)} />
           </motion.div>
         )}
         {tab === 'binder' && (
-          <motion.div key="binder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div key="binder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : SCREEN_FADE_S }}>
             {hasDuplicates && (
               <div className="flex justify-end mb-4">
                 <button
@@ -707,7 +709,7 @@ export default function Cards() {
           </motion.div>
         )}
         {tab === 'friends' && (
-          <motion.div key="friends" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.div key="friends" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : SCREEN_FADE_S }}>
             <div className="flex justify-end mb-4">
               <button
                 data-testid="showcase-open-btn"

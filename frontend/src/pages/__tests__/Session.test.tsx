@@ -145,5 +145,9 @@ describe('Session', () => {
     );
     expect(screen.getAllByRole('progressbar')).toHaveLength(1);
     expect(screen.queryByText('Loading session')).toBeNull();
+    // A stored lesson is being loaded, not built: no "preparing" copy, no timing hint.
+    expect(screen.getByRole('heading', { name: 'Načítavam lekciu…' })).toBeTruthy();
+    expect(screen.getByText('Loading your lesson')).toBeTruthy();
+    expect(screen.queryByText(/seconds/)).toBeNull();
   });
 });

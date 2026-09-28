@@ -7,11 +7,16 @@
  */
 
 interface BrandedLoaderProps {
+  heading?: string;
   subCopy?: string;
+  /** Timing hint under the ring; null hides it (e.g. when only fetching a stored lesson). */
+  hint?: string | null;
 }
 
 export default function BrandedLoader({
+  heading = 'Pripravujeme lekciu…',
   subCopy = 'Building vocabulary exercises for your level',
+  hint = 'usually 5–10 seconds — up to a minute if the tutor is waking up',
 }: BrandedLoaderProps) {
   return (
     <div
@@ -101,7 +106,7 @@ export default function BrandedLoader({
           fontFamily: 'Inter, sans-serif',
         }}
       >
-        Pripravujeme lekciu…
+        {heading}
       </h2>
 
       {/* Sub-copy */}
@@ -118,16 +123,18 @@ export default function BrandedLoader({
       </p>
 
       {/* Timing hint */}
-      <p
-        style={{
-          fontSize: 10,
-          color: '#4a5068',
-          margin: '16px 0 0 0',
-          fontFamily: 'Inter, sans-serif',
-        }}
-      >
-        usually 5–10 seconds — up to a minute if the tutor is waking up
-      </p>
+      {hint && (
+        <p
+          style={{
+            fontSize: 10,
+            color: '#4a5068',
+            margin: '16px 0 0 0',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          {hint}
+        </p>
+      )}
 
       {/* Keyframe styles — injected as a style tag */}
       <style>{`

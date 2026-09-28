@@ -179,7 +179,7 @@ function TranslationModeInner({
                           strokeDasharray={`${2 * Math.PI * 52}`}
                           initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
                           animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - pct / 100) }}
-                          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+                          transition={reduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.3 }}
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">

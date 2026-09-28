@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, MotionConfig } from 'framer-motion';
 import { Send, Lightbulb, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import ChatMessage from '../components/ChatMessage';
 import SessionHeader from '../components/SessionHeader';
@@ -190,8 +190,19 @@ function handedOverSession(state: unknown, id: string | undefined): SessionType 
   return handed && handed.id === id ? handed : null;
 }
 
-// Main session page — routes to mode-specific components
+// Main session page. Under prefers-reduced-motion, framer-motion skips every
+// transform (slides, shakes, pops, tap squeezes) on the lesson screens and
+// their feedback; the screens gate their other animations themselves.
 export default function Session() {
+  return (
+    <MotionConfig reducedMotion="user">
+      <SessionPage />
+    </MotionConfig>
+  );
+}
+
+// Routes to mode-specific components
+function SessionPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -268,7 +279,7 @@ export default function Session() {
   }
 
   if (!session) {
-    return <BrandedLoader subCopy="Loading your lesson" />;
+    return <BrandedLoader heading="Načítavam lekciu…" subCopy="Loading your lesson" hint={null} />;
   }
 
   // Ownership guard: a deep link or stale history entry can point at another
