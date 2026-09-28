@@ -173,7 +173,7 @@ function ConversationModeInner({
   const showPhrases = !isComplete && !loading && input.length < 10;
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={studentMessages > 0}>
         <div className="flex items-center gap-3">
           {/* Exchange counter */}
@@ -211,7 +211,7 @@ function ConversationModeInner({
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden border-b border-border-subtle"
           >
-            <div className="bg-warning/5 px-6 py-3">
+            <div className="bg-warning/5 px-5 py-3">
               <div className="max-w-3xl mx-auto">
                 <div className="flex items-center gap-2 mb-2">
                   <PenLine size={13} className="text-warning" />
@@ -239,7 +239,7 @@ function ConversationModeInner({
       </AnimatePresence>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="max-w-3xl mx-auto">
           {/* Scenario Card */}
           {ex.scenario && (
@@ -363,7 +363,8 @@ function ConversationModeInner({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="border-t border-border-subtle glass px-6 py-4"
+          className="border-t border-border-subtle glass px-5 py-4"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
         >
           <div className="max-w-3xl mx-auto">
             {isComplete ? (
@@ -443,7 +444,7 @@ function ConversationModeInner({
                       placeholder="Type your response in Slovak... (Enter to send)"
                       rows={1}
                       {...SLOVAK_INPUT_PROPS}
-                      className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[13.5px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors leading-relaxed"
+                      className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[16px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors leading-relaxed"
                     />
                   </div>
                   <motion.button

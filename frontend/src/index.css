@@ -147,6 +147,13 @@
   box-sizing: border-box;
 }
 
+/* Nothing may push the page sideways on a phone. */
+html,
+body,
+#root {
+  overflow-x: clip;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -318,6 +325,22 @@ select {
 }
 .glow-border:hover::after {
   opacity: 0.5;
+}
+
+/* -- Tap target ------------------------- */
+
+/* Grows a control's tappable area to at least 44x44 without changing how it looks. */
+.tap-target {
+  position: relative;
+}
+.tap-target::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }
 
 /* -- Glass effect ------------------------ */

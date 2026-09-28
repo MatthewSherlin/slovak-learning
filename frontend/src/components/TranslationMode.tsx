@@ -108,7 +108,7 @@ function TranslationModeInner({
     }
   };
 
-  // Sync ref guard: the auto-end effect and a manual "End & Get Feedback"
+  // Sync ref guard: the auto-end effect and a manual "End lesson"
   // click can both pass a state guard in the same render cycle.
   const endingRef = useRef(false);
   const handleEnd = useCallback(async () => {
@@ -147,9 +147,9 @@ function TranslationModeInner({
       : 0;
 
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} />
-        <div className="flex-1 overflow-y-auto px-6 py-10">
+        <div className="flex-1 overflow-y-auto px-5 py-10" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}>
           <div className="max-w-lg mx-auto text-center">
             {ending ? (
               <div className="flex flex-col items-center justify-center py-24">
@@ -257,9 +257,9 @@ function TranslationModeInner({
   if (!currentExercise) {
     // Defensive: never strand the user on a blank screen.
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={false} />
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-5 text-center">
           <p className="text-[14px] text-text-secondary mb-4">
             Something went wrong loading this exercise.
           </p>
@@ -275,7 +275,7 @@ function TranslationModeInner({
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={ex.currentIndex > 0 || showResult}>
         {streak >= 3 && (
           <motion.div
@@ -288,7 +288,7 @@ function TranslationModeInner({
           </motion.div>
         )}
       </SessionHeader>
-      <div className="flex-1 overflow-y-auto px-6 py-8">
+      <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}>
         <div className="max-w-lg mx-auto">
           <ProgressBar
             current={showResult ? ex.currentIndex - 1 : ex.currentIndex}
@@ -300,9 +300,9 @@ function TranslationModeInner({
           <AnimatePresence mode="wait">
             <motion.div
               key={showResult ? `result-${exerciseIndex}` : `input-${exerciseIndex}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
             >
               {/* Direction badge */}
@@ -393,7 +393,7 @@ function TranslationModeInner({
                     rows={2}
                     autoFocus
                     {...(answersInSlovak(currentExercise) ? SLOVAK_INPUT_PROPS : {})}
-                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[14px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors"
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[16px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors"
                   />
                   <DiacriticsKeyboard inputRef={textareaRef} value={input} onChange={setInput} />
                   <div className="mb-3" />

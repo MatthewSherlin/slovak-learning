@@ -39,8 +39,8 @@ export default function DiacriticsKeyboard({ inputRef, value, onChange }: Diacri
 
   return (
     <>
-      {/* Mobile: compact single-row scrollable strip */}
-      <div className="flex md:hidden items-center gap-1 mt-2 overflow-x-auto flex-nowrap pb-1">
+      {/* Mobile: compact strip that wraps onto a second row, so every letter is visible */}
+      <div className="flex md:hidden items-center gap-1 mt-2 flex-wrap">
         <button
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setUpper((u) => !u)}

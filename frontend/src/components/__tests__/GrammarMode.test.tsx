@@ -398,6 +398,13 @@ describe('GrammarMode', () => {
     expect(input.getAttribute('spellcheck')).toBe('false');
   });
 
+  it('uses a 16px font on the answer box so iOS does not zoom in', () => {
+    const session = makeFirstExerciseSession();
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
+    const input = screen.getByPlaceholderText('Type the missing word...');
+    expect(input.className).toMatch(/\btext-\[16px\]/);
+  });
+
   it('exact tier shows "Correct!" label', async () => {
     const { submitGrammarAnswer } = await import('../../lib/api');
     const mockSubmit = vi.mocked(submitGrammarAnswer);

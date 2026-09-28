@@ -409,7 +409,7 @@ export default function ConfigSheet({
                 width: '100%',
                 padding: '13px 16px',
                 borderRadius: '14px',
-                fontSize: '14px',
+                fontSize: '16px',
                 background: '#0e1017',
                 border: focusError ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(255,255,255,0.08)',
                 color: '#eef1f8',

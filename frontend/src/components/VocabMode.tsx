@@ -136,8 +136,8 @@ function VocabModeInner({
   // ── Completion / ending loading screen ─────────────────────────────────
   if (ex.phase === 'complete') {
     return (
-      <div className="flex flex-col h-screen" style={{ background: '#0e1017' }}>
-        <div className="flex-1 flex items-center justify-center px-6">
+      <div className="flex flex-col h-dvh" style={{ background: '#0e1017' }}>
+        <div className="flex-1 flex items-center justify-center px-5">
           {endError ? (
             /* Never trap the user on a spinner: failed feedback gets a retry */
             <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -177,47 +177,45 @@ function VocabModeInner({
 
   // ── Active quiz ───────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen" style={{ background: '#0e1017' }}>
-      {/* Header row: close + progress segments + streak */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '20px 20px 16px 20px' }}>
-        <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={currentInPhase > 0}>
-          {/* progress segments rendered inside header slot */}
-          <div style={{ flex: 1, display: 'flex', gap: 4 }}>
-            {progressSegments.map((filled, i) => (
-              <div
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 6,
-                  borderRadius: 999,
-                  background: filled ? '#5de4a5' : 'rgba(255,255,255,0.09)',
-                  transition: 'background 0.3s',
-                }}
-              />
-            ))}
-          </div>
-          {/* Streak badge */}
-          {streak >= 3 && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+    <div className="flex flex-col h-dvh" style={{ background: '#0e1017' }}>
+      {/* Header: back + progress segments + streak, edge to edge like the other modes */}
+      <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={currentInPhase > 0}>
+        {/* progress segments rendered inside header slot */}
+        <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+          {progressSegments.map((filled, i) => (
+            <div
+              key={i}
               style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '5px 10px', borderRadius: 999,
-                background: 'rgba(245,196,94,0.12)', flexShrink: 0,
+                flex: 1,
+                height: 6,
+                borderRadius: 999,
+                background: filled ? '#5de4a5' : 'rgba(255,255,255,0.09)',
+                transition: 'background 0.3s',
               }}
-            >
-              <Flame size={12} color="#f5c45e" />
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#f5c45e', fontVariantNumeric: 'tabular-nums' }}>
-                {streak}
-              </span>
-            </motion.div>
-          )}
-        </SessionHeader>
-      </div>
+            />
+          ))}
+        </div>
+        {/* Streak badge */}
+        {streak >= 3 && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 10px', borderRadius: 999,
+              background: 'rgba(245,196,94,0.12)', flexShrink: 0,
+            }}
+          >
+            <Flame size={12} color="#f5c45e" />
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#f5c45e', fontVariantNumeric: 'tabular-nums' }}>
+              {streak}
+            </span>
+          </motion.div>
+        )}
+      </SessionHeader>
 
       {/* Progress label */}
-      <div style={{ paddingLeft: 20, paddingRight: 20, paddingBottom: 4 }}>
+      <div style={{ paddingTop: 16, paddingLeft: 20, paddingRight: 20, paddingBottom: 4 }}>
         {ex.phase === 'retry' ? (
           <p data-testid="retry-progress" style={{ fontSize: 11, color: '#f5c45e', fontWeight: 600, margin: 0 }}>
             Retry round · {ex.retryQueue.length} left
@@ -235,7 +233,7 @@ function VocabModeInner({
       </div>
 
       {/* Scrollable quiz body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 0 20px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px env(safe-area-inset-bottom) 20px' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={`${ex.phase}-${ex.currentIndex}`}
@@ -412,7 +410,7 @@ function VocabModeInner({
               borderTop: isCorrect
                 ? '1px solid rgba(93,228,165,0.25)'
                 : '1px solid rgba(240,112,112,0.2)',
-              padding: '20px 20px 32px 20px',
+              padding: '20px 20px max(32px, env(safe-area-inset-bottom)) 20px',
             }}
           >
             {isCorrect ? (

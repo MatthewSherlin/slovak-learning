@@ -82,6 +82,12 @@ describe('TranslationMode', () => {
     expect(box.getAttribute('spellcheck')).toBe('false');
   });
 
+  it('uses a 16px font on the answer box so iOS does not zoom in', () => {
+    renderMode({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
+    const box = screen.getByPlaceholderText('Type your translation...');
+    expect(box.className).toMatch(/\btext-\[16px\]/);
+  });
+
   it('keeps autocorrect for answers typed in English', () => {
     renderMode({ source: 'Mám vodu.', direction: 'sk-en', modelAnswer: 'I have water.', keyPoints: [] });
     expect(screen.getByText('Translate to English')).toBeTruthy();

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Home from '../Home';
 import type { Recommendations, DashboardStats, LeaderboardEntry, Session } from '../../lib/types';
 
@@ -12,6 +12,7 @@ vi.mock('../../lib/api', () => ({
   getLeaderboard: vi.fn(),
   createSession: vi.fn(),
   getSession: vi.fn(),
+  deleteSession: vi.fn(),
   getTopics: vi.fn(() => Promise.resolve([])),
   listSessions: vi.fn(() => Promise.resolve([])),
 }));
@@ -134,6 +135,61 @@ describe('Home', () => {
       const el = screen.queryByText(/continue session/i);
       expect(el).not.toBeNull();
     });
+  });
+
+  it('gives the Continue card dismiss button a 44 by 44 tap target outside the card', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-abc',
+          mode: 'grammar',
+          topic: 'Noun Cases',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+
+    renderHome();
+
+    const dismiss = await screen.findByRole('button', { name: /discard this session/i });
+    // jsdom does not compute layout, so this checks the classes that set the size.
+    expect(dismiss.className).toMatch(/\bw-11\b/);
+    expect(dismiss.className).toMatch(/\bh-11\b/);
+    const card = screen.getByText(/continue session/i).closest('[role="button"]');
+    expect(card).not.toBeNull();
+    expect(card!.contains(dismiss)).toBe(false);
+  });
+
+  it('dismissing the Continue card discards the session without opening it', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-abc',
+          mode: 'grammar',
+          topic: 'Noun Cases',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+    vi.mocked(api.deleteSession).mockResolvedValue({ ok: true });
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/session/:id" element={<p>Session page</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /discard this session/i }));
+
+    await waitFor(() => {
+      expect(api.deleteSession).toHaveBeenCalledWith('sess-abc');
+    });
+    expect(screen.queryByText('Session page')).toBeNull();
   });
 
   it('does NOT render the Continue card when in_progress_session is null', async () => {

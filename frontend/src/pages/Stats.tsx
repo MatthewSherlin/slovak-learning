@@ -517,14 +517,14 @@ function HistoryPanel() {
                     <button
                       onClick={handleDeleteConfirm}
                       aria-label="Confirm delete"
-                      className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-danger text-white border-none cursor-pointer transition-colors hover:bg-danger/80"
+                      className="tap-target px-2 py-1 rounded-lg text-[11px] font-semibold bg-danger text-white border-none cursor-pointer transition-colors hover:bg-danger/80"
                     >
                       Delete
                     </button>
                     <button
                       onClick={handleDeleteCancel}
                       aria-label="Cancel delete"
-                      className="px-2 py-1 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border cursor-pointer transition-colors hover:bg-surface-3"
+                      className="tap-target px-2 py-1 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border cursor-pointer transition-colors hover:bg-surface-3"
                     >
                       Cancel
                     </button>
@@ -533,7 +533,7 @@ function HistoryPanel() {
                   <button
                     onClick={(e) => handleDeleteRequest(session.id, e)}
                     aria-label="Delete session"
-                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
+                    className="tap-target opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -567,7 +567,7 @@ function UserSelect({
       <select
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-surface-2 border border-border-subtle rounded-lg pl-3 pr-7 py-1.5 text-[13px] font-medium text-text-primary cursor-pointer hover:border-border focus:outline-none focus:ring-1 focus:ring-accent/50"
+        className="appearance-none bg-surface-2 border border-border-subtle rounded-lg pl-3 pr-7 py-1.5 text-[16px] font-medium text-text-primary cursor-pointer hover:border-border focus:outline-none focus:ring-1 focus:ring-accent/50"
         style={selected ? { borderColor: `${selected.color}44` } : undefined}
       >
         {entries.map((entry) => (

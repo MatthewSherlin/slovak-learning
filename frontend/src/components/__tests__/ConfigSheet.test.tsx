@@ -113,6 +113,12 @@ describe('ConfigSheet', () => {
     });
   });
 
+  it('uses a 16px font on the focus box so iOS does not zoom in', () => {
+    renderSheet();
+    const textarea = screen.getByPlaceholderText(/restaurant vocabulary/i);
+    expect(textarea.style.fontSize).toBe('16px');
+  });
+
   it('passes instructions to createSession when text is provided', async () => {
     renderSheet();
     const textarea = screen.getByPlaceholderText(/restaurant vocabulary/i);

@@ -229,9 +229,9 @@ function GrammarModeInner({
   // ── Lesson phase ─────────────────────────────────────────────────────────
   if (ex.phase === 'lesson') {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={false} />
-        <div className="flex-1 overflow-y-auto px-6 py-8">
+        <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}>
           <div className="max-w-2xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -329,9 +329,9 @@ function GrammarModeInner({
     const pct = Math.round((correctCount / total) * 100);
 
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} />
-        <div className="flex-1 overflow-y-auto px-6 py-10">
+        <div className="flex-1 overflow-y-auto px-5 py-10" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}>
           <div className="max-w-lg mx-auto text-center">
             {ending ? (
               <div className="flex flex-col items-center justify-center py-24">
@@ -435,9 +435,9 @@ function GrammarModeInner({
     // Defensive: never strand the user on a blank screen if the index and
     // exercise array ever disagree.
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-dvh">
         <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={false} />
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-5 text-center">
           <p className="text-[14px] text-text-secondary mb-4">
             Something went wrong loading this exercise.
           </p>
@@ -466,7 +466,7 @@ function GrammarModeInner({
     : 'border-mode-grammar/40 bg-mode-grammar/5 text-mode-grammar';
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={ex.currentIndex > 0}>
         {streak >= 3 && (
           <motion.div
@@ -479,7 +479,7 @@ function GrammarModeInner({
           </motion.div>
         )}
       </SessionHeader>
-      <div className="flex-1 overflow-y-auto px-6 py-8">
+      <div className="flex-1 overflow-y-auto px-5 py-8" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)' }}>
         <div className="max-w-lg mx-auto">
           <ProgressBar
             current={showResult ? ex.currentIndex - 1 : ex.currentIndex}
@@ -491,9 +491,9 @@ function GrammarModeInner({
           <AnimatePresence mode="wait">
             <motion.div
               key={showResult ? `result-${exerciseIndex}` : `input-${exerciseIndex}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
             >
               {/* Sentence with blank — XSS safe: JSX split, no dangerouslySetInnerHTML */}
@@ -638,7 +638,7 @@ function GrammarModeInner({
                       placeholder="Type the missing word..."
                       autoFocus
                       {...SLOVAK_INPUT_PROPS}
-                      className="flex-1 bg-surface-2 border border-border rounded-xl px-4 py-3 text-[14px] text-text-primary placeholder:text-text-faint focus:border-border-focus transition-colors"
+                      className="flex-1 bg-surface-2 border border-border rounded-xl px-4 py-3 text-[16px] text-text-primary placeholder:text-text-faint focus:border-border-focus transition-colors"
                     />
                     <motion.button
                       whileTap={{ scale: 0.92 }}

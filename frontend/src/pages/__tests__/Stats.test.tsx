@@ -291,4 +291,16 @@ describe('Stats', () => {
     const selects = screen.getAllByRole('combobox');
     expect(selects.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('uses a 16px font on the Head-to-Head pickers so iOS does not zoom in', async () => {
+    renderStats('friends');
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Head-to-Head/i)).not.toBeNull();
+    });
+
+    for (const select of screen.getAllByRole('combobox')) {
+      expect(select.className).toMatch(/\btext-\[16px\]/);
+    }
+  });
 });

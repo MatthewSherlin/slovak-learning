@@ -21,7 +21,7 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
 
   return (
     <div
-      className="border-b border-border-subtle glass px-6 py-2.5 relative"
+      className="border-b border-border-subtle glass px-5 py-2.5 relative"
       style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.625rem)' }}
     >
       <div className="max-w-3xl mx-auto flex items-center justify-between">
@@ -30,7 +30,7 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
           <div className="relative">
             <button
               onClick={() => setConfirmOpen(true)}
-              className="text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer p-1 transition-colors"
+              className="w-11 h-11 -m-2.5 flex items-center justify-center text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer transition-colors"
               title="Leave session"
             >
               <ArrowLeft size={16} />
@@ -94,10 +94,11 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
             <button
               onClick={onEnd}
               disabled={!canEnd}
+              aria-label="End lesson and get feedback"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
             >
               <Square size={10} />
-              End & Get Feedback
+              End lesson
             </button>
           )}
         </div>

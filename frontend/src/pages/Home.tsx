@@ -335,7 +335,7 @@ export default function Home() {
           <button
             onClick={() => setSettingsOpen(true)}
             aria-label="Settings"
-            className="w-9 h-9 rounded-[12px] flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors duration-150"
+            className="w-11 h-11 -m-1 rounded-[12px] flex items-center justify-center text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors duration-150"
           >
             <Settings size={17} strokeWidth={1.8} />
           </button>
@@ -359,76 +359,86 @@ export default function Home() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
-          onClick={handleContinue}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleContinue(); }}
-          className="w-full text-left rounded-[22px] p-5 mb-7 border cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-[0.99]"
-          style={{
-            background: 'linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), #151926',
-            borderColor: 'rgba(94,164,247,0.22)',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
+          className="relative mb-7"
         >
-          {/* Dismiss: delete the stale session so it stops resurfacing */}
+          <div
+            onClick={handleContinue}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleContinue(); }}
+            className="w-full text-left rounded-[22px] p-5 border cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-[0.99]"
+            style={{
+              background: 'linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), #151926',
+              borderColor: 'rgba(94,164,247,0.22)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <div className="flex items-center gap-4">
+              {/* Progress ring — only shown when real progress data is available */}
+              {progressRingProps && (
+                <div className="relative w-14 h-14 flex-shrink-0">
+                  <svg viewBox="0 0 56 56" className="w-14 h-14" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                    <circle
+                      cx="28" cy="28" r="24" fill="none"
+                      stroke="#a78bfa" strokeWidth="5" strokeLinecap="round"
+                      strokeDasharray={progressRingProps.circumference}
+                      strokeDashoffset={progressRingProps.dashOffset}
+                    />
+                  </svg>
+                  <div
+                    className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tabular-nums"
+                    style={{ color: '#a78bfa', fontFamily: "'JetBrains Mono', monospace" }}
+                  >
+                    {progressRingProps.label}
+                  </div>
+                </div>
+              )}
+
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-[3px]" style={{ color: '#5ea4f7' }}>
+                  Continue session
+                </p>
+                <p className="text-[15px] font-bold text-text-primary leading-tight mb-0.5">
+                  {inProgress.mode.charAt(0).toUpperCase() + inProgress.mode.slice(1)}
+                  {inProgress.topic ? ` · ${inProgress.topic}` : ''}
+                </p>
+                <p className="text-[12px]" style={{ color: '#6b7289' }}>
+                  {sessionProgress
+                    ? `${sessionProgress.total - sessionProgress.answered} exercise${sessionProgress.total - sessionProgress.answered !== 1 ? 's' : ''} left`
+                    : 'Tap to resume'}
+                </p>
+              </div>
+
+              {/* Play button */}
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: '#5ea4f7',
+                  boxShadow: '0 8px 20px rgba(94,164,247,0.35)',
+                }}
+              >
+                <Play size={18} fill="#ffffff" color="#ffffff" />
+              </div>
+            </div>
+          </div>
+          {/* Dismiss: delete the stale session so it stops resurfacing. It sits on
+              the card's corner, outside the card, so its 44px tap area neither
+              overlaps the play button nor lets a near miss start the lesson. */}
           <button
             aria-label="Discard this session"
             onClick={handleDismissSession}
-            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center border-none cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.07)', color: '#6b7289' }}
+            className="absolute -top-[22px] -right-4 w-11 h-11 flex items-center justify-center bg-transparent border-none cursor-pointer"
           >
-            <X size={13} />
-          </button>
-          <div className="flex items-center gap-4">
-            {/* Progress ring — only shown when real progress data is available */}
-            {progressRingProps && (
-              <div className="relative w-14 h-14 flex-shrink-0">
-                <svg viewBox="0 0 56 56" className="w-14 h-14" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
-                  <circle
-                    cx="28" cy="28" r="24" fill="none"
-                    stroke="#a78bfa" strokeWidth="5" strokeLinecap="round"
-                    strokeDasharray={progressRingProps.circumference}
-                    strokeDashoffset={progressRingProps.dashOffset}
-                  />
-                </svg>
-                <div
-                  className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tabular-nums"
-                  style={{ color: '#a78bfa', fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  {progressRingProps.label}
-                </div>
-              </div>
-            )}
-
-            {/* Text */}
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-[3px]" style={{ color: '#5ea4f7' }}>
-                Continue session
-              </p>
-              <p className="text-[15px] font-bold text-text-primary leading-tight mb-0.5">
-                {inProgress.mode.charAt(0).toUpperCase() + inProgress.mode.slice(1)}
-                {inProgress.topic ? ` · ${inProgress.topic}` : ''}
-              </p>
-              <p className="text-[12px]" style={{ color: '#6b7289' }}>
-                {sessionProgress
-                  ? `${sessionProgress.total - sessionProgress.answered} exercise${sessionProgress.total - sessionProgress.answered !== 1 ? 's' : ''} left`
-                  : 'Tap to resume'}
-              </p>
-            </div>
-
-            {/* Play button */}
-            <div
-              className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{
-                background: '#5ea4f7',
-                boxShadow: '0 8px 20px rgba(94,164,247,0.35)',
-              }}
+            <span
+              className="w-7 h-7 rounded-full flex items-center justify-center"
+              style={{ background: 'linear-gradient(rgba(255,255,255,0.07), rgba(255,255,255,0.07)), #151926', color: '#6b7289' }}
             >
-              <Play size={18} fill="#ffffff" color="#ffffff" />
-            </div>
-          </div>
+              <X size={13} />
+            </span>
+          </button>
         </motion.div>
       )}
 

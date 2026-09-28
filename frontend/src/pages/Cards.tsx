@@ -554,7 +554,7 @@ export default function Cards() {
 
   if (!user || loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
+      <div className="max-w-4xl mx-auto px-5 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
         {/* Header skeleton */}
         <div className="text-center mb-8">
           <div className="h-8 w-32 rounded-full bg-surface-2 animate-pulse mx-auto mb-3" />
@@ -571,7 +571,7 @@ export default function Cards() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
+      <div className="max-w-4xl mx-auto px-5 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
         <ErrorRetry message={error} onRetry={fetchData} />
       </div>
     );
@@ -592,7 +592,7 @@ export default function Cards() {
   // ── Pack loading (purchase in-flight) ───────────────────────────
   if (isPurchasing && openingSet) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pb-16 flex flex-col items-center gap-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
+      <div className="max-w-3xl mx-auto px-5 md:px-6 pb-16 flex flex-col items-center gap-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 8 }}
@@ -615,7 +615,7 @@ export default function Cards() {
   // ── Pack opening overlay ─────────────────────────────────────────
   if (openingSet && purchaseResult) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}>
+      <div className="max-w-3xl mx-auto px-5 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}>
         <PackOpening
           set={openingSet}
           result={purchaseResult}
@@ -628,7 +628,7 @@ export default function Cards() {
   // ── Main page with tabs ──────────────────────────────────────────
   return (
     <div
-      className="max-w-4xl mx-auto px-4 md:px-6"
+      className="max-w-4xl mx-auto px-5 md:px-6"
       style={{
         paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
         paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)',
@@ -685,12 +685,12 @@ export default function Cards() {
       {/* Tab content */}
       <AnimatePresence mode="wait">
         {tab === 'shop' && (
-          <motion.div key="shop" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+          <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <ShopTab catalog={catalog} collection={collection} xpAvailable={xpAvailable} onBuy={(set) => setConfirmSet(set)} />
           </motion.div>
         )}
         {tab === 'binder' && (
-          <motion.div key="binder" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+          <motion.div key="binder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             {hasDuplicates && (
               <div className="flex justify-end mb-4">
                 <button
@@ -707,7 +707,7 @@ export default function Cards() {
           </motion.div>
         )}
         {tab === 'friends' && (
-          <motion.div key="friends" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}>
+          <motion.div key="friends" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
             <div className="flex justify-end mb-4">
               <button
                 data-testid="showcase-open-btn"

@@ -97,8 +97,8 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
   const studentMessages = session.messages.filter((m) => m.role === 'student').length;
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="border-b border-border-subtle glass px-6 py-2.5">
+    <div className="flex flex-col h-dvh">
+      <div className="border-b border-border-subtle glass px-5 py-2.5">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/')} className="text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer p-1 transition-colors">
@@ -129,7 +129,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="max-w-3xl mx-auto">
           {session.messages.map((msg, i) => (
             <ChatMessage key={i} message={msg} />
@@ -162,7 +162,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
       </div>
 
       {!session.completed && !ending && (
-        <div className="border-t border-border-subtle glass px-6 py-4">
+        <div className="border-t border-border-subtle glass px-5 py-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
           <div className="max-w-3xl mx-auto">
             <div className="flex gap-2 mb-3">
               <button
@@ -188,7 +188,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
                   placeholder="Type your response... (Enter to send, Shift+Enter for new line)"
                   rows={1}
                   {...SLOVAK_INPUT_PROPS}
-                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[13.5px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors leading-relaxed"
+                  className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[16px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors leading-relaxed"
                 />
               </div>
               <motion.button
@@ -242,7 +242,7 @@ export default function Session() {
   // Error state — show banner with retry, don't silently navigate
   if (loadError) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="min-h-dvh flex items-center justify-center px-5">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -276,7 +276,7 @@ export default function Session() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <LoadingDots text="Loading session" />
       </div>
     );
@@ -286,7 +286,7 @@ export default function Session() {
   // profile's session — answering would silently record against their account.
   if (user && session.user_id !== user.id) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
+      <div className="min-h-dvh flex flex-col items-center justify-center px-5 text-center">
         <h2 className="text-lg font-bold text-text-primary mb-2">Not your session</h2>
         <p className="text-sm text-text-muted mb-6">
           This session belongs to another profile.

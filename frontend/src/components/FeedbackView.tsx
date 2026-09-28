@@ -55,7 +55,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
   const message = encouragementMessage(score);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <div className="max-w-2xl mx-auto px-5 py-10">
 
         {/* Score hero card */}

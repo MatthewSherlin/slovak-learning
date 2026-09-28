@@ -52,4 +52,18 @@ describe('SessionHeader', () => {
     expect(screen.getByText('Vocabulary')).toBeTruthy();
     expect(screen.queryByText(/^Focus:/)).toBeNull();
   });
+
+  it('labels the end button "End lesson" and keeps the full name for screen readers', () => {
+    renderHeader(makeSession());
+    const end = screen.getByRole('button', { name: 'End lesson and get feedback' });
+    expect(end.textContent).toBe('End lesson');
+  });
+
+  it('gives the back arrow a 44 by 44 tap target', () => {
+    renderHeader(makeSession());
+    // jsdom does not compute layout, so this checks the classes that set the size.
+    const back = screen.getByTitle('Leave session');
+    expect(back.className).toMatch(/\bw-11\b/);
+    expect(back.className).toMatch(/\bh-11\b/);
+  });
 });
