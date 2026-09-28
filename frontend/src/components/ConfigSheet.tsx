@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getTopics, createSession, listSessions } from '../lib/api';
+import { tutorErrorMessage } from '../lib/errors';
 import type { Difficulty, LearningMode, Topic } from '../lib/types';
 import BrandedLoader from './BrandedLoader';
 
@@ -180,14 +181,16 @@ export default function ConfigSheet({
       });
       navigate(`/session/${session.id}`);
     } catch (e) {
-      // An empty AI account will not recover in the next minute: say so now.
-      if (e instanceof Error && e.message.includes('tutor_out_of_credits')) {
+      // The backend answered with a definite failure (an empty AI account, a
+      // lesson it could not build): no session is coming, so say so now.
+      const known = tutorErrorMessage(e);
+      if (known) {
         setStarting(false);
-        setStartError('The tutor is out of AI credits.');
+        setStartError(known);
         return;
       }
-      // Keep the loader up and poll: the backend may still be finishing
-      // the session this request started.
+      // No answer arrived (the phone dropped the request). Keep the loader up
+      // and poll: the backend may still be finishing the session it started.
       for (let attempt = 0; attempt < 5; attempt++) {
         const orphanId = await findOrphanedSession();
         if (orphanId) {

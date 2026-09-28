@@ -48,6 +48,7 @@ class TestSessionCreationLLMFailure:
             })
         assert resp.status_code == 502
         assert "unavailable" in resp.json()["detail"].lower()
+        assert resp.json()["code"] == "tutor_unavailable"
 
     async def test_end_session_returns_502_on_llm_error(
         self, client, monkeypatch, sample_vocab_session

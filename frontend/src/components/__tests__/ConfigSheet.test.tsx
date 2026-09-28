@@ -237,6 +237,22 @@ describe('ConfigSheet', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  it('does not poll when the backend reports a definite failure', async () => {
+    vi.mocked(api.createSession).mockRejectedValue(
+      new Error('{"detail":"AI service temporarily unavailable","code":"tutor_unavailable"}')
+    );
+    renderSheet();
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText('The tutor could not build this lesson. Please try again.')
+      ).not.toBeNull();
+    });
+    expect(api.listSessions).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('recovers only a session with the same topic and difficulty', async () => {
     vi.mocked(api.createSession).mockRejectedValue(new Error('network'));
     const now = new Date().toISOString();

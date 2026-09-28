@@ -106,7 +106,10 @@ async def llm_error_handler(request: Request, exc: LLMError) -> JSONResponse:
     logging.getLogger(__name__).error("LLM failure on %s: %s", request.url.path, exc)
     return JSONResponse(
         status_code=502,
-        content={"detail": "AI service temporarily unavailable — please try again."},
+        content={
+            "detail": "AI service temporarily unavailable — please try again.",
+            "code": "tutor_unavailable",
+        },
     )
 
 
