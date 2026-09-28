@@ -179,22 +179,30 @@ function VocabModeInner({
   return (
     <div className="flex flex-col h-dvh" style={{ background: '#0e1017' }}>
       {/* Header: back + progress segments + streak, edge to edge like the other modes */}
-      <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={currentInPhase > 0}>
-        {/* progress segments rendered inside header slot */}
-        <div style={{ flex: 1, display: 'flex', gap: 4 }}>
-          {progressSegments.map((filled, i) => (
-            <div
-              key={i}
-              style={{
-                flex: 1,
-                height: 6,
-                borderRadius: 999,
-                background: filled ? '#5de4a5' : 'rgba(255,255,255,0.09)',
-                transition: 'background 0.3s',
-              }}
-            />
-          ))}
-        </div>
+      <SessionHeader
+        session={session}
+        onEnd={handleEnd}
+        ending={ending}
+        canEnd={currentInPhase > 0}
+        progress={
+          /* One segment per question, on its own row: there is no room beside the end button on a 360px phone */
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${progressSegments.length}, minmax(0, 1fr))`, gap: 4 }}>
+            {progressSegments.map((filled, i) => (
+              <div
+                key={i}
+                data-testid="progress-segment"
+                data-filled={filled}
+                style={{
+                  height: 6,
+                  borderRadius: 999,
+                  background: filled ? '#5de4a5' : 'rgba(255,255,255,0.09)',
+                  transition: 'background 0.3s',
+                }}
+              />
+            ))}
+          </div>
+        }
+      >
         {/* Streak badge */}
         {streak >= 3 && (
           <motion.div

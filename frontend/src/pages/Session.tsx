@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Send, Lightbulb, Square, ArrowLeft, Clock, MessageSquare, RefreshCw } from 'lucide-react';
+import { Send, Lightbulb, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import ChatMessage from '../components/ChatMessage';
+import SessionHeader from '../components/SessionHeader';
 import LoadingDots from '../components/LoadingDots';
 import FeedbackView from '../components/FeedbackView';
 import VocabMode from '../components/VocabMode';
@@ -16,7 +17,6 @@ import type { Session as SessionType, SessionFeedback } from '../lib/types';
 
 // Legacy chat UI for old sessions that don't have structured exercises
 function LegacyChatMode({ session, setSession }: { session: SessionType; setSession: (s: SessionType) => void }) {
-  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [hintLoading, setHintLoading] = useState(false);
@@ -93,41 +93,16 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
     return <FeedbackView session={session} feedback={feedback} />;
   }
 
-  const modeLabel = session.mode.charAt(0).toUpperCase() + session.mode.slice(1);
   const studentMessages = session.messages.filter((m) => m.role === 'student').length;
 
   return (
     <div className="flex flex-col h-dvh">
-      <div className="border-b border-border-subtle glass px-5 py-2.5">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/')} className="text-text-faint hover:text-text-primary bg-transparent border-none cursor-pointer p-1 transition-colors">
-              <ArrowLeft size={16} />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] font-semibold text-text-primary">{modeLabel}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-3 text-text-faint capitalize font-medium">{session.difficulty}</span>
-              </div>
-              <div className="text-[11px] text-text-faint mt-0.5">{session.topic.replace(/_/g, ' ')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
-              <MessageSquare size={11} />
-              <span>{studentMessages}</span>
-            </div>
-            <button
-              onClick={handleEnd}
-              disabled={ending || studentMessages === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              <Square size={10} />
-              End & Get Feedback
-            </button>
-          </div>
+      <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={studentMessages > 0}>
+        <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
+          <MessageSquare size={11} />
+          <span>{studentMessages}</span>
         </div>
-      </div>
+      </SessionHeader>
 
       <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="max-w-3xl mx-auto">

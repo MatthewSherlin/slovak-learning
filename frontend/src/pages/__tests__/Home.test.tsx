@@ -260,6 +260,22 @@ describe('Home', () => {
     });
   });
 
+  it('gives the review chip a tap target at least 44px tall', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        recommended: [
+          { kind: 'review_vocab', label: 'Review 5 due words', mode: 'vocabulary' },
+        ],
+      })
+    );
+
+    renderHome();
+
+    const chip = await screen.findByRole('button', { name: /review 5 due words/i });
+    // jsdom does not compute layout, so this checks the class that sets the height.
+    expect(chip.className).toMatch(/\bmin-h-11\b/);
+  });
+
   it('opens the start sheet with review on when the review chip is tapped', async () => {
     vi.mocked(api.getRecommendations).mockResolvedValue(
       baseRecs({

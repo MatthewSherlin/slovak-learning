@@ -10,9 +10,11 @@ interface SessionHeaderProps {
   ending: boolean;
   canEnd?: boolean;
   children?: React.ReactNode;
+  /** A row under the header's content, inside the header (vocab progress segments). */
+  progress?: React.ReactNode;
 }
 
-export default function SessionHeader({ session, onEnd, ending, canEnd = true, children }: SessionHeaderProps) {
+export default function SessionHeader({ session, onEnd, ending, canEnd = true, children, progress }: SessionHeaderProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const modeLabel = session.mode.charAt(0).toUpperCase() + session.mode.slice(1);
@@ -88,22 +90,32 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
           </div>
         </div>
 
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Extras give way first on a narrow phone, so the end button stays on one line */}
-          {children && <div className="flex items-center gap-3 min-w-0 overflow-hidden">{children}</div>}
+        <div className="grow flex items-center justify-end gap-3">
+          {/* Extras take only the room left over, so the end button stays on one line.
+              They are a size container: extras can drop words when the room is short. */}
+          {children && (
+            <div className="@container flex-1 min-w-0 overflow-hidden flex items-center justify-end gap-3">
+              {children}
+            </div>
+          )}
           {!ending && (
+            /* 44px-tall tap target; the visible pill is the inner span, and the
+               negative margin keeps the header its original height. */
             <button
               onClick={onEnd}
               disabled={!canEnd}
               aria-label="End lesson and get feedback"
-              className="shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              className="group shrink-0 min-h-11 -my-1.5 flex items-center bg-transparent border-none p-0 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <Square size={10} />
-              End lesson
+              <span className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border group-hover:bg-danger-muted group-hover:text-danger group-hover:border-danger/20 transition-all duration-200">
+                <Square size={10} />
+                End lesson
+              </span>
             </button>
           )}
         </div>
       </div>
+      {progress && <div className="max-w-3xl mx-auto mt-2">{progress}</div>}
     </div>
   );
 }

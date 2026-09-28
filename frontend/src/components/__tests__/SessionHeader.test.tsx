@@ -58,8 +58,15 @@ describe('SessionHeader', () => {
     const end = screen.getByRole('button', { name: 'End lesson and get feedback' });
     expect(end.textContent).toBe('End lesson');
     // Stays on one line on a 360px phone; extras beside it shrink instead.
-    expect(end.className).toMatch(/\bwhitespace-nowrap\b/);
     expect(end.className).toMatch(/\bshrink-0\b/);
+    expect(end.querySelector('span')!.className).toMatch(/\bwhitespace-nowrap\b/);
+  });
+
+  it('gives the end button a tap target at least 44px tall', () => {
+    renderHeader(makeSession());
+    // jsdom does not compute layout, so this checks the class that sets the height.
+    const end = screen.getByRole('button', { name: 'End lesson and get feedback' });
+    expect(end.className).toMatch(/\bmin-h-11\b/);
   });
 
   it('gives the back arrow a 44 by 44 tap target', () => {

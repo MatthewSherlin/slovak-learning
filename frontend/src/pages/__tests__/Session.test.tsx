@@ -54,4 +54,17 @@ describe('Session', () => {
     const box = await screen.findByRole('textbox');
     expect(box.className).toMatch(/\btext-\[16px\]/);
   });
+
+  it('labels the legacy chat end button "End lesson"', async () => {
+    vi.mocked(api.getSession).mockResolvedValue(makeLegacySession());
+    render(
+      <MemoryRouter initialEntries={['/session/s-legacy']}>
+        <Routes>
+          <Route path="/session/:id" element={<Session />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const end = await screen.findByRole('button', { name: 'End lesson and get feedback' });
+    expect(end.textContent).toBe('End lesson');
+  });
 });

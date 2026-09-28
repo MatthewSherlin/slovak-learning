@@ -490,21 +490,27 @@ export default function Home() {
             {recs.recommended
               .filter((r) => r.kind !== 'continue')
               .map((rec, i) => (
+                /* 44px-tall tap target; the visible chip is the inner span, and the
+                   negative margin keeps the chip row its original height. */
                 <button
                   key={i}
                   onClick={() => handleRecClick(rec)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold border cursor-pointer transition-all duration-200 hover:brightness-110"
-                  style={{
-                    background: 'rgba(94,164,247,0.08)',
-                    borderColor: 'rgba(94,164,247,0.18)',
-                    color: '#5ea4f7',
-                  }}
+                  className="group min-h-11 -my-[3.5px] flex items-center bg-transparent border-none p-0 cursor-pointer"
                 >
-                  {/* Sparkle icon */}
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-                  </svg>
-                  {rec.label}
+                  <span
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold border transition-all duration-200 group-hover:brightness-110"
+                    style={{
+                      background: 'rgba(94,164,247,0.08)',
+                      borderColor: 'rgba(94,164,247,0.18)',
+                      color: '#5ea4f7',
+                    }}
+                  >
+                    {/* Sparkle icon */}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                    </svg>
+                    {rec.label}
+                  </span>
                 </button>
               ))}
           </div>

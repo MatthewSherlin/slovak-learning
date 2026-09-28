@@ -37,11 +37,15 @@ vi.mock('framer-motion', async () => {
 });
 
 // Mock child components that aren't under test
-// SessionHeader renders children so progress segments (passed as slot children) are visible in tests
-vi.mock('../SessionHeader', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  default: ({ children }: { children: any }) => children,
-}));
+// SessionHeader renders its slots so progress segments and the streak badge are visible in tests
+vi.mock('../SessionHeader', async () => {
+  const React = await import('react');
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    default: ({ children, progress }: { children: any; progress?: any }) =>
+      React.createElement(React.Fragment, null, children, progress),
+  };
+});
 vi.mock('../ProgressBar', () => ({
   default: () => null,
 }));
@@ -231,6 +235,25 @@ describe('VocabMode', () => {
       el => el.getAttribute('style')?.includes('rgb(93, 228, 165)')
     );
     expect(filled.length).toBe(2);
+  });
+
+  it('shows one visible progress segment per question, filled for answered ones', () => {
+    const questions = Array.from({ length: 10 }, (_, i) => ({
+      word: `slovo${i}`, direction: 'sk-en' as const,
+      choices: ['a', 'b', 'c', 'd'], correctIndex: 0, explanation: '',
+    }));
+    const session = makeVocabSession({
+      questions,
+      currentIndex: 4,
+      answers: [0, 0, 0, 0, null, null, null, null, null, null],
+      credits: Array(10).fill(null),
+    });
+    render(<VocabMode session={session} setSession={noop} />);
+    const segments = screen.getAllByTestId('progress-segment');
+    expect(segments).toHaveLength(10);
+    // jsdom does not compute layout: the row is a 10-column grid, so each segment gets a share of its width.
+    expect(segments[0].parentElement!.style.gridTemplateColumns).toBe('repeat(10, minmax(0, 1fr))');
+    expect(segments.filter(s => s.dataset.filled === 'true')).toHaveLength(4);
   });
 
   // --- progress dots in questions phase ---

@@ -284,7 +284,9 @@ function TranslationModeInner({
             className="flex items-center gap-1 text-[11px] text-warning font-semibold bg-warning/10 px-2 py-0.5 rounded-full"
           >
             <Sparkles size={10} />
-            {streak} streak!
+            {streak}
+            {/* Dropped when the header is short of room (container query on SessionHeader's extras) */}
+            <span className="@max-[84px]:hidden">streak!</span>
           </motion.div>
         )}
       </SessionHeader>

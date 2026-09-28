@@ -39,12 +39,12 @@ export default function DiacriticsKeyboard({ inputRef, value, onChange }: Diacri
 
   return (
     <>
-      {/* Mobile: compact strip that wraps onto a second row, so every letter is visible */}
-      <div className="flex md:hidden items-center gap-1 mt-2 flex-wrap">
+      {/* Mobile: two even rows of eight keys (shift + 15 letters), each 44px tall */}
+      <div data-testid="accent-keys-phone" className="grid md:hidden grid-cols-8 gap-1.5 mt-2">
         <button
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setUpper((u) => !u)}
-          className={`shrink-0 px-2 py-1 rounded-md text-xs font-semibold border cursor-pointer transition-colors select-none ${
+          className={`h-11 rounded-md text-xs font-semibold border cursor-pointer transition-colors select-none ${
             upper
               ? 'bg-accent/15 border-accent/30 text-accent'
               : 'bg-surface-3 border-border-subtle text-text-faint hover:text-text-muted'
@@ -60,7 +60,7 @@ export default function DiacriticsKeyboard({ inputRef, value, onChange }: Diacri
             whileTap={{ scale: 0.88 }}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => insert(ch)}
-            className="shrink-0 min-w-[26px] h-[28px] rounded-md bg-surface-3 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border text-xs font-medium cursor-pointer transition-colors select-none"
+            className="h-11 rounded-md bg-surface-3 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border text-xs font-medium cursor-pointer transition-colors select-none"
           >
             {ch}
           </motion.button>
