@@ -16,7 +16,7 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 ## Key Backend Files
 - `app/main.py` — FastAPI routes with lifespan, CORS
 - `app/sessions.py` — Session creation, answer submission, feedback generation
-- `app/llm.py` — Anthropic SDK wrapper (`ask()`, `ask_json()`)
+- `app/llm.py` — Model client for OpenRouter, with a direct Anthropic path kept as a fallback (`ask()`, `ask_messages()`, `ask_json()`)
 - `app/database.py` — SQLite schema, CRUD, dashboard/leaderboard aggregation
 - `app/questions.py` — Slovak question banks by mode/topic
 - `app/prompts.py` — System prompts per learning mode
@@ -58,7 +58,9 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 ## Environment
 Copy `backend/.env.example` to `backend/.env` and set:
 ```
-SLOVAK_ANTHROPIC_API_KEY=sk-ant-api03-...
+SLOVAK_LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-v1-...
 ```
+`SLOVAK_OPENROUTER_MODEL` overrides the model (default `anthropic/claude-sonnet-5`). If `SLOVAK_LLM_PROVIDER` is not set, the backend calls the Anthropic API directly and needs `SLOVAK_ANTHROPIC_API_KEY` instead; schema output, reasoning effort and the out-of-credits message apply only to the OpenRouter path.
 
 Frontend uses `VITE_API_URL` env var (defaults to `http://localhost:8888`).
