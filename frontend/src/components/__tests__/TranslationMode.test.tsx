@@ -14,6 +14,7 @@ vi.mock('../../lib/api', () => ({
 vi.mock('../../lib/sounds', () => ({
   playCorrect: vi.fn(),
   playIncorrect: vi.fn(),
+  primeSound: vi.fn(),
 }));
 
 vi.mock('framer-motion', async () => {
@@ -121,6 +122,19 @@ describe('TranslationMode', () => {
   it('shows no meaning line for a plain translation', () => {
     renderMode({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
     expect(screen.queryByText(/^Meaning/)).toBeNull();
+  });
+
+  it('primes sound synchronously when an answer is submitted, before the network call resolves', async () => {
+    const { primeSound } = await import('../../lib/sounds');
+    // Never resolves during this test, so primeSound must have already run.
+    vi.mocked(api.submitTranslation).mockReturnValue(new Promise(() => {}));
+    renderMode({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
+    fireEvent.change(screen.getByPlaceholderText('Type your translation...'), {
+      target: { value: 'Mam vodu' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /check translation/i }));
+
+    expect(primeSound).toHaveBeenCalled();
   });
 
   it('shows a sentence, not the response body, when checking fails', async () => {

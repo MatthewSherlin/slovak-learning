@@ -10,7 +10,7 @@ import ResultsLoader from './ResultsLoader';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitTranslation, endSession, getSession } from '../lib/api';
 import { tutorErrorMessage } from '../lib/errors';
-import { playCorrect, playIncorrect } from '../lib/sounds';
+import { playCorrect, playIncorrect, primeSound } from '../lib/sounds';
 import { ADVANCE_AFTER_ACCENT_MS, ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S, listItemFade } from '../lib/pacing';
 import { renderInlineMd } from '../lib/mdlite';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
@@ -55,6 +55,7 @@ function TranslationModeInner({
 
   const handleSubmit = async () => {
     if (!input.trim() || submitting) return;
+    primeSound(); // unlocks audio on iOS: must run before the first await, inside the tap
     setSubmitting(true);
     setError('');
     try {

@@ -18,6 +18,7 @@ vi.mock('../../lib/api', () => ({
 vi.mock('../../lib/sounds', () => ({
   playCorrect: vi.fn(),
   playIncorrect: vi.fn(),
+  primeSound: vi.fn(),
 }));
 
 // Mock framer-motion to avoid animation noise in tests
@@ -387,6 +388,24 @@ describe('GrammarMode', () => {
     expect(screen.getByText('Correct!')).toBeTruthy();
     expect(screen.queryByText('Takmer!')).toBeNull();
     expect(screen.queryByText(/Watch the diacritics/)).toBeNull();
+  });
+
+  it('primes sound synchronously when an answer is submitted, before the network call resolves', async () => {
+    const { submitGrammarAnswer } = await import('../../lib/api');
+    const { primeSound } = await import('../../lib/sounds');
+    const mockSubmit = vi.mocked(submitGrammarAnswer);
+    // Never resolves during this test, so primeSound must have already run.
+    mockSubmit.mockReturnValue(new Promise(() => {}));
+
+    const user = userEvent.setup();
+    const session = makeFirstExerciseSession();
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
+
+    const input = screen.getByPlaceholderText('Type the missing word...');
+    await user.type(input, 'hovorim');
+    await user.keyboard('{Enter}');
+
+    expect(primeSound).toHaveBeenCalled();
   });
 
   it('turns off autocorrect on the Slovak answer box', () => {

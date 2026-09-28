@@ -160,4 +160,56 @@ describe('sounds', () => {
     const { setSoundEnabled } = await loadSounds();
     expect(() => setSoundEnabled(false)).not.toThrow();
   });
+
+  describe('with no Web Audio in the browser', () => {
+    beforeEach(() => {
+      Reflect.deleteProperty(window, 'AudioContext');
+    });
+
+    it('playCorrect and playIncorrect become no-ops, without throwing', async () => {
+      const { playCorrect, playIncorrect } = await loadSounds();
+      expect(() => playCorrect()).not.toThrow();
+      expect(() => playIncorrect()).not.toThrow();
+      expect(oscillators).toHaveLength(0);
+    });
+
+    it('primeSound does nothing, without throwing', async () => {
+      const { primeSound } = await loadSounds();
+      expect(() => primeSound()).not.toThrow();
+    });
+  });
+
+  describe('primeSound', () => {
+    it('creates the shared AudioContext, so a later sound needs none of its own', async () => {
+      const { primeSound, playCorrect } = await loadSounds();
+      primeSound();
+      playCorrect();
+      expect(oscillators).toHaveLength(2);
+    });
+
+    it('resumes a suspended context', async () => {
+      const resumeSpy = vi.fn();
+      class SuspendedAudioContext extends FakeAudioContext {
+        state = 'suspended';
+        resume = resumeSpy;
+      }
+      Object.defineProperty(window, 'AudioContext', { value: SuspendedAudioContext, configurable: true, writable: true });
+      const { primeSound } = await loadSounds();
+      primeSound();
+      expect(resumeSpy).toHaveBeenCalled();
+    });
+
+    it('does nothing when sound is switched off in Settings', async () => {
+      localStorage.setItem('sound-enabled', 'false');
+      const resumeSpy = vi.fn();
+      class SuspendedAudioContext extends FakeAudioContext {
+        state = 'suspended';
+        resume = resumeSpy;
+      }
+      Object.defineProperty(window, 'AudioContext', { value: SuspendedAudioContext, configurable: true, writable: true });
+      const { primeSound } = await loadSounds();
+      primeSound();
+      expect(resumeSpy).not.toHaveBeenCalled();
+    });
+  });
 });

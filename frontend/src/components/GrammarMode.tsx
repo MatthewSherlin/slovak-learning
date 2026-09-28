@@ -13,7 +13,7 @@ import MarkdownTable from './MarkdownTable';
 import { renderInlineMd } from '../lib/mdlite';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { advanceGrammarPhase, submitGrammarAnswer, endSession, getSession } from '../lib/api';
-import { playCorrect, playIncorrect } from '../lib/sounds';
+import { playCorrect, playIncorrect, primeSound } from '../lib/sounds';
 import { ADVANCE_AFTER_ACCENT_MS, ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S, listItemFade } from '../lib/pacing';
 import type { Session, SessionFeedback, GrammarExerciseData } from '../lib/types';
 
@@ -103,6 +103,7 @@ function GrammarModeInner({
 
   const handleSubmit = async () => {
     if (!input.trim() || checking) return;
+    primeSound(); // unlocks audio on iOS: must run before the first await, inside the tap
     setChecking(true);
     setSubmitError('');
     try {
@@ -136,6 +137,7 @@ function GrammarModeInner({
   const handleSelect = async (idx: number) => {
     // selected is set synchronously, so it doubles as an in-flight guard
     if (showResult || selected !== null || !currentExercise?.choices) return;
+    primeSound(); // unlocks audio on iOS: must run before the first await, inside the tap
     setSelected(idx);
     try {
       const choiceText = currentExercise.choices[idx];
