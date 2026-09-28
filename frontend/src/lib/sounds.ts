@@ -3,6 +3,25 @@
  * No external audio files needed — synthesized tones only.
  */
 
+const SOUND_ENABLED_KEY = 'sound-enabled';
+
+/** The "Answer sounds" setting. Storage can throw (private browsing); that reads as on. */
+export function isSoundEnabled(): boolean {
+  try {
+    return localStorage.getItem(SOUND_ENABLED_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export function setSoundEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(SOUND_ENABLED_KEY, String(enabled));
+  } catch {
+    // Not stored; the switch still shows the choice until the settings close.
+  }
+}
+
 let ctx: AudioContext | null = null;
 
 function getCtx(): AudioContext {
@@ -12,14 +31,18 @@ function getCtx(): AudioContext {
   return ctx;
 }
 
-function playTone(freq: number, startTime: number, duration: number, gain: number, type: OscillatorType = 'sine') {
+const PEAK_GAIN = 0.08;
+const ATTACK_S = 0.01; // a short fade-in, so the note starts without a click
+
+function playTone(freq: number, startTime: number, duration: number, type: OscillatorType) {
   const ac = getCtx();
   const osc = ac.createOscillator();
   const vol = ac.createGain();
 
   osc.type = type;
   osc.frequency.value = freq;
-  vol.gain.setValueAtTime(gain, startTime);
+  vol.gain.setValueAtTime(0, startTime);
+  vol.gain.linearRampToValueAtTime(PEAK_GAIN, startTime + ATTACK_S);
   vol.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
   osc.connect(vol);
@@ -28,20 +51,22 @@ function playTone(freq: number, startTime: number, duration: number, gain: numbe
   osc.stop(startTime + duration);
 }
 
-/** Pleasant ascending two-tone chime for correct answers. */
+/** Soft ascending two-note chime for correct answers (about 0.32s). */
 export function playCorrect() {
+  if (!isSoundEnabled()) return;
   const ac = getCtx();
   if (ac.state === 'suspended') ac.resume();
   const now = ac.currentTime;
-  playTone(523.25, now, 0.15, 0.18);        // C5
-  playTone(783.99, now + 0.12, 0.22, 0.15); // G5
+  playTone(523.25, now, 0.15, 'sine');        // C5
+  playTone(783.99, now + 0.1, 0.22, 'sine');  // G5
 }
 
-/** Short low descending buzz for incorrect answers. */
+/** Soft descending two-note tone for incorrect answers (about 0.32s). */
 export function playIncorrect() {
+  if (!isSoundEnabled()) return;
   const ac = getCtx();
   if (ac.state === 'suspended') ac.resume();
   const now = ac.currentTime;
-  playTone(311.13, now, 0.15, 0.16, 'square');       // Eb4
-  playTone(233.08, now + 0.12, 0.25, 0.13, 'square'); // Bb3
+  playTone(440.0, now, 0.15, 'triangle');        // A4
+  playTone(349.23, now + 0.1, 0.22, 'triangle'); // F4
 }

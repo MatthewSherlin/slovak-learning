@@ -6,6 +6,7 @@ import LoadingDots from './LoadingDots';
 import { submitVocabAnswer, endSession, getSession } from '../lib/api';
 import { renderInlineMd } from '../lib/mdlite';
 import { playCorrect, playIncorrect } from '../lib/sounds';
+import { speakSlovak, cancelSpeech, useCanSpeakSlovak } from '../lib/speech';
 import { ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S } from '../lib/pacing';
 import type { Session, SessionFeedback, VocabExerciseData } from '../lib/types';
 import FeedbackView from './FeedbackView';
@@ -38,6 +39,7 @@ function VocabModeInner({
   // Bug fix RISK: sync ref guard so end-session can't double-fire
   const endingRef = useRef(false);
   const reduceMotion = useReducedMotion();
+  const canSpeak = useCanSpeakSlovak();
 
   const currentQuestion = ex.questions[ex.currentIndex] ?? null;
 
@@ -124,6 +126,10 @@ function VocabModeInner({
     }
   }, [showResult, isCorrect, pending, handleNext]);
 
+  // Stop any word being spoken when the question changes or the lesson is left,
+  // so it is not read over the next screen.
+  useEffect(() => cancelSpeech, [ex.phase, ex.currentIndex]);
+
   // Auto-end when exercises complete
   useEffect(() => {
     if (ex.phase === 'complete' && !endingRef.current && !feedback) {
@@ -172,6 +178,29 @@ function VocabModeInner({
   const directionLabel = currentQuestion.direction === 'sk-en'
     ? 'What does this mean in English?'
     : 'What is this in Slovak?';
+
+  // The Slovak word to say aloud: the prompt when it is Slovak; the answer once
+  // given when the prompt is English (earlier would give the answer away).
+  const spokenWord = currentQuestion.direction === 'sk-en'
+    ? currentQuestion.word
+    : showResult ? currentQuestion.choices[currentQuestion.correctIndex] : null;
+  const pronunciationPill: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 7,
+    padding: '7px 14px', borderRadius: 999,
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.07)',
+  };
+  const pronunciationText: React.CSSProperties = {
+    fontSize: 12,
+    fontFamily: "'JetBrains Mono', monospace",
+    color: '#a3aabe',
+  };
+  // 44px-tall tap target around the pill; the negative margin keeps the card its original height.
+  const pronunciationTapArea: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', verticalAlign: 'top',
+    minHeight: 44, margin: '-5px 0', padding: 0,
+    background: 'none', border: 'none',
+  };
 
   // ── Progress segments ─────────────────────────────────────────────────
   // Always use total questions as segment count; filled = words mastered so far
@@ -290,24 +319,38 @@ function VocabModeInner({
               }}>
                 {currentQuestion.word}
               </div>
-              {/* Pronunciation pill — JetBrains Mono — only shown when pronunciation data is available */}
-              {currentQuestion.direction === 'sk-en' && currentQuestion.pronunciation && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  padding: '7px 14px', borderRadius: 999,
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                }}>
-                  <Volume2 size={14} color="#5ea4f7" />
-                  <span style={{
-                    fontSize: 12,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    color: '#a3aabe',
-                  }}>
+              {/* Pronunciation pill — JetBrains Mono. With a Slovak voice on the
+                  phone it is a button that says the word; without one it shows
+                  the phonetic hint alone, with no speaker icon. */}
+              {canSpeak && spokenWord !== null ? (
+                <button
+                  type="button"
+                  onClick={() => speakSlovak(spokenWord)}
+                  aria-label={`Hear ${spokenWord}`}
+                  style={{ ...pronunciationTapArea, cursor: 'pointer' }}
+                >
+                  <span style={pronunciationPill}>
+                    <Volume2 size={14} color="#5ea4f7" />
+                    <span style={pronunciationText}>
+                      {currentQuestion.pronunciation ? `/${currentQuestion.pronunciation}/` : 'Listen'}
+                    </span>
+                  </span>
+                </button>
+              ) : canSpeak && currentQuestion.direction === 'en-sk' ? (
+                /* Holds the button's place until the learner answers, so the choices do not move down */
+                <span aria-hidden="true" style={{ ...pronunciationTapArea, visibility: 'hidden' }}>
+                  <span style={pronunciationPill}>
+                    <Volume2 size={14} />
+                    <span style={pronunciationText}>Listen</span>
+                  </span>
+                </span>
+              ) : currentQuestion.direction === 'sk-en' && currentQuestion.pronunciation ? (
+                <div style={pronunciationPill}>
+                  <span style={pronunciationText}>
                     /{currentQuestion.pronunciation}/
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Choice grid — 2x2 */}

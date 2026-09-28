@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import VocabMode from '../VocabMode';
 import * as api from '../../lib/api';
 import { ADVANCE_AFTER_CORRECT_MS } from '../../lib/pacing';
+import { installFakeSpeech, type FakeSpeech } from '../../test/fakeSpeech';
 import type { Session, VocabExerciseData, GrammarExerciseData } from '../../lib/types';
 
 // Mock api so tests don't make real HTTP calls
@@ -378,6 +379,114 @@ describe('VocabMode', () => {
 
     const panel = (await screen.findByText('Správne!')).closest('[data-transition]') as HTMLElement;
     expect(JSON.parse(panel.dataset.transition!).duration).toBeGreaterThan(0);
+  });
+
+  // --- Spoken pronunciation ---
+  describe('spoken pronunciation', () => {
+    let fake: FakeSpeech | null = null;
+    const slovakVoice = { name: 'Laura', lang: 'sk-SK' };
+
+    afterEach(() => {
+      fake?.uninstall();
+      fake = null;
+    });
+
+    function skEnSession(): Session {
+      return makeVocabSession({
+        questions: [
+          { word: 'voda', direction: 'sk-en', choices: ['water', 'fire', 'air', 'earth'], correctIndex: 0, explanation: '', pronunciation: 'VOH-dah' },
+        ],
+        answers: [null],
+        credits: [null],
+      });
+    }
+
+    function enSkSession(): Session {
+      return makeVocabSession({
+        questions: [
+          { word: 'water', direction: 'en-sk', choices: ['oheň', 'voda', 'vzduch', 'zem'], correctIndex: 1, explanation: '', pronunciation: 'VOH-dah' },
+        ],
+        answers: [null],
+        credits: [null],
+      });
+    }
+
+    function spokenTexts(): string[] {
+      return fake!.synth.speak.mock.calls.map(call => call[0].text);
+    }
+
+    it('shows a button that speaks the Slovak word when speech is available', () => {
+      fake = installFakeSpeech([slovakVoice]);
+      render(<VocabMode session={skEnSession()} setSession={noop} />);
+      const button = screen.getByRole('button', { name: /hear voda/i });
+      expect(button.textContent).toContain('/VOH-dah/');
+      fireEvent.click(button);
+      expect(spokenTexts()).toEqual(['voda']);
+      expect(fake.synth.speak.mock.calls[0][0].lang).toBe('sk-SK');
+    });
+
+    it('gives the button a tap target at least 44px tall', () => {
+      fake = installFakeSpeech([slovakVoice]);
+      render(<VocabMode session={skEnSession()} setSession={noop} />);
+      const button = screen.getByRole('button', { name: /hear voda/i });
+      expect(parseInt(button.style.minHeight, 10)).toBeGreaterThanOrEqual(44);
+    });
+
+    it('shows the phonetic text with no button and no speaker icon when speech is not available', () => {
+      render(<VocabMode session={skEnSession()} setSession={noop} />);
+      expect(screen.queryByRole('button', { name: /hear/i })).toBeNull();
+      const pill = screen.getByText('/VOH-dah/').parentElement!;
+      expect(pill.tagName).not.toBe('BUTTON');
+      expect(pill.querySelector('svg')).toBeNull();
+    });
+
+    it('shows no button when the phone has voices but none of them Slovak', () => {
+      fake = installFakeSpeech([{ name: 'Samantha', lang: 'en-US' }]);
+      render(<VocabMode session={skEnSession()} setSession={noop} />);
+      expect(screen.queryByRole('button', { name: /hear/i })).toBeNull();
+      expect(screen.getByText('/VOH-dah/')).toBeTruthy();
+    });
+
+    it('turns the pill into a button when a Slovak voice arrives late', () => {
+      fake = installFakeSpeech([]);
+      render(<VocabMode session={skEnSession()} setSession={noop} />);
+      expect(screen.queryByRole('button', { name: /hear voda/i })).toBeNull();
+      act(() => fake!.setVoices([slovakVoice]));
+      expect(screen.getByRole('button', { name: /hear voda/i })).toBeTruthy();
+    });
+
+    it('on an English question, offers no button until the learner answers, then speaks the correct answer', async () => {
+      fake = installFakeSpeech([slovakVoice]);
+      const session = enSkSession();
+      vi.mocked(api.submitVocabAnswer).mockResolvedValue(session);
+      render(<VocabMode session={session} setSession={noop} />);
+      expect(screen.queryByRole('button', { name: /hear/i })).toBeNull();
+      // The phonetic hint would give the answer away too.
+      expect(screen.queryByText('/VOH-dah/')).toBeNull();
+
+      fireEvent.click(screen.getByText('oheň'));
+      // Let the mocked server acknowledgement resolve before tapping.
+      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: /hear voda/i }));
+      expect(spokenTexts()).toEqual(['voda']);
+    });
+
+    it('stops speaking when the learner leaves the lesson', () => {
+      fake = installFakeSpeech([slovakVoice]);
+      const { unmount } = render(<VocabMode session={skEnSession()} setSession={noop} />);
+      fake.synth.cancel.mockClear();
+      unmount();
+      expect(fake.synth.cancel).toHaveBeenCalled();
+    });
+
+    it('stops speaking when the lesson moves to another question', () => {
+      fake = installFakeSpeech([slovakVoice]);
+      const first = makeVocabSession({ currentIndex: 0 });
+      const { rerender } = render(<VocabMode session={first} setSession={noop} />);
+      fake.synth.cancel.mockClear();
+      rerender(<VocabMode session={makeVocabSession({ currentIndex: 1, answers: [0, null, null] })} setSession={noop} />);
+      expect(fake.synth.cancel).toHaveBeenCalled();
+    });
   });
 
   // --- Pacing: a correct answer moves on quickly ---

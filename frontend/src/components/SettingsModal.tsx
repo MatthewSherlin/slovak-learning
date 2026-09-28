@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Shield, X, Check, AlertCircle, Sun, Moon, Users } from 'lucide-react';
+import { Lock, Shield, X, Check, AlertCircle, Sun, Moon, Users, Volume2, VolumeX } from 'lucide-react';
 import { useUser } from './UserPicker';
 import { useTheme } from './ThemeProvider';
 import { setPin, verifyPin, removePin } from '../lib/api';
+import { isSoundEnabled, setSoundEnabled } from '../lib/sounds';
 import PinInput from './PinInput';
 
 type PinView = 'idle' | 'set' | 'change-verify' | 'change-new' | 'remove-verify';
@@ -50,6 +51,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [soundOn, setSoundOn] = useState(isSoundEnabled);
 
   useEffect(() => {
     if (open) {
@@ -173,6 +175,12 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     }
   };
 
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOn(next);
+  };
+
   const pinValue = view === 'change-new' ? newPin : pin;
   const pinReady = view === 'change-new' ? newPin.length === 4 : pin.length === 4;
 
@@ -253,6 +261,48 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                       left: theme === 'light' ? '26px' : '2px',
                     }}
                   />
+                </button>
+              </div>
+            </div>
+
+            {/* Sound Section — answer tones only; spoken pronunciation is not affected */}
+            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-accent-muted flex items-center justify-center">
+                    {soundOn ? (
+                      <Volume2 size={18} className="text-accent" />
+                    ) : (
+                      <VolumeX size={18} className="text-accent" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">Sound</h3>
+                    <p className="text-xs text-text-muted">Answer sounds</p>
+                  </div>
+                </div>
+                {/* 44px-tall tap target; the visible track is the inner span, and the
+                    negative margin keeps the row its original height. */}
+                <button
+                  role="switch"
+                  aria-checked={soundOn}
+                  aria-label="Answer sounds"
+                  onClick={toggleSound}
+                  className="w-12 min-h-11 -my-2.5 flex items-center bg-transparent border-none p-0 cursor-pointer"
+                >
+                  <span
+                    className="relative block w-12 h-6 rounded-full transition-colors"
+                    style={{
+                      background: soundOn ? 'var(--color-accent)' : 'var(--color-surface-3)',
+                    }}
+                  >
+                    <span
+                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                      style={{
+                        left: soundOn ? '26px' : '2px',
+                      }}
+                    />
+                  </span>
                 </button>
               </div>
             </div>
