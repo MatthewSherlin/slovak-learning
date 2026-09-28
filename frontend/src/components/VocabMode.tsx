@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, X, Volume2, Flame } from 'lucide-react';
 import SessionHeader from './SessionHeader';
-import LoadingDots from './LoadingDots';
 import { submitVocabAnswer, endSession, getSession } from '../lib/api';
 import { renderInlineMd } from '../lib/mdlite';
 import { playCorrect, playIncorrect } from '../lib/sounds';
@@ -10,6 +9,7 @@ import { speakSlovak, cancelSpeech, useCanSpeakSlovak } from '../lib/speech';
 import { ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S } from '../lib/pacing';
 import type { Session, SessionFeedback, VocabExerciseData } from '../lib/types';
 import FeedbackView from './FeedbackView';
+import ResultsLoader from './ResultsLoader';
 
 interface VocabModeProps {
   session: Session;
@@ -163,10 +163,7 @@ function VocabModeInner({
               <a href="#/" style={{ fontSize: 12, color: '#6b7289' }}>Back to Home</a>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-24">
-              <LoadingDots text="Analyzing your results" />
-              <p className="text-[11px] mt-3" style={{ color: '#6b7289' }}>Generating detailed feedback...</p>
-            </div>
+            <ResultsLoader />
           )}
         </div>
       </div>

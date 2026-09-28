@@ -2,7 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import type { Session, SessionFeedback } from '../lib/types';
-import { renderInlineMd } from '../lib/mdlite';
+import { listItemFade } from '../lib/pacing';
+import {
+  conversationSummary,
+  grammarRows,
+  translationRows,
+  vocabRows,
+  type VocabOutcome,
+} from '../lib/results';
 
 interface FeedbackViewProps {
   session: Session;
@@ -43,6 +50,44 @@ function formatMode(mode: string): string {
   return mode.charAt(0).toUpperCase() + mode.slice(1);
 }
 
+const VOCAB_OUTCOME: Record<VocabOutcome, { label: string; color: string }> = {
+  first_try: { label: 'First try', color: '#5de4a5' },
+  retry: { label: 'On retry', color: '#f5c45e' },
+  missed: { label: 'Missed', color: '#f87171' },
+};
+
+const sectionStyle = {
+  borderRadius: 22,
+  background: '#151926',
+  border: '1px solid rgba(255,255,255,0.06)',
+  padding: 20,
+  marginBottom: 14,
+};
+
+const sectionTitleStyle = {
+  fontSize: 14,
+  fontWeight: 700,
+  margin: '0 0 14px 0',
+  color: '#eef1f8',
+};
+
+const rowStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 12,
+  padding: '12px 14px',
+  borderRadius: 14,
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid rgba(255,255,255,0.05)',
+};
+
+const rowStatusStyle = {
+  fontSize: 12,
+  fontWeight: 700,
+  flexShrink: 0,
+  fontVariantNumeric: 'tabular-nums' as const,
+};
+
 const RING_R = 58;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
 
@@ -50,10 +95,15 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
 
-  const score = feedback.overall_score;
-  const fillOffset = RING_CIRCUMFERENCE * (1 - score / 10);
-  const label = encouragement(score);
-  const message = encouragementMessage(score);
+  // Built from the lesson itself; text a model once wrote about it is ignored.
+  const ex = session.exercises;
+  const conversation = ex?.type === 'conversation' ? conversationSummary(ex, session.messages) : null;
+  const vocab = ex?.type === 'vocabulary' ? vocabRows(ex) : [];
+  const grammar = ex?.type === 'grammar' ? grammarRows(ex) : [];
+  const translation = ex?.type === 'translation' ? translationRows(ex) : [];
+  const score = conversation ? null : feedback.overall_score;
+  // A lesson from before exercises existed shows its score card alone.
+  const showBreakdown = !!ex && !conversation && feedback.scores.length > 0;
 
   return (
     <div className="min-h-dvh">
@@ -73,45 +123,96 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             border: '1px solid rgba(255,255,255,0.07)',
           }}
         >
-          {/* Animated ring */}
-          <div style={{ position: 'relative', width: 132, height: 132, margin: '0 auto 16px auto' }}>
-            <svg
-              viewBox="0 0 132 132"
-              style={{ width: 132, height: 132, transform: 'rotate(-90deg)', display: 'block' }}
-            >
-              <circle
-                cx="66" cy="66" r={RING_R}
-                fill="none"
-                stroke="rgba(255,255,255,0.07)"
-                strokeWidth="9"
-              />
-              <motion.circle
-                cx="66" cy="66" r={RING_R}
-                fill="none"
-                stroke="#5ea4f7"
-                strokeWidth="9"
-                strokeLinecap="round"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                initial={{ strokeDashoffset: RING_CIRCUMFERENCE }}
-                animate={{ strokeDashoffset: fillOffset }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.3 }}
-              />
-            </svg>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+          {score !== null && (
+            <>
+              {/* Animated ring */}
+              <div style={{ position: 'relative', width: 132, height: 132, margin: '0 auto 16px auto' }}>
+                <svg
+                  viewBox="0 0 132 132"
+                  style={{ width: 132, height: 132, transform: 'rotate(-90deg)', display: 'block' }}
+                >
+                  <circle
+                    cx="66" cy="66" r={RING_R}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.07)"
+                    strokeWidth="9"
+                  />
+                  <motion.circle
+                    cx="66" cy="66" r={RING_R}
+                    fill="none"
+                    stroke="#5ea4f7"
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                    strokeDasharray={RING_CIRCUMFERENCE}
+                    initial={{ strokeDashoffset: RING_CIRCUMFERENCE }}
+                    animate={{ strokeDashoffset: RING_CIRCUMFERENCE * (1 - score / 10) }}
+                    transition={reduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+                  />
+                </svg>
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    style={{
+                      fontSize: 38,
+                      fontWeight: 800,
+                      color: '#5ea4f7',
+                      fontVariantNumeric: 'tabular-nums',
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {score}
+                  </motion.span>
+                  <span style={{ fontSize: 11, color: '#6b7289', marginTop: 4 }}>out of 10</span>
+                </div>
+              </div>
+
+              {/* Encouragement label */}
+              <h2
+                style={{
+                  fontSize: 24,
+                  fontWeight: 800,
+                  margin: '0 0 6px 0',
+                  letterSpacing: '-0.02em',
+                  color: '#eef1f8',
+                }}
+              >
+                {encouragement(score)}
+              </h2>
+              <p
+                style={{
+                  fontSize: 13.5,
+                  color: '#6b7289',
+                  margin: '0 auto',
+                  maxWidth: 280,
+                  lineHeight: 1.55,
+                }}
+              >
+                {encouragementMessage(score)}
+              </p>
+            </>
+          )}
+
+          {/* Conversation: messages sent, in place of the ring */}
+          {conversation && (
+            <div style={{ margin: '0 auto 4px auto' }}>
               <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.2 }}
                 style={{
+                  display: 'block',
                   fontSize: 38,
                   fontWeight: 800,
                   color: '#5ea4f7',
@@ -120,35 +221,13 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                   lineHeight: 1,
                 }}
               >
-                {score}
+                {conversation.sent}
               </motion.span>
-              <span style={{ fontSize: 11, color: '#6b7289', marginTop: 4 }}>out of 10</span>
+              <span style={{ display: 'block', fontSize: 11, color: '#6b7289', marginTop: 4 }}>
+                of {conversation.max} messages sent
+              </span>
             </div>
-          </div>
-
-          {/* Encouragement label */}
-          <h2
-            style={{
-              fontSize: 24,
-              fontWeight: 800,
-              margin: '0 0 6px 0',
-              letterSpacing: '-0.02em',
-              color: '#eef1f8',
-            }}
-          >
-            {label}
-          </h2>
-          <p
-            style={{
-              fontSize: 13.5,
-              color: '#6b7289',
-              margin: '0 auto',
-              maxWidth: 280,
-              lineHeight: 1.55,
-            }}
-          >
-            {message}
-          </p>
+          )}
 
           {/* Mode / topic / difficulty chips */}
           <div
@@ -200,7 +279,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
         </motion.div>
 
         {/* Breakdown bars */}
-        {feedback.scores.length > 0 && (
+        {showBreakdown && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -290,265 +369,108 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
           </motion.div>
         )}
 
-        {/* Strengths & Improvements */}
-        {(feedback.strengths.length > 0 || feedback.improvements.length > 0) && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: feedback.strengths.length > 0 && feedback.improvements.length > 0
-                ? '1fr 1fr'
-                : '1fr',
-              gap: 12,
-              marginBottom: 14,
-            }}
-          >
-            {feedback.strengths.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                style={{
-                  borderRadius: 22,
-                  background: '#151926',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  padding: 18,
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: '#5de4a5',
-                    margin: '0 0 12px 0',
-                  }}
-                >
-                  What went well
-                </h3>
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {feedback.strengths.map((s, i) => (
-                    <li
-                      key={i}
-                      style={{
-                        fontSize: 12.5,
-                        color: '#a3aabe',
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 8,
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      <span style={{ color: '#5de4a5', flexShrink: 0, fontSize: 11, marginTop: 2 }}>+</span>
-                      <span>{renderInlineMd(s)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-            {feedback.improvements.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                style={{
-                  borderRadius: 22,
-                  background: '#151926',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  padding: 18,
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: '#f5c45e',
-                    margin: '0 0 12px 0',
-                  }}
-                >
-                  Where to improve
-                </h3>
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {feedback.improvements.map((s, i) => (
-                    <li
-                      key={i}
-                      style={{
-                        fontSize: 12.5,
-                        color: '#a3aabe',
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 8,
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      <span style={{ color: '#f5c45e', flexShrink: 0, fontSize: 11, marginTop: 2 }}>*</span>
-                      <span>{renderInlineMd(s)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-          </div>
-        )}
-
-        {/* New words to keep */}
-        {feedback.vocabulary_learned.length > 0 && (
+        {/* Vocabulary: each word and how it went */}
+        {vocab.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            style={{
-              borderRadius: 22,
-              background: '#151926',
-              border: '1px solid rgba(255,255,255,0.06)',
-              padding: 20,
-              marginBottom: 14,
-            }}
+            transition={{ delay: 0.15 }}
+            style={sectionStyle}
           >
-            <h3
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                margin: '0 0 14px 0',
-                color: '#eef1f8',
-              }}
-            >
-              New words to keep
-            </h3>
+            <h3 style={sectionTitleStyle}>Your answers</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {feedback.vocabulary_learned.map((v, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '12px 14px',
-                    borderRadius: 14,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <span
-                      style={{ fontSize: 14, fontWeight: 700, color: '#5de4a5' }}
-                    >
-                      {v.slovak}
-                    </span>
-                    <span
-                      style={{ fontSize: 13, color: '#a3aabe', marginLeft: 10 }}
-                    >
-                      {v.english}
-                    </span>
-                    {v.example && (
-                      <p
-                        style={{
-                          fontSize: 11,
-                          color: '#6b7289',
-                          fontStyle: 'italic',
-                          margin: '4px 0 0 0',
-                        }}
-                      >
-                        "{v.example}"
-                      </p>
-                    )}
+              {vocab.map((row, i) => (
+                <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#5de4a5' }}>{row.slovak}</span>
+                    <span style={{ fontSize: 13, color: '#a3aabe', marginLeft: 10 }}>{row.english}</span>
                   </div>
-                </div>
+                  <span style={{ ...rowStatusStyle, color: VOCAB_OUTCOME[row.outcome].color }}>
+                    {VOCAB_OUTCOME[row.outcome].label}
+                  </span>
+                </motion.div>
               ))}
             </div>
           </motion.div>
         )}
 
-        {/* Grammar notes */}
-        {feedback.grammar_notes.length > 0 && (
+        {/* Grammar: each sentence, what was typed, right or wrong */}
+        {grammar.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.28 }}
-            style={{
-              borderRadius: 22,
-              background: '#151926',
-              border: '1px solid rgba(255,255,255,0.06)',
-              padding: 20,
-              marginBottom: 14,
-            }}
+            transition={{ delay: 0.15 }}
+            style={sectionStyle}
           >
-            <h3
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                margin: '0 0 12px 0',
-                color: '#eef1f8',
-              }}
-            >
-              Grammar notes
-            </h3>
-            <ul
-              style={{
-                margin: 0,
-                padding: 0,
-                listStyle: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-              }}
-            >
-              {feedback.grammar_notes.map((note, i) => (
-                <li
-                  key={i}
-                  style={{
-                    fontSize: 12.5,
-                    color: '#a3aabe',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 8,
-                    lineHeight: 1.55,
-                  }}
-                >
-                  <span style={{ color: '#a78bfa', flexShrink: 0, fontSize: 11, marginTop: 2 }}>*</span>
-                  <span>{renderInlineMd(note)}</span>
-                </li>
+            <h3 style={sectionTitleStyle}>Your answers</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {grammar.map((row, i) => (
+                <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#eef1f8', margin: 0, lineHeight: 1.45 }}>
+                      {row.sentence}
+                    </p>
+                    <p style={{ fontSize: 12.5, color: '#a3aabe', margin: '4px 0 0 0' }}>
+                      You typed: {row.typed}
+                    </p>
+                  </div>
+                  <span style={{ ...rowStatusStyle, color: row.right ? '#5de4a5' : '#f87171' }}>
+                    {row.right ? 'Right' : 'Wrong'}
+                  </span>
+                </motion.div>
               ))}
-            </ul>
+            </div>
           </motion.div>
         )}
 
-        {/* Sample answer */}
-        {feedback.sample_answer && (
+        {/* Translation: each sentence reached, with its score */}
+        {translation.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            style={{
-              borderRadius: 22,
-              background: '#151926',
-              border: '1px solid rgba(255,255,255,0.06)',
-              padding: 20,
-              marginBottom: 14,
-            }}
+            transition={{ delay: 0.15 }}
+            style={sectionStyle}
           >
-            <h3
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                margin: '0 0 12px 0',
-                color: '#eef1f8',
-              }}
-            >
-              Example strong answer
-            </h3>
-            <p
-              style={{
-                fontSize: 13,
-                color: '#a3aabe',
-                lineHeight: 1.6,
-                margin: 0,
-                padding: '14px 16px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.05)',
-              }}
-            >
-              {renderInlineMd(feedback.sample_answer)}
-            </p>
+            <h3 style={sectionTitleStyle}>Your answers</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {translation.map((row, i) => (
+                <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#eef1f8', margin: 0, lineHeight: 1.45 }}>
+                      {row.source}
+                    </p>
+                    <p style={{ fontSize: 12.5, color: '#a3aabe', margin: '4px 0 0 0', lineHeight: 1.45 }}>
+                      You typed: {row.typed}
+                    </p>
+                    <p style={{ fontSize: 12.5, color: '#6b7289', margin: '2px 0 0 0', lineHeight: 1.45 }}>
+                      Model answer: {row.modelAnswer}
+                    </p>
+                  </div>
+                  <span style={{ ...rowStatusStyle, color: scoreColor(row.score) }}>
+                    {row.score}/10
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Conversation: the tutor's corrections */}
+        {conversation && conversation.corrections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            style={sectionStyle}
+          >
+            <h3 style={sectionTitleStyle}>Corrections</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {conversation.corrections.map((text, i) => (
+                <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
+                  <span style={{ fontSize: 13, color: '#a3aabe', lineHeight: 1.55 }}>{text}</span>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         )}
 

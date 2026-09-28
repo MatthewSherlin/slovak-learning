@@ -29,6 +29,8 @@ vi.mock('framer-motion', async () => {
   };
 });
 
+const MEMO = '\u{1F4DD}';
+
 const baseSession: Session = {
   id: 's1',
   user_id: 'u1',
@@ -39,10 +41,27 @@ const baseSession: Session = {
   completed: true,
   created_at: '2026-07-16T10:00:00Z',
   feedback: null,
+  exercises: {
+    type: 'vocabulary',
+    questions: [
+      { word: 'chlieb', direction: 'sk-en', choices: ['bread', 'milk', 'meat', 'fish'], correctIndex: 0, explanation: '' },
+      { word: 'water', direction: 'en-sk', choices: ['mlieko', 'voda', 'pivo', 'čaj'], correctIndex: 1, explanation: '' },
+      { word: 'mäso', direction: 'sk-en', choices: ['fish', 'meat', 'milk', 'pork'], correctIndex: 1, explanation: '' },
+      { word: 'syr', direction: 'sk-en', choices: ['cheese', 'milk', 'meat', 'fish'], correctIndex: 0, explanation: '' },
+    ],
+    currentIndex: 4,
+    answers: [0, 1, 1, null],
+    credits: [1, 0.5, 0, null],
+    retryQueue: [],
+    phase: 'complete',
+  },
 };
 
+// A lesson from before exercises existed.
+const legacySession: Session = { ...baseSession, exercises: undefined };
+
 const makeFeedback = (
-  overall_score: number,
+  overall_score: number | null,
   scores: SessionFeedback['scores'] = [],
 ): SessionFeedback => ({
   overall_score,
@@ -53,6 +72,76 @@ const makeFeedback = (
   vocabulary_learned: [],
   grammar_notes: [],
 });
+
+// What the backend sent before this change: text written by a model.
+const olderFeedback = (overall_score: number): SessionFeedback => ({
+  ...makeFeedback(overall_score),
+  strengths: ['Great recall of food words'],
+  improvements: ['Practise the accusative'],
+  sample_answer: 'Chcem chlieb, prosím.',
+  vocabulary_learned: [{ slovak: 'ďakujem', english: 'thank you', example: 'Ďakujem pekne.' }],
+  grammar_notes: ['Accusative after chcieť'],
+});
+
+const grammarSession: Session = {
+  ...baseSession,
+  mode: 'grammar',
+  exercises: {
+    type: 'grammar',
+    lesson: { concept: 'Accusative', explanation: '', examples: [] },
+    exercises: [
+      { sentence: 'Vidím ____.', blank: 'dom', explanation: '' },
+      { sentence: 'Pijem ____ každý deň.', blank: 'kávu', explanation: '' },
+      { sentence: 'Mám ____.', blank: 'knihu', explanation: '' },
+      { sentence: 'Čítam ____.', blank: 'noviny', explanation: '' },
+    ],
+    currentIndex: 3,
+    answers: ['dom', 'kavu', 'knihy', null],
+    correct: [true, true, false, null],
+    credits: [1, 1, 0, null],
+    tiers: ['exact', 'accent', 'wrong', null],
+    phase: 'complete',
+  },
+};
+
+const translationSession: Session = {
+  ...baseSession,
+  mode: 'translation',
+  exercises: {
+    type: 'translation',
+    exercises: [
+      { kind: 'translate', source: 'I want bread', direction: 'en-sk', modelAnswer: 'Chcem chlieb', keyPoints: [] },
+      { kind: 'translate', source: 'Water, please', direction: 'en-sk', modelAnswer: 'Vodu, prosím', keyPoints: [] },
+      { kind: 'translate', source: 'Good night', direction: 'en-sk', modelAnswer: 'Dobrú noc', keyPoints: [] },
+    ],
+    currentIndex: 2,
+    answers: [
+      { userAnswer: 'Chcem chlieb', score: 10, feedback: '', tier: 'exact' },
+      { userAnswer: 'Voda prosim', score: 6, feedback: 'Use the accusative.' },
+      null,
+    ],
+    phase: 'exercises',
+  },
+};
+
+const conversationSession: Session = {
+  ...baseSession,
+  mode: 'conversation',
+  topic: 'shopping',
+  messages: [
+    { role: 'tutor', content: 'Dobrý deň! Čo si želáte?' },
+    { role: 'student', content: 'Chcem kúpiť chlieb.' },
+    { role: 'tutor', content: `Nech sa páči.\n${MEMO} chcem kupit chleba → chcem kúpiť chlieb` },
+    { role: 'student', content: 'Ďakujem.' },
+    { role: 'system', content: `${MEMO} not a tutor line` },
+  ],
+  exercises: {
+    type: 'conversation',
+    exchangeCount: 2,
+    maxExchanges: 10,
+    phase: 'active',
+  },
+};
 
 describe('FeedbackView', () => {
   describe('category breakdown bars', () => {
@@ -120,17 +209,128 @@ describe('FeedbackView', () => {
     });
   });
 
-  describe('vocabulary learned', () => {
-    it('renders vocab entries when present', () => {
-      const feedback: SessionFeedback = {
-        ...makeFeedback(8),
-        vocabulary_learned: [
-          { slovak: 'ďakujem', english: 'thank you', example: null },
-        ],
+  describe('vocabulary answers', () => {
+    it('shows each answered word with its meaning and how the first attempt went', () => {
+      render(<FeedbackView session={baseSession} feedback={makeFeedback(5)} />);
+      expect(screen.getByText('Your answers')).toBeTruthy();
+      expect(screen.getByText('chlieb')).toBeTruthy();
+      expect(screen.getByText('bread')).toBeTruthy();
+      expect(screen.getByText('voda')).toBeTruthy();
+      expect(screen.getByText('water')).toBeTruthy();
+      expect(screen.getByText('mäso')).toBeTruthy();
+      expect(screen.getByText('First try')).toBeTruthy();
+      expect(screen.getByText('On retry')).toBeTruthy();
+      expect(screen.getByText('Missed')).toBeTruthy();
+    });
+
+    it('leaves out a question that was never answered', () => {
+      render(<FeedbackView session={baseSession} feedback={makeFeedback(5)} />);
+      expect(screen.queryByText('syr')).toBeNull();
+    });
+  });
+
+  describe('grammar answers', () => {
+    it('shows each sentence completed, what was typed, and right or wrong', () => {
+      render(<FeedbackView session={grammarSession} feedback={makeFeedback(5)} />);
+      expect(screen.getByText('Vidím dom.')).toBeTruthy();
+      expect(screen.getByText('You typed: dom')).toBeTruthy();
+      expect(screen.getByText('Mám knihu.')).toBeTruthy();
+      expect(screen.getByText('You typed: knihy')).toBeTruthy();
+      expect(screen.getByText('Wrong')).toBeTruthy();
+      expect(screen.queryByText('Čítam noviny.')).toBeNull();
+    });
+
+    it('shows an answer right but for its accents as right, with nothing else', () => {
+      render(<FeedbackView session={grammarSession} feedback={makeFeedback(5)} />);
+      const row = screen.getByText('Pijem kávu každý deň.').closest('div')!.parentElement!;
+      expect(row.textContent).toBe('Pijem kávu každý deň.You typed: kavuRight');
+      expect(screen.getAllByText('Right')).toHaveLength(2);
+    });
+  });
+
+  describe('translation answers', () => {
+    it('shows source, what was typed, the model answer and the score of each answered exercise', () => {
+      render(<FeedbackView session={translationSession} feedback={makeFeedback(5.3)} />);
+      expect(screen.getByText('I want bread')).toBeTruthy();
+      expect(screen.getByText('You typed: Chcem chlieb')).toBeTruthy();
+      expect(screen.getByText('Model answer: Chcem chlieb')).toBeTruthy();
+      expect(screen.getByText('10/10')).toBeTruthy();
+      expect(screen.getByText('Water, please')).toBeTruthy();
+      expect(screen.getByText('You typed: Voda prosim')).toBeTruthy();
+      expect(screen.getByText('Model answer: Vodu, prosím')).toBeTruthy();
+      expect(screen.getByText('6/10')).toBeTruthy();
+    });
+
+    it('leaves out exercises the learner did not reach', () => {
+      render(<FeedbackView session={translationSession} feedback={makeFeedback(5.3)} />);
+      expect(screen.queryByText('Good night')).toBeNull();
+    });
+  });
+
+  describe('conversation', () => {
+    it('shows messages sent out of the maximum and the corrections, with no ring', () => {
+      render(<FeedbackView session={conversationSession} feedback={makeFeedback(null)} />);
+      expect(screen.queryByText('out of 10')).toBeNull();
+      expect(screen.queryByText('Breakdown')).toBeNull();
+      expect(screen.getByText('2')).toBeTruthy();
+      expect(screen.getByText('of 10 messages sent')).toBeTruthy();
+      expect(screen.getByText('Corrections')).toBeTruthy();
+      expect(screen.getByText('chcem kupit chleba → chcem kúpiť chlieb')).toBeTruthy();
+      expect(screen.queryByText(/not a tutor line/)).toBeNull();
+    });
+
+    it('shows no ring for an older conversation that has a stored score', () => {
+      const feedback = {
+        ...olderFeedback(7),
+        scores: [{ category: 'Fluency', score: 7, comment: 'ok' }],
       };
-      render(<FeedbackView session={baseSession} feedback={feedback} />);
-      expect(screen.getByText('ďakujem')).toBeTruthy();
-      expect(screen.getByText('thank you')).toBeTruthy();
+      render(<FeedbackView session={conversationSession} feedback={feedback} />);
+      expect(screen.queryByText('out of 10')).toBeNull();
+      expect(screen.queryByText('Fluency')).toBeNull();
+      expect(screen.getByText('of 10 messages sent')).toBeTruthy();
+    });
+
+    it('shows no corrections list when there are none', () => {
+      const session = { ...conversationSession, messages: conversationSession.messages.slice(0, 2) };
+      render(<FeedbackView session={session} feedback={makeFeedback(null)} />);
+      expect(screen.queryByText('Corrections')).toBeNull();
+      expect(screen.getByText('1')).toBeTruthy();
+    });
+  });
+
+  describe('a null score', () => {
+    it('renders without a ring or encouragement', () => {
+      render(<FeedbackView session={baseSession} feedback={makeFeedback(null)} />);
+      expect(screen.queryByText('out of 10')).toBeNull();
+      expect(screen.queryByText('Skús znova!')).toBeNull();
+      expect(screen.getByText('Vocabulary')).toBeTruthy();
+      expect(screen.getByText('chlieb')).toBeTruthy();
+    });
+  });
+
+  describe('older lessons', () => {
+    it('ignores the text a model wrote and shows the answers instead', () => {
+      render(<FeedbackView session={baseSession} feedback={olderFeedback(7)} />);
+      expect(screen.queryByText('Great recall of food words')).toBeNull();
+      expect(screen.queryByText('Practise the accusative')).toBeNull();
+      expect(screen.queryByText('Chcem chlieb, prosím.')).toBeNull();
+      expect(screen.queryByText('ďakujem')).toBeNull();
+      expect(screen.queryByText('Accusative after chcieť')).toBeNull();
+      expect(screen.getByText('chlieb')).toBeTruthy();
+      expect(screen.getByText('Dobre!')).toBeTruthy();
+    });
+
+    it('shows the score card alone for a lesson from before exercises existed', () => {
+      const feedback = {
+        ...olderFeedback(8),
+        scores: [{ category: 'Retention', score: 8, comment: 'Good' }],
+      };
+      render(<FeedbackView session={legacySession} feedback={feedback} />);
+      expect(screen.getByText('out of 10')).toBeTruthy();
+      expect(screen.getByText('Dobre!')).toBeTruthy();
+      expect(screen.queryByText('Breakdown')).toBeNull();
+      expect(screen.queryByText('Your answers')).toBeNull();
+      expect(screen.queryByText('Great recall of food words')).toBeNull();
     });
   });
 });

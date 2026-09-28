@@ -14,6 +14,7 @@ import ChatMessage from './ChatMessage';
 import SessionHeader from './SessionHeader';
 import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
+import ResultsLoader from './ResultsLoader';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { submitAnswer, requestHint, endSession, getSession } from '../lib/api';
@@ -130,8 +131,7 @@ function ConversationModeInner({
   };
 
   const handleEnd = async () => {
-    // Sync ref guard: feedback generation takes 10s+ and a second tap would
-    // start a duplicate job.
+    // Sync ref guard: a second tap must not end the lesson twice.
     if (endingRef.current || feedback) return;
     endingRef.current = true;
     setEnding(true);
@@ -326,20 +326,7 @@ function ConversationModeInner({
             </motion.div>
           )}
 
-          {ending && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center my-8"
-            >
-              <div className="bg-surface-2 border border-border rounded-2xl px-6 py-5 text-center max-w-sm">
-                <LoadingDots text="Analyzing your conversation" />
-                <p className="text-[11px] text-text-faint mt-3">
-                  Generating detailed feedback and vocabulary review...
-                </p>
-              </div>
-            </motion.div>
-          )}
+          {ending && <ResultsLoader />}
 
           {error && (
             <motion.div
@@ -384,7 +371,7 @@ function ConversationModeInner({
                   disabled={ending}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent to-sky-400 text-white font-medium text-[13px] cursor-pointer border-none shadow-md shadow-accent/20 transition-all disabled:opacity-60 disabled:cursor-wait"
                 >
-                  {ending ? 'Preparing feedback…' : (<>Get Feedback <ArrowRight size={13} /></>)}
+                  Get Feedback <ArrowRight size={13} />
                 </motion.button>
               </motion.div>
             ) : (

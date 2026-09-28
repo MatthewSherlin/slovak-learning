@@ -26,3 +26,6 @@ export function listItemFade(index: number, reduceMotion: boolean | null) {
       : { duration: SCREEN_FADE_S, delay: Math.min(index * LIST_STAGGER_S, LIST_STAGGER_MAX_S) },
   };
 }
+
+/** Ending a lesson usually returns at once; show a loader only if it takes longer. */
+export const RESULTS_LOADER_DELAY_MS = 400;

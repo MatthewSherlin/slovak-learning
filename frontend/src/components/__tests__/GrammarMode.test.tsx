@@ -558,4 +558,16 @@ describe('GrammarMode', () => {
     // Input should still be enabled (not locked in an in-flight state)
     expect((input as HTMLInputElement).disabled).toBe(false);
   });
+
+  it('ends the lesson with no analysis text, and the shared loader only if it takes a while', async () => {
+    const api = await import('../../lib/api');
+    vi.mocked(api.endSession).mockReturnValue(new Promise(() => {}));
+    const session = makeLastExerciseCompleteSession({ wasCorrect: true, tier: 'exact', userAnswer: 'hovorím' });
+    render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
+    expect(api.endSession).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/analy[sz]ing|generating|preparing feedback/i)).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    await waitFor(() => expect(screen.getAllByRole('progressbar')).toHaveLength(1));
+    expect(screen.queryByText(/analy[sz]ing|generating|preparing feedback/i)).toBeNull();
+  });
 });

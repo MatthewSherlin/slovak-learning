@@ -7,6 +7,7 @@ import SessionHeader from './SessionHeader';
 import ProgressBar from './ProgressBar';
 import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
+import ResultsLoader from './ResultsLoader';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import MarkdownTable from './MarkdownTable';
 import { renderInlineMd } from '../lib/mdlite';
@@ -336,10 +337,7 @@ function GrammarModeInner({
         <div className="flex-1 overflow-y-auto px-5 py-10" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 2.5rem)' }}>
           <div className="max-w-lg mx-auto text-center">
             {ending ? (
-              <div className="flex flex-col items-center justify-center py-24">
-                <LoadingDots text="Analyzing your results" />
-                <p className="text-[11px] text-text-faint mt-3">Generating detailed feedback...</p>
-              </div>
+              <ResultsLoader />
             ) : (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <div className="w-20 h-20 rounded-2xl bg-mode-grammar/12 flex items-center justify-center mx-auto mb-6">

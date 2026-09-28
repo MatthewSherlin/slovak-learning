@@ -303,4 +303,45 @@ describe('Stats', () => {
       expect(select.className).toMatch(/\btext-\[16px\]/);
     }
   });
+
+  // ── Lessons without a score (conversation) ─────────────────────────
+
+  describe('a completed lesson without a score', () => {
+    const conversation: SessionSummary = {
+      id: 'sess-convo',
+      user_id: 'user-1',
+      mode: 'conversation',
+      topic: 'cafe',
+      difficulty: 'beginner',
+      completed: true,
+      overall_score: null,
+      question_preview: 'Dobrý deň!',
+      created_at: new Date().toISOString(),
+    };
+
+    it('renders in the recent list and the stat cards on Overview', async () => {
+      vi.mocked(api.getDashboard).mockResolvedValue({
+        ...mockStats,
+        avg_score: null,
+        scores_by_mode: {},
+        recent_sessions: [conversation],
+      });
+      vi.mocked(api.getLeaderboard).mockResolvedValue(
+        mockLeaderboard.map((e) => ({ ...e, avg_score: null })),
+      );
+      renderStats('overview');
+      await waitFor(() => {
+        expect(screen.queryByText('Avg score')).not.toBeNull();
+      });
+      expect(screen.getAllByText('--').length).toBeGreaterThan(0);
+    });
+
+    it('renders in the History list', async () => {
+      vi.mocked(api.listSessions).mockResolvedValue([conversation]);
+      renderStats('history');
+      await waitFor(() => {
+        expect(screen.queryByText('--')).not.toBeNull();
+      });
+    });
+  });
 });

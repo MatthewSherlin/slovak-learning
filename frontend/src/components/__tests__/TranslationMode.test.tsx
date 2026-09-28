@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TranslationMode from '../TranslationMode';
 import * as api from '../../lib/api';
-import type { Session, TranslationExercise } from '../../lib/types';
+import type { Session, TranslationExercise, TranslationExerciseData } from '../../lib/types';
 
 vi.mock('../../lib/api', () => ({
   submitTranslation: vi.fn(),
@@ -151,5 +151,23 @@ describe('TranslationMode', () => {
     await waitFor(() => {
       expect(screen.queryByText('The tutor is out of AI credits.')).not.toBeNull();
     });
+  });
+
+  it('ends the lesson with no analysis text, and the shared loader only if it takes a while', async () => {
+    vi.mocked(api.endSession).mockReturnValue(new Promise(() => {}));
+    const session = makeSession({ source: 'I have water.', direction: 'en-sk', modelAnswer: 'Mám vodu.', keyPoints: [] });
+    const ex = session.exercises as TranslationExerciseData;
+    session.exercises = {
+      ...ex,
+      currentIndex: 1,
+      answers: [{ userAnswer: 'Mám vodu.', score: 10, feedback: '', tier: 'exact' }],
+      phase: 'complete',
+    };
+    render(<MemoryRouter><TranslationMode session={session} setSession={() => {}} /></MemoryRouter>);
+    expect(api.endSession).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/analy[sz]ing|generating|preparing feedback/i)).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    await waitFor(() => expect(screen.getAllByRole('progressbar')).toHaveLength(1));
+    expect(screen.queryByText(/analy[sz]ing|generating|preparing feedback/i)).toBeNull();
   });
 });

@@ -7,6 +7,7 @@ import SessionHeader from '../components/SessionHeader';
 import LoadingDots from '../components/LoadingDots';
 import BrandedLoader from '../components/BrandedLoader';
 import FeedbackView from '../components/FeedbackView';
+import ResultsLoader from '../components/ResultsLoader';
 import VocabMode from '../components/VocabMode';
 import GrammarMode from '../components/GrammarMode';
 import TranslationMode from '../components/TranslationMode';
@@ -120,14 +121,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
               </div>
             </motion.div>
           )}
-          {ending && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center my-8">
-              <div className="bg-surface-2 border border-border rounded-2xl px-6 py-5 text-center max-w-sm">
-                <LoadingDots text="Analyzing your responses" />
-                <p className="text-[11px] text-text-faint mt-3">Generating detailed feedback and vocabulary review...</p>
-              </div>
-            </motion.div>
-          )}
+          {ending && <ResultsLoader />}
           {error && (
             <div className="text-center my-4">
               <span className="text-[13px] text-danger bg-danger-muted px-4 py-2 rounded-lg inline-block">{error}</span>

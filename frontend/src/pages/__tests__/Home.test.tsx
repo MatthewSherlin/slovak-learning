@@ -357,4 +357,33 @@ describe('Home', () => {
     // But the progress fraction must NOT appear (no ring rendered)
     expect(screen.queryByText(/\d+\/\d+/)).toBeNull();
   });
+
+  it('renders when no lesson has a score yet', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(baseRecs());
+    vi.mocked(api.getDashboard).mockResolvedValue({
+      ...mockStats,
+      avg_score: null,
+      scores_by_mode: {},
+      recent_sessions: [{
+        id: 'sess-convo',
+        user_id: 'user-1',
+        mode: 'conversation',
+        topic: 'cafe',
+        difficulty: 'beginner',
+        completed: true,
+        overall_score: null,
+        question_preview: 'Dobrý deň!',
+        created_at: new Date().toISOString(),
+      }],
+    });
+    vi.mocked(api.getLeaderboard).mockResolvedValue(
+      mockLeaderboard.map((e) => ({ ...e, avg_score: null })),
+    );
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Master the cases')).not.toBeNull();
+    });
+  });
 });

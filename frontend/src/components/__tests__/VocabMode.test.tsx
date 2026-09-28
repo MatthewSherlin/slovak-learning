@@ -526,4 +526,14 @@ describe('VocabMode', () => {
       expect(screen.queryByText('ďakujem')).toBeNull();
     });
   });
+
+  it('ends the lesson with no analysis text, and the shared loader only if it takes a while', async () => {
+    vi.mocked(api.endSession).mockReturnValue(new Promise(() => {}));
+    render(<VocabMode session={makeVocabSession({ phase: 'complete', currentIndex: 3, answers: [0, 1, 2], credits: [1, 1, 1] })} setSession={noop} />);
+    expect(api.endSession).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/analy[sz]ing|generating|preparing feedback/i)).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    await waitFor(() => expect(screen.getAllByRole('progressbar')).toHaveLength(1));
+    expect(screen.queryByText(/analy[sz]ing|generating|preparing feedback/i)).toBeNull();
+  });
 });

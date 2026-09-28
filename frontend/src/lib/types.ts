@@ -32,13 +32,18 @@ export interface VocabEntry {
 }
 
 export interface SessionFeedback {
-  overall_score: number;
+  /** Null for conversation, which has no score. */
+  overall_score: number | null;
   scores: FeedbackScore[];
   strengths: string[];
   improvements: string[];
   sample_answer: string;
   vocabulary_learned: VocabEntry[];
   grammar_notes: string[];
+  /** Absent from feedback stored before results were counted from answers. */
+  items_answered?: number;
+  items_total?: number;
+  corrections?: string[];
 }
 
 // -- Vocabulary exercise types --
