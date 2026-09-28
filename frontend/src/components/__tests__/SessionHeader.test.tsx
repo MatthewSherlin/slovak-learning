@@ -57,6 +57,9 @@ describe('SessionHeader', () => {
     renderHeader(makeSession());
     const end = screen.getByRole('button', { name: 'End lesson and get feedback' });
     expect(end.textContent).toBe('End lesson');
+    // Stays on one line on a 360px phone; extras beside it shrink instead.
+    expect(end.className).toMatch(/\bwhitespace-nowrap\b/);
+    expect(end.className).toMatch(/\bshrink-0\b/);
   });
 
   it('gives the back arrow a 44 by 44 tap target', () => {

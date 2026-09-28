@@ -88,14 +88,15 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {children}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Extras give way first on a narrow phone, so the end button stays on one line */}
+          {children && <div className="flex items-center gap-3 min-w-0 overflow-hidden">{children}</div>}
           {!ending && (
             <button
               onClick={onEnd}
               disabled={!canEnd}
               aria-label="End lesson and get feedback"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              className="shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-surface-2 text-text-secondary border border-border hover:bg-danger-muted hover:text-danger hover:border-danger/20 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
             >
               <Square size={10} />
               End lesson
