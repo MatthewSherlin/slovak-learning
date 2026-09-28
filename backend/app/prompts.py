@@ -138,6 +138,7 @@ Rules:
 - Each sentence has exactly one blank, written as four underscores. The blank is one word or a short phrase.
 - blank holds the exact correct form.
 - hint names the rule or pattern, such as "this preposition takes the locative case". It never contains the answer or any of the choices.
+- When an exercise has choices, no two choices differ only in diacritics, capitalisation or punctuation.
 - Every form in a declension or conjugation table is one you are certain of.
 - The session focus in the user message decides the vocabulary domain and example themes. The lesson stays grammatically accurate whatever the focus.
 

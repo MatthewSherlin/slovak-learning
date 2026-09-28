@@ -213,3 +213,27 @@ def filter_translation_items(
             "keyPoints": [str(k) for k in (raw.get("keyPoints") or [])],
         })
     return kept
+
+
+def filter_grammar_exercises(exercises: list[dict]) -> list[dict]:
+    """Keep grammar exercises a learner can answer.
+
+    One blank per sentence, a non-empty answer, and when there are choices,
+    four that stay distinct once accents, case and punctuation are set aside,
+    exactly one of them the answer.
+    """
+    kept: list[dict] = []
+    for raw in exercises:
+        sentence = _BLANK.sub("____", (raw.get("sentence") or "").strip())
+        blank = (raw.get("blank") or "").strip()
+        if sentence.count("____") != 1 or not blank:
+            continue
+        choices = raw.get("choices") or []
+        if choices:
+            normalized = [normalize_answer(str(c)) for c in choices]
+            if len(choices) != 4 or len(set(normalized)) != 4:
+                continue
+            if normalized.count(normalize_answer(blank)) != 1:
+                continue
+        kept.append({**raw, "sentence": sentence})
+    return kept

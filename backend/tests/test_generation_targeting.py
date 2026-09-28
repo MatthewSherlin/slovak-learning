@@ -14,6 +14,16 @@ from app.sessions import _create_grammar_session, _create_vocab_session
 pytestmark = pytest.mark.asyncio
 
 
+def _grammar_exercise(i: int) -> dict:
+    return {
+        "sentence": f"Veta {i} ma ____ .",
+        "blank": f"tvar{i}",
+        "hint": None,
+        "explanation": "",
+        "choices": [f"tvar{i}", f"inyA{i}", f"inyB{i}", f"inyC{i}"],
+    }
+
+
 @pytest.fixture
 def capture_llm(monkeypatch):
     captured = {}
@@ -34,7 +44,7 @@ def capture_llm(monkeypatch):
         return {
             "questions": [_q(i) for i in range(10)],
             "lesson": {"concept": "X", "explanation": "", "examples": []},
-            "exercises": [],
+            "exercises": [_grammar_exercise(i) for i in range(8)],
         }
 
     monkeypatch.setattr(sessions_module, "ask_json", fake_ask_json)
@@ -279,3 +289,64 @@ async def test_conversation_with_no_choices_uses_default_focus(db, capture_messa
     opener = capture_messages["messages"][0]["content"]
     assert "everyday high-frequency" in opener
     assert "general" not in opener.lower().replace("get-to-know-you", "")
+
+
+@pytest.fixture
+def grammar_replies(monkeypatch):
+    """Queue-based fake: each call pops the next canned grammar reply."""
+    state: dict = {"prompts": [], "responses": []}
+
+    async def fake_ask_json(prompt, system_prompt=None, **kwargs):
+        state["prompts"].append(prompt)
+        return state["responses"].pop(0)
+
+    monkeypatch.setattr(sessions_module, "ask_json", fake_ask_json)
+    return state
+
+
+def _grammar_reply(concept: str, valid: int, broken: int = 0) -> dict:
+    exercises = [_grammar_exercise(i) for i in range(valid)]
+    exercises += [{**_grammar_exercise(100 + i), "sentence": "No blank here."} for i in range(broken)]
+    return {
+        "lesson": {"concept": concept, "explanation": "", "examples": []},
+        "exercises": exercises,
+    }
+
+
+async def test_grammar_drops_unusable_exercises(db, grammar_replies):
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    grammar_replies["responses"] = [_grammar_reply("A", valid=7, broken=3)]
+    session = await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "noun_cases"})
+    ex = session["exercises"]
+    assert len(ex["exercises"]) == 7
+    assert all(e["sentence"].count("____") == 1 for e in ex["exercises"])
+    assert len(ex["answers"]) == len(ex["correct"]) == len(ex["credits"]) == len(ex["tiers"]) == 7
+    assert len(grammar_replies["prompts"]) == 1
+
+
+async def test_grammar_regenerates_once_when_too_few_are_usable(db, grammar_replies):
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    grammar_replies["responses"] = [
+        _grammar_reply("First", valid=5, broken=4),
+        _grammar_reply("Second", valid=12),
+    ]
+    session = await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "noun_cases"})
+    assert len(grammar_replies["prompts"]) == 2
+    assert session["exercises"]["lesson"]["concept"] == "Second"
+    assert len(session["exercises"]["exercises"]) == 10
+
+
+async def test_grammar_two_short_replies_raise(db, grammar_replies):
+    from app.llm import LLMError
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    grammar_replies["responses"] = [
+        _grammar_reply("First", valid=5),
+        _grammar_reply("Second", valid=0, broken=8),
+    ]
+    with pytest.raises(LLMError):
+        await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "noun_cases"})
+    assert len(grammar_replies["prompts"]) == 2

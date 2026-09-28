@@ -51,3 +51,10 @@ def test_quote_escaping_workaround_is_gone():
 
 def test_error_correction_never_uses_accent_mistakes():
     assert "never a missing or wrong diacritic" in prompts.ERROR_CORRECTION_BATCH_PROMPT
+
+
+def test_grammar_choices_never_differ_only_in_accents():
+    assert (
+        "When an exercise has choices, no two choices differ only in diacritics, "
+        "capitalisation or punctuation."
+    ) in prompts.GRAMMAR_LESSON_PROMPT

@@ -7,6 +7,7 @@ from app.composition import (
     build_exclusion_list,
     build_focus_block,
     build_vocab_plan,
+    filter_grammar_exercises,
     filter_new_questions,
     filter_translation_items,
     has_non_latin_letters,
@@ -276,3 +277,50 @@ class TestFilterTranslationItems:
 
     def test_translate_still_drops_a_missing_direction(self):
         assert filter_translation_items([_item(direction=None)], "translate", None, []) == []
+
+
+def _gx(**over) -> dict:
+    ex = {
+        "sentence": "Mam ____ .", "blank": "vodu", "hint": None, "explanation": "",
+        "choices": ["vodu", "voda", "vode", "vodou"],
+    }
+    ex.update(over)
+    return ex
+
+
+class TestFilterGrammarExercises:
+    def test_keeps_a_good_exercise(self):
+        assert filter_grammar_exercises([_gx()]) == [_gx()]
+
+    def test_keeps_a_typed_exercise_without_choices(self):
+        assert len(filter_grammar_exercises([_gx(choices=None), _gx(choices=[])])) == 2
+
+    def test_normalises_a_long_blank(self):
+        kept = filter_grammar_exercises([_gx(sentence="Mam ________ .")])
+        assert kept[0]["sentence"] == "Mam ____ ."
+
+    def test_drops_a_sentence_without_a_blank(self):
+        assert filter_grammar_exercises([_gx(sentence="Mam vodu.")]) == []
+
+    def test_drops_a_sentence_with_two_blanks(self):
+        assert filter_grammar_exercises([_gx(sentence="____ mam ____.")]) == []
+
+    def test_drops_an_empty_blank(self):
+        assert filter_grammar_exercises([_gx(blank=""), _gx(blank="  ")]) == []
+
+    def test_drops_choices_that_are_not_four(self):
+        assert filter_grammar_exercises([_gx(choices=["vodu", "voda", "vode"])]) == []
+
+    def test_drops_duplicate_choices(self):
+        assert filter_grammar_exercises([_gx(choices=["vodu", "Vodu!", "vode", "vodou"])]) == []
+
+    def test_drops_a_choice_pair_differing_only_by_an_accent(self):
+        choices = ["vodu", "v\u00f4du", "vode", "vodou"]
+        assert filter_grammar_exercises([_gx(choices=choices)]) == []
+
+    def test_drops_choices_that_omit_the_answer(self):
+        assert filter_grammar_exercises([_gx(choices=["voda", "vode", "vodou", "vody"])]) == []
+
+    def test_answer_matches_a_choice_whatever_its_accents(self):
+        kept = filter_grammar_exercises([_gx(blank="V\u00f4DU", choices=["vodu", "voda", "vode", "vodou"])])
+        assert len(kept) == 1

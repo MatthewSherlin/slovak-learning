@@ -27,6 +27,7 @@ from .composition import (
     build_exclusion_list,
     build_focus_block,
     build_vocab_plan,
+    filter_grammar_exercises,
     filter_translation_items,
     normalize_word,
     partition_seen_questions,
@@ -448,14 +449,26 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
             f"request a different one."
         )
 
-    data = await ask_json(
-        prompt, GRAMMAR_LESSON_PROMPT,
-        schema=GRAMMAR_LESSON_SCHEMA, schema_name="grammar_lesson",
-        effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
-    )
+    # Exercises belong to their lesson, so too few usable ones means the
+    # whole lesson is generated again, once.
+    for attempt in range(2):
+        data = await ask_json(
+            prompt, GRAMMAR_LESSON_PROMPT,
+            schema=GRAMMAR_LESSON_SCHEMA, schema_name="grammar_lesson",
+            effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
+        )
+        exercise_list = filter_grammar_exercises(data.get("exercises", []))
+        if len(exercise_list) >= 6:
+            break
+        log.warning(
+            "Grammar lesson had %d usable exercises (attempt %d) for user %s",
+            len(exercise_list), attempt + 1, req["user_id"],
+        )
+    else:
+        raise LLMError("Grammar generation produced too few valid exercises")
+    exercise_list = exercise_list[:10]
 
     lesson = data.get("lesson", {})
-    exercise_list = data.get("exercises", [])
 
     exercises = {
         "type": "grammar",
