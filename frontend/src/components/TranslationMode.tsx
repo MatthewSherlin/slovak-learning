@@ -18,8 +18,16 @@ interface TranslationModeProps {
 }
 
 export default function TranslationMode({ session, setSession }: TranslationModeProps) {
+  // Narrow in a wrapper so every hook in the inner component runs unconditionally.
   if (session.exercises?.type !== 'translation') return null;
-  const ex = session.exercises;
+  return <TranslationModeInner session={session} ex={session.exercises} setSession={setSession} />;
+}
+
+function TranslationModeInner({
+  session,
+  ex,
+  setSession,
+}: TranslationModeProps & { ex: TranslationExerciseData }) {
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [submitting, setSubmitting] = useState(false);

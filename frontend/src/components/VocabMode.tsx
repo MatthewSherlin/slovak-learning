@@ -6,7 +6,7 @@ import LoadingDots from './LoadingDots';
 import { submitVocabAnswer, endSession, getSession } from '../lib/api';
 import { renderInlineMd } from '../lib/mdlite';
 import { playCorrect, playIncorrect } from '../lib/sounds';
-import type { Session, SessionFeedback } from '../lib/types';
+import type { Session, SessionFeedback, VocabExerciseData } from '../lib/types';
 import FeedbackView from './FeedbackView';
 
 interface VocabModeProps {
@@ -15,10 +15,16 @@ interface VocabModeProps {
 }
 
 export default function VocabMode({ session, setSession }: VocabModeProps) {
-  // Bug fix #8: use discriminant narrowing instead of bare `as` cast
+  // Narrow in a wrapper so every hook in the inner component runs unconditionally.
   if (session.exercises?.type !== 'vocabulary') return null;
-  const ex = session.exercises;
+  return <VocabModeInner session={session} ex={session.exercises} setSession={setSession} />;
+}
 
+function VocabModeInner({
+  session,
+  ex,
+  setSession,
+}: VocabModeProps & { ex: VocabExerciseData }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [ending, setEnding] = useState(false);

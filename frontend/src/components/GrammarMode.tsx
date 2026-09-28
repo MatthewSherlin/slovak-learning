@@ -12,7 +12,7 @@ import MarkdownTable from './MarkdownTable';
 import { renderInlineMd } from '../lib/mdlite';
 import { advanceGrammarPhase, submitGrammarAnswer, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
-import type { Session, SessionFeedback } from '../lib/types';
+import type { Session, SessionFeedback, GrammarExerciseData } from '../lib/types';
 
 interface GrammarModeProps {
   session: Session;
@@ -44,10 +44,16 @@ function SentenceWithBlank({
 }
 
 export default function GrammarMode({ session, setSession }: GrammarModeProps) {
-  // Discriminant narrowing — no bare `as` cast
+  // Narrow in a wrapper so every hook in the inner component runs unconditionally.
   if (session.exercises?.type !== 'grammar') return null;
-  const ex = session.exercises;
+  return <GrammarModeInner session={session} ex={session.exercises} setSession={setSession} />;
+}
 
+function GrammarModeInner({
+  session,
+  ex,
+  setSession,
+}: GrammarModeProps & { ex: GrammarExerciseData }) {
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [showResult, setShowResult] = useState(false);

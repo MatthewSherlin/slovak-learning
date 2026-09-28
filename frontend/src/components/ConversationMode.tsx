@@ -16,7 +16,7 @@ import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitAnswer, requestHint, endSession, getSession } from '../lib/api';
-import type { Session, SessionFeedback, Difficulty } from '../lib/types';
+import type { Session, SessionFeedback, Difficulty, ConversationExerciseData } from '../lib/types';
 
 interface ConversationModeProps {
   session: Session;
@@ -50,8 +50,16 @@ function parseCorrections(messages: { role: string; content: string }[]): Correc
 }
 
 export default function ConversationMode({ session, setSession }: ConversationModeProps) {
+  // Narrow in a wrapper so every hook in the inner component runs unconditionally.
   if (session.exercises?.type !== 'conversation') return null;
-  const ex = session.exercises;
+  return <ConversationModeInner session={session} ex={session.exercises} setSession={setSession} />;
+}
+
+function ConversationModeInner({
+  session,
+  ex,
+  setSession,
+}: ConversationModeProps & { ex: ConversationExerciseData }) {
   const [input, setInput] = useState('');
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
