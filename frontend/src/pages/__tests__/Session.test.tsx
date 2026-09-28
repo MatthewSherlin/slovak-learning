@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import Session from '../Session';
 import type { Session as SessionType } from '../../lib/types';
 
@@ -132,6 +132,44 @@ describe('Session', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('Not your session')).toBeTruthy();
+  });
+
+  it('shows the loader, never the previous lesson, while a different id is being fetched', async () => {
+    let resolveB!: (s: SessionType) => void;
+    vi.mocked(api.getSession).mockImplementation((sid: unknown) =>
+      sid === 's-b'
+        ? new Promise((resolve) => { resolveB = resolve; })
+        : Promise.resolve({ ...makeLegacySession(), id: 's-a', topic: 'topic_a' }),
+    );
+
+    function Harness() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <button onClick={() => navigate('/session/s-b')}>go to b</button>
+          <Session />
+        </>
+      );
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/session/s-a']}>
+        <Routes>
+          <Route path="/session/:id" element={<Harness />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('topic a');
+
+    fireEvent.click(screen.getByText('go to b'));
+
+    expect(screen.getByRole('heading', { name: 'Načítavam lekciu…' })).toBeTruthy();
+    expect(screen.queryByText('topic a')).toBeNull();
+
+    resolveB({ ...makeLegacySession(), id: 's-b', topic: 'topic_b' });
+    await screen.findByText('topic b');
+    expect(screen.queryByText('topic a')).toBeNull();
   });
 
   it('shows the branded loader while it fetches the session', () => {

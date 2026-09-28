@@ -272,7 +272,9 @@ function SessionPage() {
     );
   }
 
-  if (!session) {
+  // While a different id is being fetched, the old lesson is still in state:
+  // keep showing the loader rather than a stale, still-tappable lesson.
+  if (!session || session.id !== id) {
     return <BrandedLoader heading="Načítavam lekciu…" subCopy="Loading your lesson" hint={null} />;
   }
 
@@ -298,22 +300,25 @@ function SessionPage() {
   // Feedback already shown? Let FeedbackView handle it for legacy sessions
   // For new sessions, the mode components handle their own feedback display
   if (session.feedback && !session.exercises) {
-    return <FeedbackView session={session} feedback={session.feedback} />;
+    return <FeedbackView key={session.id} session={session} feedback={session.feedback} />;
   }
 
   // Route to mode-specific component based on exercises type
   const mode = session.exercises?.type ?? null;
 
+  // key={session.id}: opening a different lesson while one is on screen must
+  // rebuild the mode screen from scratch, not reuse the previous lesson's
+  // local state (answers, streak, timers).
   switch (mode) {
     case 'vocabulary':
-      return <VocabMode session={session} setSession={setSession} />;
+      return <VocabMode key={session.id} session={session} setSession={setSession} />;
     case 'grammar':
-      return <GrammarMode session={session} setSession={setSession} />;
+      return <GrammarMode key={session.id} session={session} setSession={setSession} />;
     case 'translation':
-      return <TranslationMode session={session} setSession={setSession} />;
+      return <TranslationMode key={session.id} session={session} setSession={setSession} />;
     case 'conversation':
-      return <ConversationMode session={session} setSession={setSession} />;
+      return <ConversationMode key={session.id} session={session} setSession={setSession} />;
     default:
-      return <LegacyChatMode session={session} setSession={setSession} />;
+      return <LegacyChatMode key={session.id} session={session} setSession={setSession} />;
   }
 }
