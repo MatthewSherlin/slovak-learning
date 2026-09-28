@@ -91,3 +91,29 @@ describe('SettingsModal — Sound', () => {
     expect(screen.getByRole('switch', { name: 'Answer sounds' }).className).toMatch(/\bmin-h-11\b/);
   });
 });
+
+describe('SettingsModal — tap targets', () => {
+  let uninstallStorage = () => {};
+
+  beforeEach(() => {
+    uninstallStorage = installMemoryStorage().uninstall;
+  });
+
+  afterEach(() => {
+    uninstallStorage();
+  });
+
+  it('gives the close button and theme toggle a 44px tap target', () => {
+    render(<SettingsModal open onClose={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Switch to light mode' }).className).toMatch(/\bmin-h-11\b/);
+    // The close button has no accessible name; find it by its icon's parent.
+    const closeButton = document.querySelector('button.min-w-11.min-h-11');
+    expect(closeButton).toBeTruthy();
+  });
+
+  it('gives the Switch and Set a PIN buttons the tap-target class', () => {
+    render(<SettingsModal open onClose={() => {}} />);
+    expect(screen.getByText('Switch').closest('button')!.className).toMatch(/\btap-target\b/);
+    expect(screen.getByText('Set a PIN').closest('button')!.className).toMatch(/\btap-target\b/);
+  });
+});

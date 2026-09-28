@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import SessionHeader from '../SessionHeader';
 import type { Session } from '../../lib/types';
@@ -75,5 +75,12 @@ describe('SessionHeader', () => {
     const back = screen.getByTitle('Leave session');
     expect(back.className).toMatch(/\bw-11\b/);
     expect(back.className).toMatch(/\bh-11\b/);
+  });
+
+  it('gives Stay and Leave in the leave popover the tap-target class', () => {
+    renderHeader(makeSession());
+    fireEvent.click(screen.getByTitle('Leave session'));
+    expect(screen.getByText('Stay').className).toMatch(/\btap-target\b/);
+    expect(screen.getByText('Leave').className).toMatch(/\btap-target\b/);
   });
 });

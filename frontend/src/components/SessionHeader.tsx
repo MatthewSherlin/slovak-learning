@@ -53,13 +53,13 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
                   <div className="flex gap-2">
                     <button
                       onClick={() => setConfirmOpen(false)}
-                      className="flex-1 px-3 py-2 rounded-lg bg-surface-2 text-text-secondary text-[12px] font-medium border-none cursor-pointer hover:bg-surface-3 transition-colors"
+                      className="tap-target flex-1 px-3 py-2 rounded-lg bg-surface-2 text-text-secondary text-[12px] font-medium border-none cursor-pointer hover:bg-surface-3 transition-colors"
                     >
                       Stay
                     </button>
                     <button
                       onClick={() => navigate('/')}
-                      className="flex-1 px-3 py-2 rounded-lg bg-danger-muted text-danger text-[12px] font-medium border-none cursor-pointer hover:bg-danger/20 transition-colors"
+                      className="tap-target flex-1 px-3 py-2 rounded-lg bg-danger-muted text-danger text-[12px] font-medium border-none cursor-pointer hover:bg-danger/20 transition-colors"
                     >
                       Leave
                     </button>

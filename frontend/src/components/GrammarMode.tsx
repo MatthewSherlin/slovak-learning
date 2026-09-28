@@ -516,7 +516,7 @@ function GrammarModeInner({
                 isMultipleChoice && !showHint ? (
                   <button
                     onClick={() => setShowHint(true)}
-                    className="flex items-center gap-1.5 text-[12px] text-text-faint hover:text-warning cursor-pointer bg-transparent border-none mb-4 transition-colors"
+                    className="tap-target flex items-center gap-1.5 text-[12px] text-text-faint hover:text-warning cursor-pointer bg-transparent border-none mb-4 transition-colors"
                   >
                     <Lightbulb size={13} />
                     <span>Show hint</span>

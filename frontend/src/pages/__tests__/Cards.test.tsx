@@ -272,6 +272,14 @@ describe('Cards — Binder tab', () => {
     });
   });
 
+  it('gives the Shop, Binder and Friends tabs a 44px tap target', async () => {
+    renderCards();
+    for (const name of [/shop/i, /binder/i, /friends/i]) {
+      const tab = await screen.findByRole('button', { name });
+      expect(tab.className).toMatch(/\btap-target\b/);
+    }
+  });
+
   it('shows unowned card slots as empty placeholders with card numbers', async () => {
     renderCards();
 

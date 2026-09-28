@@ -212,9 +212,12 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                   Manage your account
                 </p>
               </div>
+              {/* 44px tap target, matching the sound switch below; the negative
+                  margin cancels the growth so the row's layout is unchanged
+                  and the visible square (from the padding below) stays put. */}
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors"
+                className="min-w-11 min-h-11 -m-[5px] p-2 flex items-center justify-center rounded-lg text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors"
               >
                 <X size={18} />
               </button>
@@ -247,20 +250,27 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                     </p>
                   </div>
                 </div>
+                {/* 44px-tall tap target, matching the sound switch below; the
+                    visible track is the inner span, and the negative margin
+                    keeps the row its original height. */}
                 <button
                   onClick={toggleTheme}
                   aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  className="relative w-12 h-6 rounded-full transition-colors border-none cursor-pointer"
-                  style={{
-                    background: theme === 'light' ? 'var(--color-accent)' : 'var(--color-surface-3)',
-                  }}
+                  className="relative w-12 min-h-11 -my-2.5 flex items-center bg-transparent border-none p-0 cursor-pointer"
                 >
                   <span
-                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                    className="relative block w-12 h-6 rounded-full transition-colors"
                     style={{
-                      left: theme === 'light' ? '26px' : '2px',
+                      background: theme === 'light' ? 'var(--color-accent)' : 'var(--color-surface-3)',
                     }}
-                  />
+                  >
+                    <span
+                      className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                      style={{
+                        left: theme === 'light' ? '26px' : '2px',
+                      }}
+                    />
+                  </span>
                 </button>
               </div>
             </div>
@@ -322,7 +332,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </div>
                 <button
                   onClick={() => { onClose(); setUser(null); }}
-                  className="px-4 py-2 rounded-xl bg-surface-3 text-text-primary text-sm font-medium border-none cursor-pointer hover:bg-surface-hover transition-colors"
+                  className="tap-target px-4 py-2 rounded-xl bg-surface-3 text-text-primary text-sm font-medium border-none cursor-pointer hover:bg-surface-hover transition-colors"
                 >
                   Switch
                 </button>
@@ -355,7 +365,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                     {!hasPin ? (
                       <button
                         onClick={() => { setView('set'); setPin_(''); }}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium border-none cursor-pointer hover:bg-accent-hover transition-colors"
+                        className="tap-target flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium border-none cursor-pointer hover:bg-accent-hover transition-colors"
                       >
                         <Lock size={15} />
                         Set a PIN

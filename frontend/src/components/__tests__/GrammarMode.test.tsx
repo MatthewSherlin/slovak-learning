@@ -408,6 +408,16 @@ describe('GrammarMode', () => {
     expect(primeSound).toHaveBeenCalled();
   });
 
+  it('gives the "Show hint" link a 44px tap target', () => {
+    const session = makeFirstExerciseSession({
+      exercises: [
+        { sentence: 'Ja ____ slovensky.', blank: 'hovorím', explanation: '', hint: 'Present tense, I-form', choices: ['hovorím', 'hovoríš', 'hovorí', 'hovoríme'] },
+      ],
+    });
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
+    expect(screen.getByText('Show hint').closest('button')!.className).toMatch(/\btap-target\b/);
+  });
+
   it('turns off autocorrect on the Slovak answer box', () => {
     const session = makeFirstExerciseSession();
     render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);

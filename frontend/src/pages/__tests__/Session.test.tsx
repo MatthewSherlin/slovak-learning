@@ -59,6 +59,22 @@ describe('Session', () => {
     expect(box.className).toMatch(/\btext-\[16px\]/);
   });
 
+  it('gives the legacy chat hint and send buttons a 44px tap target', async () => {
+    vi.mocked(api.getSession).mockResolvedValue({ ...makeLegacySession(), messages: [] });
+    render(
+      <MemoryRouter initialEntries={['/session/s-legacy']}>
+        <Routes>
+          <Route path="/session/:id" element={<Session />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const hint = await screen.findByText('Hint');
+    expect(hint.closest('button')!.className).toMatch(/\btap-target\b/);
+    const box = screen.getByRole('textbox');
+    const send = box.parentElement!.parentElement!.querySelector('button:last-child')!;
+    expect(send.className).toMatch(/\btap-target\b/);
+  });
+
   it('labels the legacy chat end button "End lesson"', async () => {
     vi.mocked(api.getSession).mockResolvedValue(makeLegacySession());
     render(

@@ -666,7 +666,7 @@ export default function Cards() {
             key={id}
             role="button"
             onClick={() => setTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium cursor-pointer border-none transition-all ${
+            className={`tap-target flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium cursor-pointer border-none transition-all ${
               tab === id
                 ? 'bg-accent text-white shadow-sm'
                 : 'bg-transparent text-text-muted hover:text-text-secondary'

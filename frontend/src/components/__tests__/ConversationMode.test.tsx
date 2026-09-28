@@ -61,6 +61,32 @@ function makeSession(): Session {
 }
 
 describe('ConversationMode', () => {
+  it('gives the hint and send buttons a 44px tap target', () => {
+    render(
+      <MemoryRouter>
+        <ConversationMode session={makeSession()} setSession={() => {}} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Hint').closest('button')!.className).toMatch(/\btap-target\b/);
+    const send = screen.getByRole('textbox').parentElement!.parentElement!.querySelector('button:last-child')!;
+    expect(send.className).toMatch(/\btap-target\b/);
+  });
+
+  it('gives the corrections toggle a 44px tap target', () => {
+    const session = {
+      ...makeSession(),
+      messages: [
+        { role: 'tutor' as const, content: '\u{1F4DD} chcem kupit → chcem kúpiť' },
+      ],
+    };
+    render(
+      <MemoryRouter>
+        <ConversationMode session={session} setSession={() => {}} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('1').closest('button')!.className).toMatch(/\btap-target\b/);
+  });
+
   it('uses a 16px font on the reply box so iOS does not zoom in', () => {
     render(
       <MemoryRouter>

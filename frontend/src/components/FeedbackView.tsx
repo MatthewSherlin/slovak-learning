@@ -127,7 +127,10 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
 
   return (
     <div className="min-h-dvh">
-      <div className="max-w-2xl mx-auto px-5 py-10">
+      <div
+        className="max-w-2xl mx-auto px-5 pb-10"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2.5rem)' }}
+      >
 
         {/* Score hero card */}
         <motion.div

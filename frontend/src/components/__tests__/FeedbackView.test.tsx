@@ -348,6 +348,15 @@ describe('FeedbackView', () => {
     });
   });
 
+  describe('safe area', () => {
+    it('adds the top safe-area inset to the page padding, since the route has no header', () => {
+      const { container } = render(<FeedbackView session={baseSession} feedback={makeFeedback(7)} />);
+      const page = container.querySelector('.px-5') as HTMLElement;
+      expect(page.style.paddingTop).toContain('env(safe-area-inset-top)');
+      expect(page.style.paddingTop).toContain('2.5rem');
+    });
+  });
+
   describe('a null score', () => {
     it('renders without a ring or encouragement', () => {
       render(<FeedbackView session={baseSession} feedback={makeFeedback(null)} />);

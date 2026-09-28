@@ -193,7 +193,7 @@ function ConversationModeInner({
               animate={{ scale: 1, opacity: 1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setCorrectionsOpen(!correctionsOpen)}
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/10 text-warning border border-warning/20 hover:border-warning/40 cursor-pointer transition-all"
+              className="tap-target flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/10 text-warning border border-warning/20 hover:border-warning/40 cursor-pointer transition-all"
             >
               <PenLine size={10} />
               <span className="tabular-nums">{corrections.length}</span>
@@ -409,7 +409,7 @@ function ConversationModeInner({
                     whileTap={{ scale: 0.95 }}
                     onClick={handleHint}
                     disabled={hintLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-warning-muted text-warning border border-warning/15 hover:border-warning/30 cursor-pointer disabled:opacity-40 transition-all duration-200"
+                    className="tap-target flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-warning-muted text-warning border border-warning/15 hover:border-warning/30 cursor-pointer disabled:opacity-40 transition-all duration-200"
                   >
                     <Lightbulb size={11} />
                     {hintLoading ? 'Getting hint...' : 'Hint'}
@@ -438,7 +438,7 @@ function ConversationModeInner({
                     whileTap={{ scale: 0.92 }}
                     onClick={handleSubmit}
                     disabled={!input.trim() || loading}
-                    className="shrink-0 w-10 h-10 rounded-xl bg-accent hover:bg-accent-hover text-white flex items-center justify-center cursor-pointer border-none disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-md shadow-accent/20"
+                    className="tap-target shrink-0 w-10 h-10 rounded-xl bg-accent hover:bg-accent-hover text-white flex items-center justify-center cursor-pointer border-none disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-md shadow-accent/20"
                   >
                     <Send size={15} />
                   </motion.button>

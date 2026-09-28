@@ -86,7 +86,7 @@ function TabSegments({
           key={t.id}
           onClick={() => onChange(t.id)}
           aria-label={t.label}
-          className={`flex-1 text-center py-[9px] rounded-[11px] text-[13px] font-medium cursor-pointer border-none transition-all ${
+          className={`tap-target flex-1 text-center py-[9px] rounded-[11px] text-[13px] font-medium cursor-pointer border-none transition-all ${
             active === t.id
               ? 'bg-accent text-white font-bold'
               : 'bg-transparent text-text-faint hover:text-text-muted'
@@ -533,7 +533,7 @@ function HistoryPanel() {
                   <button
                     onClick={(e) => handleDeleteRequest(session.id, e)}
                     aria-label="Delete session"
-                    className="tap-target opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
+                    className="tap-target opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
                   >
                     <Trash2 size={13} />
                   </button>

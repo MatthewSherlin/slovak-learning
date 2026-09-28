@@ -168,6 +168,16 @@ describe('Stats', () => {
     });
   });
 
+  it('gives the Overview, History and Friends tabs a 44px tap target', async () => {
+    renderStats('overview');
+    await waitFor(() => {
+      expect(screen.queryByText('XP race')).not.toBeNull();
+    });
+    for (const name of [/overview/i, /history/i, /friends/i]) {
+      expect(screen.getByRole('button', { name }).className).toMatch(/\btap-target\b/);
+    }
+  });
+
   // ── Overview panel ────────────────────────────────────────────────
 
   it('shows XP race bars in Overview with both user avatars', async () => {
@@ -230,6 +240,17 @@ describe('Stats', () => {
   });
 
   // ── History delete — bug fix #6 ───────────────────────────────────
+
+  it('hides the delete button until hover only on a device that has hover', async () => {
+    renderStats('history');
+    await waitFor(() => {
+      expect(screen.queryByText(/Animals/i)).not.toBeNull();
+    });
+    const deleteButton = screen.getAllByRole('button', { name: /delete session/i })[0];
+    // A touch screen (no hover) must not hide it behind a breakpoint rule.
+    expect(deleteButton.className).not.toMatch(/\bsm:opacity-0\b/);
+    expect(deleteButton.className).toMatch(/\[@media\(hover:hover\)\]:opacity-0/);
+  });
 
   it('keeps session in list when delete API call fails', async () => {
     vi.mocked(api.deleteSession).mockRejectedValue(new Error('Server error'));
