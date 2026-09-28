@@ -144,3 +144,36 @@ class TestLearningContextCombined:
         )
         assert "[Student's vocabulary progress]" not in context
         assert "session history]" in context
+
+
+class TestLearningContextLeavesOutStaleText:
+    async def test_no_general_label_and_no_improvement_text(self, db, sample_vocab_session):
+        uid = f"lc_{uuid.uuid4().hex[:8]}"
+        await db.execute(
+            "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, 'T', 'T', '#000')",
+            (uid,),
+        )
+        await db.commit()
+        await upsert_vocab_progress(db, uid, [
+            {"slovak": "chlieb", "english": "bread", "correct": True, "source_mode": "vocabulary"},
+        ])
+        session = {
+            **sample_vocab_session,
+            "id": f"test-lc-{uuid.uuid4().hex[:8]}",
+            "user_id": uid,
+            "topic": "general",
+            "feedback": {
+                **sample_vocab_session["feedback"],
+                "strengths": ["Quick recall"],
+                "improvements": ["Pay attention to diacritics on long vowels"],
+            },
+        }
+        await _seed_completed_session(db, session)
+
+        context = await _get_learning_context(db, uid, "vocabulary")
+        assert "[Recent vocabulary session history]" in context
+        assert "mixed practice" in context
+        assert "Strength: Quick recall" in context
+        assert "general" not in context.lower()
+        assert "diacritics" not in context.lower()
+        assert "To improve" not in context

@@ -45,7 +45,7 @@ from .prompts import (
     TRANSLATION_EVALUATE_PROMPT,
     VOCAB_BATCH_PROMPT,
 )
-from .questions import QUESTIONS, TOPICS
+from .questions import QUESTIONS
 from .scoring import compute_category_scores, compute_session_score, grade_answer, normalize_answer
 from .schemas import (
     FEEDBACK_SCHEMA,
@@ -127,7 +127,7 @@ async def _get_learning_context(
         # Topics covered: derive from completed sessions
         topic_counts: dict[str, int] = {}
         for s in completed_sessions:
-            topic_label = TOPICS.get(s["mode"], {}).get(s["topic"], s["topic"])
+            topic_label = _history_topic_label(s)
             topic_counts[topic_label] = topic_counts.get(topic_label, 0) + 1
 
         top_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -162,15 +162,14 @@ async def _get_learning_context(
         digest_parts: list[str] = []
         for s in mode_sessions:
             fb = s["feedback"]
-            topic_label = TOPICS.get(s["mode"], {}).get(s["topic"], s["topic"])
+            topic_label = _history_topic_label(s)
             score = fb.get("overall_score", "?")
             strengths = fb.get("strengths", [])[:1]
-            improvements = fb.get("improvements", [])[:1]
+            # Stored "improvements" are left out: text written before accents
+            # stopped counting advises about accent marks.
             part = f"- {topic_label} (score: {score}/10)"
             if strengths:
                 part += f" | Strength: {strengths[0]}"
-            if improvements:
-                part += f" | To improve: {improvements[0]}"
             digest_parts.append(part)
 
         grammar_notes_all: list[str] = []
@@ -185,6 +184,11 @@ async def _get_learning_context(
         return ""
 
     return "\n\n".join(sections)
+
+
+def _history_topic_label(session: dict) -> str:
+    """A past session's topic as the model should read it; never "general"."""
+    return resolve_topic_label(session["mode"], session["topic"]) or "mixed practice"
 
 
 # ── Session Creation ─────────────────────────────────────────────────
