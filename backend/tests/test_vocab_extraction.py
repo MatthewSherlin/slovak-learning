@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.vocab_extraction import extract_vocab_from_session
+from app.vocab_extraction import extract_vocab_from_session, question_pair
 
 
 class TestVocabModeExtraction:
@@ -59,6 +59,15 @@ class TestVocabModeExtraction:
         for w in words:
             assert w["source_mode"] == "vocabulary"
 
+    def test_per_answer_sessions_extract_nothing_at_the_end(self, sample_vocab_session):
+        sample_vocab_session["exercises"]["srsPerAnswer"] = True
+        assert extract_vocab_from_session(sample_vocab_session) == []
+
+    def test_question_pair_resolves_both_directions(self, sample_vocab_session):
+        q_sk, q_en = sample_vocab_session["exercises"]["questions"][:2]
+        assert question_pair(q_sk) == ("chlieb", "bread")
+        assert question_pair(q_en) == ("voda", "water")
+
     def test_deduplicates_by_slovak(self):
         """Duplicate slovak words should be deduplicated."""
         session = {
@@ -109,19 +118,11 @@ class TestVocabModeExtraction:
 class TestGrammarModeExtraction:
     """Tests for extracting vocabulary from grammar mode sessions."""
 
-    def test_extracts_blank_words(self, sample_grammar_session):
+    def test_blanks_are_not_extracted(self, sample_grammar_session):
         words = extract_vocab_from_session(sample_grammar_session)
         slovaks = {w["slovak"].lower() for w in words}
-        assert "dom" in slovaks
-        assert "knihu" in slovaks
-
-    def test_tracks_grammar_correctness(self, sample_grammar_session):
-        words = extract_vocab_from_session(sample_grammar_session)
-        dom = next(w for w in words if w["slovak"].lower() == "dom")
-        knihu = next(w for w in words if w["slovak"].lower() == "knihu")
-
-        assert dom["correct"] is True
-        assert knihu["correct"] is False
+        assert "knihu" not in slovaks      # an inflected blank, not a vocabulary word
+        assert slovaks == {"dom", "kniha"}  # from feedback only
 
     def test_supplements_with_feedback_vocab(self, sample_grammar_session):
         """Should also include words from feedback.vocabulary_learned."""

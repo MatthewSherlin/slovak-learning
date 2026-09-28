@@ -206,3 +206,75 @@ class TestBidirectionalDedup:
         assert "mäso" in words
         assert "meat" not in words
         assert "pes" in words
+
+
+class TestPerAnswerProgress:
+    async def _fresh(self, db, active_vocab_session) -> tuple[str, str]:
+        """Make the fixture a per-answer session owned by a unique user."""
+        from app.database import get_session as db_get_session, update_session as db_update_session
+
+        uid = f"pa_{uuid.uuid4().hex[:8]}"
+        await db.execute(
+            "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, 'T', 'T', '#000')",
+            (uid,),
+        )
+        await db.execute(
+            "UPDATE sessions SET user_id = ? WHERE id = ?", (uid, active_vocab_session["id"]),
+        )
+        await db.commit()
+        session = await db_get_session(db, active_vocab_session["id"])
+        ex = session["exercises"]
+        ex["srsPerAnswer"] = True
+        await db_update_session(db, session["id"], exercises_json=ex)
+        return session["id"], uid
+
+    async def _rows(self, db, uid) -> dict:
+        from app.database import get_vocab_progress
+
+        return {w["slovak"]: w for w in await get_vocab_progress(db, uid)}
+
+    async def test_first_attempt_is_recorded_without_ending(self, db, active_vocab_session):
+        sid, uid = await self._fresh(db, active_vocab_session)
+        await submit_vocab_answer(db, sid, 0)  # chlieb, correct
+        rows = await self._rows(db, uid)
+        assert rows["chlieb"]["times_seen"] == 1
+        assert rows["chlieb"]["times_correct"] == 1
+        assert rows["chlieb"]["english"] == "bread"
+        assert rows["chlieb"]["source_mode"] == "vocabulary"
+
+    async def test_wrong_first_attempt_recorded_as_wrong(self, db, active_vocab_session):
+        sid, uid = await self._fresh(db, active_vocab_session)
+        await submit_vocab_answer(db, sid, 1)  # chlieb, wrong
+        rows = await self._rows(db, uid)
+        assert rows["chlieb"]["times_correct"] == 0
+
+    async def test_retry_answers_are_not_counted_again(self, db, active_vocab_session):
+        sid, uid = await self._fresh(db, active_vocab_session)
+        await submit_vocab_answer(db, sid, 1)  # q0 wrong
+        await submit_vocab_answer(db, sid, 1)  # q1 correct -> retry phase
+        await submit_vocab_answer(db, sid, 0)  # retry q0 correct
+        rows = await self._rows(db, uid)
+        assert rows["chlieb"]["times_seen"] == 1
+        assert rows["chlieb"]["times_correct"] == 0
+        assert rows["voda"]["times_seen"] == 1
+
+    async def test_answer_after_completion_changes_nothing(self, db, active_vocab_session):
+        sid, uid = await self._fresh(db, active_vocab_session)
+        await submit_vocab_answer(db, sid, 0)
+        await submit_vocab_answer(db, sid, 1)  # both correct -> complete
+        with pytest.raises(ValueError):
+            await submit_vocab_answer(db, sid, 0)  # a resent request
+        rows = await self._rows(db, uid)
+        assert rows["chlieb"]["times_seen"] == 1
+        assert rows["voda"]["times_seen"] == 1
+
+    async def test_legacy_session_not_recorded_per_answer(self, db, active_vocab_session):
+        from app.database import get_vocab_progress
+
+        uid = f"pa_{uuid.uuid4().hex[:8]}"
+        await db.execute(
+            "UPDATE sessions SET user_id = ? WHERE id = ?", (uid, active_vocab_session["id"]),
+        )
+        await db.commit()
+        await submit_vocab_answer(db, active_vocab_session["id"], 0)
+        assert await get_vocab_progress(db, uid) == []

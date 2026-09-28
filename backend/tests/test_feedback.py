@@ -100,3 +100,63 @@ async def test_feedback_prompt_never_says_general(db, fake_llm, sample_vocab_ses
     await end_session(db, session["id"])
     assert "Topic: general" not in fake_llm["prompt"]
     assert "Topic: no set topic" in fake_llm["prompt"]
+
+
+async def test_end_session_twice_calls_the_model_once(db, monkeypatch, sample_vocab_session):
+    calls = {"n": 0}
+
+    async def counting_ask_json(prompt, system_prompt=None, **kwargs):
+        calls["n"] += 1
+        return dict(FULL_LLM)
+
+    monkeypatch.setattr(sessions_module, "ask_json", counting_ask_json)
+    uid = f"fbu_{uuid.uuid4().hex[:8]}"
+    session = {
+        **sample_vocab_session,
+        "id": f"fb-{uuid.uuid4().hex[:8]}",
+        "user_id": uid,
+        "completed": False,
+        "feedback": None,
+    }
+    await db_create_session(db, session)
+    first = await end_session(db, session["id"])
+    second = await end_session(db, session["id"])
+    assert calls["n"] == 1
+    assert second == first
+
+    from app.database import get_vocab_progress
+
+    rows = await get_vocab_progress(db, uid)
+    assert {w["times_seen"] for w in rows} == {1}
+
+
+async def test_progress_survives_a_failed_feedback_call_once(db, monkeypatch, sample_vocab_session):
+    from app.database import get_vocab_progress
+    from app.llm import LLMError
+
+    state = {"fail": True}
+
+    async def flaky_ask_json(prompt, system_prompt=None, **kwargs):
+        if state["fail"]:
+            raise LLMError("upstream unavailable")
+        return dict(FULL_LLM)
+
+    monkeypatch.setattr(sessions_module, "ask_json", flaky_ask_json)
+    uid = f"fbu_{uuid.uuid4().hex[:8]}"
+    session = {
+        **sample_vocab_session,
+        "id": f"fb-{uuid.uuid4().hex[:8]}",
+        "user_id": uid,
+        "completed": False,
+        "feedback": None,
+    }
+    await db_create_session(db, session)
+
+    with pytest.raises(LLMError):
+        await end_session(db, session["id"])
+    assert len(await get_vocab_progress(db, uid)) == 3  # saved despite the failure
+
+    state["fail"] = False
+    await end_session(db, session["id"])
+    rows = await get_vocab_progress(db, uid)
+    assert {w["times_seen"] for w in rows} == {1}  # and not saved a second time

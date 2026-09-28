@@ -45,7 +45,7 @@ from .prompts import (
 from .questions import QUESTIONS, TOPICS
 from .scoring import compute_category_scores, compute_session_score, grade_answer
 from .schemas import FEEDBACK_SCHEMA, GRAMMAR_LESSON_SCHEMA, VOCAB_BATCH_SCHEMA
-from .vocab_extraction import extract_vocab_from_session
+from .vocab_extraction import extract_vocab_from_session, question_pair
 
 log = logging.getLogger(__name__)
 
@@ -242,6 +242,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
         "credits": [None] * len(questions),
         "retryQueue": [],
         "phase": "questions",
+        "srsPerAnswer": True,
     }
 
     session = _build_session(req, exercises=exercises)
@@ -492,6 +493,7 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
     if not (0 <= choice_index < len(q["choices"])):
         raise ValueError(f"choice_index out of range: {choice_index}")
     is_correct = choice_index == q["correctIndex"]
+    first_attempt = ex["phase"] == "questions"
     ex["answers"][idx] = choice_index
     credits = ex.setdefault("credits", [None] * len(questions))
     if ex["phase"] == "questions":
@@ -540,6 +542,17 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
         exercises_json=ex,
         messages_json=session["messages"],
     )
+    if first_attempt and ex.get("srsPerAnswer"):
+        slovak, english = question_pair(q)
+        try:
+            await upsert_vocab_progress(db, session["user_id"], [{
+                "slovak": slovak,
+                "english": english,
+                "correct": is_correct,
+                "source_mode": "vocabulary",
+            }])
+        except Exception:
+            log.exception("Failed to save progress for %r in session %s", slovak, session_id)
     session["exercises"] = ex
     return session
 
@@ -768,10 +781,40 @@ async def get_hint(db: aiosqlite.Connection, session_id: str) -> dict:
 
 # ── End Session ──────────────────────────────────────────────────────
 
+async def _record_deterministic_progress(db: aiosqlite.Connection, session: dict) -> None:
+    """Save the progress that needs no model output, once per session."""
+    ex = session.get("exercises") or {}
+    if not ex or ex.get("progressRecorded"):
+        return
+    try:
+        if ex.get("type") == "vocabulary" and not ex.get("srsPerAnswer"):
+            words = extract_vocab_from_session(session)
+            if words:
+                await upsert_vocab_progress(db, session["user_id"], words)
+        if ex.get("type") == "grammar":
+            concept = (ex.get("lesson") or {}).get("concept", "")
+            credits = [c for c in (ex.get("credits") or []) if c is not None]
+            if concept and credits:
+                await record_concept_result(db, session["user_id"], concept, credits)
+    except Exception:
+        # Leave the flag unset so the next attempt records it.
+        log.exception("Failed to record progress for session %s", session["id"])
+        return
+    ex["progressRecorded"] = True
+    await db_update_session(db, session["id"], exercises_json=ex)
+
+
 async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
     session = await db_get_session(db, session_id)
     if not session:
         raise ValueError("Session not found")
+
+    if session["completed"] and session.get("feedback"):
+        return session["feedback"]
+
+    # Before the model call: a failed feedback request must not cost the
+    # learner their progress.
+    await _record_deterministic_progress(db, session)
 
     conversation = _build_conversation(session["messages"])
     mode_label = session["mode"].replace("_", " ").title()
@@ -824,27 +867,18 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
         feedback_json=feedback,
     )
 
-    # Extract and persist vocabulary progress. Kept in separate try blocks so
-    # a concept-recording failure can't silently drop the SRS update (and
-    # vice versa) — silent SRS loss makes vocab sessions repeat words.
-    session_with_feedback = await db_get_session(db, session_id)
-    if session_with_feedback:
+    # Words that only the feedback can name. Vocabulary sessions with
+    # questions were already recorded from their answers.
+    ex = session.get("exercises") or {}
+    has_vocab_questions = ex.get("type") == "vocabulary" and bool(ex.get("questions"))
+    if not has_vocab_questions:
         try:
-            words = extract_vocab_from_session(session_with_feedback)
+            words = extract_vocab_from_session({**session, "feedback": feedback})
             if words:
-                await upsert_vocab_progress(db, session_with_feedback["user_id"], words)
-                log.info("Tracked %d words for user %s", len(words), session_with_feedback["user_id"])
+                await upsert_vocab_progress(db, session["user_id"], words)
+                log.info("Tracked %d words for user %s", len(words), session["user_id"])
         except Exception:
             log.exception("Failed to persist vocab progress for session %s", session_id)
-        try:
-            ex = session_with_feedback.get("exercises") or {}
-            if ex.get("type") == "grammar":
-                concept = (ex.get("lesson") or {}).get("concept", "")
-                credits = [c for c in (ex.get("credits") or []) if c is not None]
-                if concept and credits:
-                    await record_concept_result(db, session_with_feedback["user_id"], concept, credits)
-        except Exception:
-            log.exception("Failed to record concept result for session %s", session_id)
 
     return feedback
 

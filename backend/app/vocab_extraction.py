@@ -18,7 +18,7 @@ def extract_vocab_from_session(session: dict) -> list[dict]:
 
     extractors = {
         "vocabulary": _extract_from_vocab,
-        "grammar": _extract_from_grammar,
+        "grammar": _extract_from_feedback,
         "translation": _extract_from_feedback,
         "conversation": _extract_from_feedback,
     }
@@ -38,6 +38,16 @@ def extract_vocab_from_session(session: dict) -> list[dict]:
     return unique
 
 
+def question_pair(q: dict) -> tuple[str, str]:
+    """The (slovak, english) pair a vocabulary question teaches."""
+    choices = q.get("choices", [])
+    idx = q.get("correctIndex", 0)
+    answer = choices[idx] if 0 <= idx < len(choices) else ""
+    if q.get("direction", "sk-en") == "sk-en":
+        return q.get("word", ""), answer
+    return answer, q.get("word", "")
+
+
 def _extract_from_vocab(
     session: dict, exercises: dict | None, feedback: dict | None
 ) -> list[dict]:
@@ -45,17 +55,16 @@ def _extract_from_vocab(
     if not exercises or "questions" not in exercises:
         return _extract_from_feedback(session, exercises, feedback)
 
+    if exercises.get("srsPerAnswer"):
+        return []  # each word was saved when its first answer arrived
+
     words: list[dict] = []
     questions = exercises["questions"]
     answers = exercises.get("answers", [])
     credits = exercises.get("credits", [])
 
     for i, q in enumerate(questions):
-        word = q.get("word", "")
-        direction = q.get("direction", "sk-en")
         correct_idx = q.get("correctIndex", 0)
-        choices = q.get("choices", [])
-        correct_answer = choices[correct_idx] if correct_idx < len(choices) else ""
         user_answer = answers[i] if i < len(answers) else None
         # Credits preserve the first-attempt outcome (retry overwrites answers):
         # only full credit counts as correct so missed words resurface in the SRS.
@@ -65,12 +74,7 @@ def _extract_from_vocab(
         else:
             is_correct = user_answer == correct_idx
 
-        if direction == "sk-en":
-            slovak = word
-            english = correct_answer
-        else:
-            slovak = correct_answer
-            english = word
+        slovak, english = question_pair(q)
 
         words.append({
             "slovak": slovak,
@@ -78,40 +82,6 @@ def _extract_from_vocab(
             "correct": is_correct,
             "source_mode": "vocabulary",
         })
-
-    return words
-
-
-def _extract_from_grammar(
-    session: dict, exercises: dict | None, feedback: dict | None
-) -> list[dict]:
-    """Extract blank words from grammar exercises + feedback vocabulary."""
-    words: list[dict] = []
-
-    if exercises and "exercises" in exercises:
-        exercise_list = exercises["exercises"]
-        correct_flags = exercises.get("correct", [])
-
-        for i, ex in enumerate(exercise_list):
-            blank = ex.get("blank", "")
-            if blank:
-                is_correct = correct_flags[i] if i < len(correct_flags) else False
-                words.append({
-                    "slovak": blank,
-                    "english": "",
-                    "correct": bool(is_correct),
-                    "source_mode": "grammar",
-                })
-
-    # Supplement with feedback vocabulary_learned for richer data
-    if feedback and feedback.get("vocabulary_learned"):
-        for v in feedback["vocabulary_learned"]:
-            words.append({
-                "slovak": v.get("slovak", ""),
-                "english": v.get("english", ""),
-                "correct": True,
-                "source_mode": "grammar",
-            })
 
     return words
 

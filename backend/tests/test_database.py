@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 import pytest_asyncio
 
@@ -10,6 +12,7 @@ from app.database import (
     get_vocab_progress,
     get_vocab_stats,
     get_weak_words,
+    init_db,
     update_user_preferences,
     upsert_vocab_progress,
 )
@@ -334,3 +337,36 @@ def test_streak_buckets_by_new_york_day():
         {"completed": True, "created_at": yesterday_utc.isoformat()},
     ]
     assert _calculate_streak(sessions) == 2
+
+
+# ── init_db cleanup of unusable vocab rows ──────────────────────────
+
+
+async def test_init_removes_unusable_vocab_rows(db):
+    uid = f"clean_{uuid.uuid4().hex[:8]}"
+    await db.execute(
+        "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, 'C', 'C', '#000')",
+        (uid,),
+    )
+    rows = [
+        ("na zdravie", "all of the above"),
+        ("č\u00edt\u0430\u043b", ""),
+        ("chlieb", "bread"),
+        ("ťažký", "heavy"),
+    ]
+    for slovak, english in rows:
+        await db.execute(
+            """INSERT INTO vocabulary_progress
+               (user_id, slovak, english, times_seen, times_correct, last_seen_at,
+                source_mode, created_at, due_at, interval_days)
+               VALUES (?, ?, ?, 1, 1, '2026-01-01T00:00:00+00:00', 'vocabulary',
+                       '2026-01-01T00:00:00+00:00', '2026-01-02T00:00:00+00:00', 1)""",
+            (uid, slovak, english),
+        )
+    await db.commit()
+
+    await init_db()
+    await init_db()  # safe to run repeatedly
+
+    kept = {w["slovak"] for w in await get_vocab_progress(db, uid)}
+    assert kept == {"chlieb", "ťažký"}
