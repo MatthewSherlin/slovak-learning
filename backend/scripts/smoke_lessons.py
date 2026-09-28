@@ -9,6 +9,7 @@ is touched. Run from backend/:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import statistics
 import sys
@@ -23,6 +24,7 @@ os.environ["SLOVAK_DB_PATH"] = _tmp.name
 
 from app.config import settings  # noqa: E402
 from app.database import get_db, init_db  # noqa: E402
+from app.llm import LLMError  # noqa: E402
 from app.scoring import strip_accents  # noqa: E402
 from app.sessions import (  # noqa: E402
     TRANSLATION_KINDS,
@@ -66,6 +68,57 @@ async def vocab_round(db: aiosqlite.Connection, label: str, req: dict) -> set[st
     return {slovak.lower() for slovak, _ in pairs}
 
 
+async def used_up_focus_round(db: aiosqlite.Connection) -> None:
+    """A closed set the learner has just finished must still start a lesson."""
+    days = {"topic": "general", "instructions": "the seven days of the week"}
+    await vocab_round(db, "used-up focus: days of the week (1 of 2)", days)
+    print("\n[vocabulary] used-up focus: days of the week (2 of 2)")
+    try:
+        session = await timed_create(db, {"mode": "vocabulary", **days})
+    except LLMError as e:
+        check(False, f"second days-of-the-week lesson starts (got {e})")
+        return
+    questions = session["exercises"]["questions"]
+    for q in questions:
+        slovak, english = question_pair(q)
+        print(f"    {slovak} = {english}{'  (review)' if q['review'] else ''}")
+    check(True, "second days-of-the-week lesson starts")
+    check(len(questions) >= 6, f"at least 6 questions (got {len(questions)})")
+    check(any(q["review"] for q in questions), "seen words fill in, marked as review")
+
+
+async def food_on_other_types(db: aiosqlite.Connection) -> None:
+    """The typed request shapes grammar, translation and conversation too."""
+    food = {"topic": "general", "instructions": "I want to learn about food"}
+
+    print("\n[grammar] typed request: food")
+    grammar = await timed_create(db, {"mode": "grammar", **food})
+    lesson = grammar["exercises"]
+    print("  READ: is this grammar lesson about food?")
+    print(f"    concept: {lesson['lesson']['concept']}")
+    for example in lesson["lesson"]["examples"]:
+        print(f"    e.g. {example}")
+    for e in lesson["exercises"]:
+        print(f"    {e['sentence']}  ->  {e['blank']}")
+
+    print("\n[translation] topic=general, typed request: food")
+    translation = await timed_create(db, {"mode": "translation", **food})
+    print("  READ: are these sentences about food?")
+    for item in translation["exercises"]["exercises"]:
+        print(f"    [{item['direction']}] {item['source']}  ->  {item['modelAnswer']}")
+
+    print("\n[conversation] typed request: food")
+    chat = await timed_create(db, {"mode": "conversation", **food})
+    print("  READ: is this opener about food?")
+    print(f"    tutor: {chat['messages'][0]['content']}")
+
+
+def remove_temp_db() -> None:
+    for suffix in ("", "-journal", "-wal", "-shm"):
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(_tmp.name + suffix)
+
+
 async def translation_round(db: aiosqlite.Connection, topic: str) -> dict:
     print(f"\n[translation] topic={topic}")
     session = await timed_create(db, {"mode": "translation", "topic": topic})
@@ -98,6 +151,9 @@ async def main() -> int:
         repeats = (first & second) | (first & third) | (second & third)
         check(not repeats, f"no word repeats across three sessions (repeats: {sorted(repeats)})")
         print("  READ: are all thirty words above about food?")
+
+        await used_up_focus_round(db)
+        await food_on_other_types(db)
 
         # Topic chip is honored.
         await vocab_round(db, "topic chip: Numbers & Time", {"topic": "numbers_time"})
@@ -149,4 +205,8 @@ async def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    try:
+        exit_code = asyncio.run(main())
+    finally:
+        remove_temp_db()
+    sys.exit(exit_code)
