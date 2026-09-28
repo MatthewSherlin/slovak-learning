@@ -224,11 +224,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
 
     prompt = f"Student level: {difficulty_label}\n\n{focus}\n"
     if plan_words:
-        listed = ", ".join(f"{w['slovak']} ({w['english']})" for w in plan_words)
-        prompt += (
-            "\nREQUIRED REVIEW WORDS — these are due for review; create one question "
-            f"for each of these exact Slovak words, whatever the session focus: {listed}\n"
-        )
+        prompt += _review_words_block(plan_words)
     prompt += (
         f"\nAdd {plan['new_count']} NEW vocabulary questions. "
         "Every new word fits the session focus."
@@ -258,11 +254,22 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
                 seen_norm.add(nw)
                 used_words.append(w)
         used = ", ".join(sorted(used_words))
-        retry_prompt = (
-            f"Student level: {difficulty_label}\n\n{focus}\n\n"
-            f"Generate exactly {missing} vocabulary quiz questions that fit the "
-            f"session focus. Do NOT use any of these words: {used}"
-        )
+        # Review words the first reply skipped are asked for again, within
+        # the same count.
+        missing_review = _uncovered_review_words(plan_words, questions)
+        retry_prompt = f"Student level: {difficulty_label}\n\n{focus}\n"
+        if missing_review:
+            retry_prompt += _review_words_block(missing_review)
+            retry_prompt += (
+                f"\nGenerate exactly {missing} vocabulary quiz questions: one for each "
+                "required review word, and the rest new words that fit the session "
+                f"focus. Do NOT use any of these words: {used}"
+            )
+        else:
+            retry_prompt += (
+                f"\nGenerate exactly {missing} vocabulary quiz questions that fit the "
+                f"session focus. Do NOT use any of these words: {used}"
+            )
         more = await ask_json(
             retry_prompt, VOCAB_BATCH_PROMPT,
             schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
@@ -297,6 +304,26 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
     session = _build_session(req, exercises=exercises)
     await db_create_session(db, session)
     return session
+
+
+def _review_words_block(words: list[dict]) -> str:
+    listed = ", ".join(f"{w['slovak']} ({w['english']})" for w in words)
+    return (
+        "\nREQUIRED REVIEW WORDS — these are due for review; create one question "
+        f"for each of these exact Slovak words, whatever the session focus: {listed}\n"
+    )
+
+
+def _uncovered_review_words(plan_words: list[dict], questions: list[dict]) -> list[dict]:
+    """Planned review words that no question in the lesson asks about."""
+    covered: set[str] = set()
+    for q in questions:
+        covered |= _question_keys(q)
+    return [
+        w for w in plan_words
+        if normalize_word(w["slovak"]) not in covered
+        and not (w.get("english") and normalize_word(w["english"]) in covered)
+    ]
 
 
 def _validate_vocab_questions(

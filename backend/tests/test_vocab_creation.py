@@ -342,3 +342,40 @@ async def test_too_few_questions_of_any_kind_still_raises(db, llm):
     ]
     with pytest.raises(LLMError):
         await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+
+
+async def test_top_up_asks_again_for_a_skipped_review_word(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [
+        {"questions": [_q(f"s{i}") for i in range(9)]},
+        {"questions": [_q("hrad", "castle")]},
+    ]
+    session = await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general", "include_review": True,
+    })
+    top_up = llm["prompts"][1]
+    assert "REQUIRED REVIEW WORDS" in top_up
+    assert "hrad (castle)" in top_up
+    assert "Generate exactly 1 " in top_up
+    flags = {q["word"]: q["review"] for q in session["exercises"]["questions"]}
+    assert flags["hrad"] is True
+
+
+async def test_top_up_names_no_review_word_already_covered(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [
+        {"questions": [_q("hrad", "castle")] + [_q(f"s{i}") for i in range(8)]},
+        {"questions": [_q("s8")]},
+    ]
+    await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general", "include_review": True,
+    })
+    assert "REQUIRED REVIEW WORDS" not in llm["prompts"][1]
