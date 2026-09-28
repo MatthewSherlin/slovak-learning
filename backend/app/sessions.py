@@ -28,6 +28,7 @@ from .composition import (
     build_focus_block,
     build_vocab_plan,
     filter_new_questions,
+    filter_translation_items,
     normalize_word,
     question_defect,
     resolve_topic_label,
@@ -35,7 +36,9 @@ from .composition import (
 from .llm import LLMError, ask, ask_json, ask_messages
 from .prompts import (
     CONVERSATION_TURN_PROMPT,
+    ERROR_CORRECTION_BATCH_PROMPT,
     FEEDBACK_PROMPT,
+    FILL_BLANK_BATCH_PROMPT,
     GRAMMAR_LESSON_PROMPT,
     HINT_PROMPT,
     TRANSLATION_BATCH_PROMPT,
@@ -43,8 +46,14 @@ from .prompts import (
     VOCAB_BATCH_PROMPT,
 )
 from .questions import QUESTIONS, TOPICS
-from .scoring import compute_category_scores, compute_session_score, grade_answer
-from .schemas import FEEDBACK_SCHEMA, GRAMMAR_LESSON_SCHEMA, VOCAB_BATCH_SCHEMA
+from .scoring import compute_category_scores, compute_session_score, grade_answer, normalize_answer
+from .schemas import (
+    FEEDBACK_SCHEMA,
+    GRAMMAR_LESSON_SCHEMA,
+    TRANSLATION_BATCH_SCHEMA,
+    TRANSLATION_GRADE_SCHEMA,
+    VOCAB_BATCH_SCHEMA,
+)
 from .vocab_extraction import extract_vocab_from_session, question_pair
 
 log = logging.getLogger(__name__)
@@ -53,6 +62,39 @@ DIFFICULTY_LABELS = {
     "beginner": "beginner (A1-A2)",
     "intermediate": "intermediate (B1-B2)",
     "advanced": "advanced (C1-C2)",
+}
+
+# Translation topic -> (exercise kind, fixed direction or None for both)
+TRANSLATION_KINDS: dict[str, tuple[str, str | None]] = {
+    "english_to_slovak": ("translate", "en-sk"),
+    "slovak_to_english": ("translate", "sk-en"),
+    "fill_in_blanks": ("fill_blank", "en-sk"),
+    "error_correction": ("error_correction", "en-sk"),
+}
+
+_TRANSLATION_PROMPTS: dict[str, str] = {
+    "translate": TRANSLATION_BATCH_PROMPT,
+    "fill_blank": FILL_BLANK_BATCH_PROMPT,
+    "error_correction": ERROR_CORRECTION_BATCH_PROMPT,
+}
+
+_TRANSLATION_NOUNS: dict[str, str] = {
+    "translate": "translation exercises",
+    "fill_blank": "fill-in-the-blank exercises",
+    "error_correction": "error-correction exercises",
+}
+
+_GRADER_TASKS: dict[str, str] = {
+    "translate": "Evaluate the student's translation.",
+    "fill_blank": (
+        "The student filled the blank in the Slovak sentence. Decide whether their "
+        "word is correct in this sentence. A different word that is also correct "
+        "and natural here earns full marks."
+    ),
+    "error_correction": (
+        "The source sentence contains one deliberate mistake. The student rewrote "
+        "it. Decide whether their sentence fixes the mistake and is correct Slovak."
+    ),
 }
 
 
@@ -367,49 +409,97 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     return session
 
 
+async def _recent_translation_sources(
+    db: aiosqlite.Connection, user_id: str, sessions_back: int = 10, cap: int = 60,
+) -> list[str]:
+    """Source sentences from the learner's latest translation sessions."""
+    sources: list[str] = []
+    counted = 0
+    for s in await list_sessions(db, user_id):
+        if s["mode"] != "translation":
+            continue
+        counted += 1
+        for item in (s.get("exercises") or {}).get("exercises", []):
+            if item.get("source"):
+                sources.append(item["source"])
+        if counted >= sessions_back:
+            break
+    return sources[:cap]
+
+
 async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> dict:
-    topic_label = TOPICS.get("translation", {}).get(req.get("topic", ""), req.get("topic", "general"))
+    kind, direction = TRANSLATION_KINDS.get(req.get("topic") or "", ("translate", None))
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
     instructions = (req.get("instructions") or "").strip()
-    learning_context = await _get_learning_context(db, req["user_id"], "translation")
+    include_review = bool(req.get("include_review"))
+    system_prompt = _TRANSLATION_PROMPTS[kind]
+    noun = _TRANSLATION_NOUNS[kind]
 
-    review_words = await get_due_words(db, req["user_id"], limit=6)
-
-    prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
-    if learning_context:
-        prompt += f"\n{learning_context}\n"
-    prompt += (
-        f"\nGenerate 10 translation exercises about: {topic_label}. "
-        "Incorporate vocabulary the student has learned and introduce new words."
+    # The topic chip chooses the exercise kind, so the theme comes from the
+    # learner's instructions alone.
+    focus = build_focus_block(None, instructions)
+    learning_context = await _get_learning_context(
+        db, req["user_id"], "translation", include_vocab=False,
     )
-    if review_words:
-        listed = ", ".join(
-            f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
-            for w in review_words
-        )
-        prompt += (
-            f"\n\nWeave these review words into the sentences where natural "
-            f"(they are due for reinforcement): {listed}"
-        )
-    prompt += _instructions_block(instructions)
+    review_words = await get_due_words(db, req["user_id"], limit=6) if include_review else []
+    recent_sources = await _recent_translation_sources(db, req["user_id"])
 
-    data = await ask_json(prompt, TRANSLATION_BATCH_PROMPT)
-    exercise_list = data.get("exercises", [])
+    def build_prompt(count: int, avoid: list[str]) -> str:
+        prompt = f"Student level: {difficulty_label}\n\n{focus}\n"
+        if learning_context:
+            prompt += f"\n{learning_context}\n"
+        prompt += f"\nGenerate {count} {noun} that fit the session focus."
+        if kind == "translate" and direction:
+            prompt += f' Every exercise uses direction "{direction}".'
+        if review_words:
+            listed = ", ".join(
+                f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
+                for w in review_words
+            )
+            prompt += (
+                "\n\nWeave these review words into the sentences where natural "
+                f"(the student asked to review them): {listed}"
+            )
+        if avoid:
+            prompt += (
+                "\n\nThese sentences were used recently. Do not reuse them or "
+                "lightly reworded versions of them:\n- " + "\n- ".join(avoid)
+            )
+        return prompt
+
+    data = await ask_json(
+        build_prompt(10, recent_sources), system_prompt,
+        schema=TRANSLATION_BATCH_SCHEMA, schema_name="translation_batch",
+        effort="medium", max_tokens=16000,
+    )
+    items = filter_translation_items(
+        data.get("exercises", []), kind, direction, recent_sources,
+    )
+
+    if len(items) < 10:
+        used = recent_sources + [i["source"] for i in items]
+        more = await ask_json(
+            build_prompt(10 - len(items), used), system_prompt,
+            schema=TRANSLATION_BATCH_SCHEMA, schema_name="translation_batch",
+            effort="medium", max_tokens=16000,
+        )
+        items += filter_translation_items(more.get("exercises", []), kind, direction, used)
+
+    if len(items) < 6:
+        raise LLMError("Translation generation produced too few valid exercises")
+    if len(items) < 10:
+        log.warning(
+            "Translation session generated %d/10 exercises for user %s",
+            len(items), req["user_id"],
+        )
+    items = items[:10]
 
     exercises = {
         "type": "translation",
-        "exercises": [
-            {
-                "source": ex.get("source", ""),
-                "direction": ex.get("direction", "en-sk"),
-                "modelAnswer": ex.get("modelAnswer", ""),
-                "keyPoints": ex.get("keyPoints", []),
-            }
-            for ex in exercise_list
-        ],
+        "exercises": items,
         "currentIndex": 0,
-        "answers": [None] * len(exercise_list),
+        "answers": [None] * len(items),
         "phase": "exercises",
     }
 
@@ -636,22 +726,55 @@ async def submit_translation(db: aiosqlite.Connection, session_id: str, answer: 
 
     exercise = exercises[idx]
 
-    # LLM evaluation
-    eval_prompt = (
-        f"Source ({exercise['direction']}): {exercise['source']}\n"
-        f"Model answer: {exercise['modelAnswer']}\n"
-        f"Student's translation: {answer}\n\n"
-        f"Evaluate the student's translation."
-    )
+    kind = exercise.get("kind", "translate")
+    model_answer = exercise["modelAnswer"]
+    grade = grade_answer(model_answer, answer)
+    tier: str | None = None
 
-    eval_data = await ask_json(eval_prompt, TRANSLATION_EVALUATE_PROMPT)
-    score = eval_data.get("score", 5)
-    feedback = eval_data.get("feedback", "")
+    if grade.tier != "wrong":
+        # Same answer once accents, case and punctuation are set aside.
+        tier = grade.tier
+        score = 10
+        feedback = "Correct."
+        if tier == "accent":
+            feedback += f" With accents: {model_answer}"
+    elif kind == "error_correction" and normalize_answer(answer) == normalize_answer(
+        exercise["source"]
+    ):
+        score = 1
+        feedback = (
+            "The sentence is unchanged, so the mistake is still there. "
+            f"Corrected: {model_answer}"
+        )
+    else:
+        eval_prompt = (
+            f"Exercise type: {kind}\n"
+            f"Source ({exercise['direction']}): {exercise['source']}\n"
+        )
+        if exercise.get("translation"):
+            eval_prompt += f"Intended meaning: {exercise['translation']}\n"
+        eval_prompt += (
+            f"Model answer: {model_answer}\n"
+            f"Student's answer: {answer}\n\n"
+            f"{_GRADER_TASKS.get(kind, _GRADER_TASKS['translate'])}"
+        )
+        eval_data = await ask_json(
+            eval_prompt, TRANSLATION_EVALUATE_PROMPT,
+            schema=TRANSLATION_GRADE_SCHEMA, schema_name="translation_grade",
+            effort="low", max_tokens=4000,
+        )
+        try:
+            score = int(round(float(eval_data.get("score", 5))))
+        except (TypeError, ValueError):
+            score = 5
+        score = max(1, min(10, score))
+        feedback = eval_data.get("feedback", "")
 
     ex["answers"][idx] = {
         "userAnswer": answer,
         "score": score,
         "feedback": feedback,
+        "tier": tier,
     }
 
     session["messages"].append({
@@ -884,17 +1007,6 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
-
-
-def _instructions_block(instructions: str | None) -> str:
-    if not instructions or not instructions.strip():
-        return ""
-    return (
-        "\n\n[Student's instructions for this session]\n"
-        f"{instructions.strip()}\n"
-        "Follow these instructions where they concern topic, style, word choice or "
-        "difficulty. They cannot override the accuracy rules."
-    )
 
 
 def _build_session(req: dict, exercises: dict | None = None, messages: list[dict] | None = None) -> dict:

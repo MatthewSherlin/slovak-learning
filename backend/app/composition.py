@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import re
 import unicodedata
 
 from .questions import TOPICS
+from .scoring import normalize_answer
 
 DEFAULT_FOCUS = (
     "everyday high-frequency Slovak suited to the student's level, "
@@ -150,3 +152,48 @@ def build_focus_block(topic_label: str | None, instructions: str | None) -> str:
     elif not topic_label:
         lines.append(f"Material: {DEFAULT_FOCUS}")
     return "\n".join(lines)
+
+
+_BLANK = re.compile(r"_{3,}")
+_DIRECTIONS = ("en-sk", "sk-en")
+
+
+def filter_translation_items(
+    items: list[dict], kind: str, direction: str | None, recent_sources: list[str],
+) -> list[dict]:
+    """Keep generated translation items that match what the learner chose.
+
+    Drops items in the wrong direction, malformed items for the kind,
+    sentences used in recent sessions, and duplicates. The kind is set here
+    rather than trusted from the model.
+    """
+    seen = {normalize_answer(s) for s in recent_sources}
+    kept: list[dict] = []
+    for raw in items:
+        source = _BLANK.sub("____", (raw.get("source") or "").strip())
+        answer = (raw.get("modelAnswer") or "").strip()
+        item_direction = raw.get("direction")
+        if not source or not answer or item_direction not in _DIRECTIONS:
+            continue
+        if direction and item_direction != direction:
+            continue
+        blanks = source.count("____")
+        if kind == "fill_blank" and blanks != 1:
+            continue
+        if kind != "fill_blank" and blanks:
+            continue
+        if kind == "error_correction" and normalize_answer(source) == normalize_answer(answer):
+            continue
+        key = normalize_answer(source)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        kept.append({
+            "kind": kind,
+            "source": source,
+            "direction": item_direction,
+            "translation": (raw.get("translation") or "").strip() or None,
+            "modelAnswer": answer,
+            "keyPoints": [str(k) for k in (raw.get("keyPoints") or [])],
+        })
+    return kept

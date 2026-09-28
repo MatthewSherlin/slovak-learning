@@ -111,8 +111,10 @@ class GrammarExerciseData(BaseModel):
 # ── Translation exercise types ───────────────────────────────────────
 
 class TranslationExerciseItem(BaseModel):
+    kind: str = "translate"  # "translate" | "fill_blank" | "error_correction"
     source: str
     direction: str  # "sk-en" | "en-sk"
+    translation: str | None = None  # English meaning, shown as context
     modelAnswer: str
     keyPoints: list[str]
 
@@ -121,6 +123,7 @@ class TranslationAnswer(BaseModel):
     userAnswer: str
     score: float
     feedback: str
+    tier: str | None = None  # "exact" | "accent" when graded without the model
 
 
 class TranslationExerciseData(BaseModel):

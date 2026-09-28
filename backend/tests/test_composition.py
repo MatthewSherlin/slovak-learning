@@ -8,6 +8,7 @@ from app.composition import (
     build_focus_block,
     build_vocab_plan,
     filter_new_questions,
+    filter_translation_items,
     has_non_latin_letters,
     is_meta_answer,
     is_quiz_artifact,
@@ -190,3 +191,68 @@ class TestIsQuizArtifact:
         assert is_quiz_artifact("above") is False
         assert is_quiz_artifact("bread") is False
         assert is_quiz_artifact("") is False
+
+
+def _item(**over) -> dict:
+    item = {
+        "source": "I have water.", "direction": "en-sk", "translation": None,
+        "modelAnswer": "Mám vodu.", "keyPoints": ["accusative"],
+    }
+    item.update(over)
+    return item
+
+
+class TestFilterTranslationItems:
+    def test_sets_kind_and_keeps_good_items(self):
+        kept = filter_translation_items([_item()], "translate", None, [])
+        assert kept == [{
+            "kind": "translate", "source": "I have water.", "direction": "en-sk",
+            "translation": None, "modelAnswer": "Mám vodu.", "keyPoints": ["accusative"],
+        }]
+
+    def test_drops_wrong_direction(self):
+        items = [_item(), _item(source="Mám psa.", direction="sk-en", modelAnswer="I have a dog.")]
+        kept = filter_translation_items(items, "translate", "en-sk", [])
+        assert [i["source"] for i in kept] == ["I have water."]
+
+    def test_drops_recently_used_sentence_ignoring_accents_and_punctuation(self):
+        kept = filter_translation_items(
+            [_item(source="Mám vodu.", direction="sk-en", modelAnswer="I have water.")],
+            "translate", None, ["mam vodu"],
+        )
+        assert kept == []
+
+    def test_drops_duplicates_within_the_batch(self):
+        kept = filter_translation_items([_item(), _item()], "translate", None, [])
+        assert len(kept) == 1
+
+    def test_drops_empty_source_or_answer(self):
+        items = [_item(source="  "), _item(modelAnswer="")]
+        assert filter_translation_items(items, "translate", None, []) == []
+
+    def test_fill_blank_needs_exactly_one_blank(self):
+        items = [
+            _item(source="Mám ____.", modelAnswer="vodu", translation="I have water."),
+            _item(source="Mám vodu.", modelAnswer="vodu", translation="I have water."),
+            _item(source="____ mám ____.", modelAnswer="ja", translation="I have."),
+        ]
+        kept = filter_translation_items(items, "fill_blank", "en-sk", [])
+        assert [i["source"] for i in kept] == ["Mám ____."]
+
+    def test_fill_blank_normalises_blank_length(self):
+        kept = filter_translation_items(
+            [_item(source="Mám ______.", modelAnswer="vodu", translation="I have water.")],
+            "fill_blank", "en-sk", [],
+        )
+        assert kept[0]["source"] == "Mám ____."
+
+    def test_translate_item_must_not_contain_a_blank(self):
+        assert filter_translation_items([_item(source="I have ____.")], "translate", None, []) == []
+
+    def test_error_correction_needs_a_real_difference(self):
+        items = [
+            _item(source="Mám voda.", modelAnswer="Mám vodu.", translation="I have water."),
+            _item(source="Mam vodu", modelAnswer="Mám vodu.", translation="I have water."),
+        ]
+        kept = filter_translation_items(items, "error_correction", "en-sk", [])
+        assert [i["source"] for i in kept] == ["Mám voda."]

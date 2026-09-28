@@ -178,6 +178,68 @@ Level:
 - Intermediate (B1-B2): longer sentences with more than one clause and a mix of tenses, 8 to 15 words.
 - Advanced (C1-C2): complex sentences with subordinate clauses, passive voice or the conditional, 12 to 20 words."""
 
+FILL_BLANK_BATCH_PROMPT = f"""{GENERATION_ACCURACY}
+
+Write fill-in-the-blank exercises for a Slovak learner. Each one shows a Slovak sentence with one missing word and the English meaning of the whole sentence. The user message says how many and what the session focus is.
+
+Return JSON with this shape:
+{{
+  "exercises": [
+    {{
+      "source": "<Slovak sentence with ____ in place of the missing word>",
+      "direction": "en-sk",
+      "translation": "<English meaning of the complete sentence>",
+      "modelAnswer": "<the missing Slovak word or short phrase>",
+      "keyPoints": ["<why this word, in this form>"]
+    }}
+  ]
+}}
+
+Rules:
+- Each source has exactly one blank, written as four underscores.
+- modelAnswer is only what goes in the blank, in the form the sentence needs.
+- The missing word is a content word the English meaning makes clear, so the learner can work it out.
+- direction is always "en-sk".
+- The sentence with modelAnswer in the blank is correct, natural Slovak.
+- Every sentence is different from the others in the set and from the sentences the user message lists as already used.
+- The session focus in the user message decides what the sentences are about.
+
+Level:
+- Beginner (A1-A2): short present-tense sentences, 4 to 7 words, with a common noun, verb or adjective missing.
+- Intermediate (B1-B2): sentences of 8 to 12 words, with the missing word in an inflected form.
+- Advanced (C1-C2): complex sentences where the missing word depends on idiom, aspect or government."""
+
+ERROR_CORRECTION_BATCH_PROMPT = f"""{GENERATION_ACCURACY}
+
+Write error-correction exercises for a Slovak learner. Each one shows a Slovak sentence that contains exactly one deliberate mistake, together with the English meaning the sentence is supposed to have. The learner rewrites the sentence correctly. The user message says how many and what the session focus is.
+
+Return JSON with this shape:
+{{
+  "exercises": [
+    {{
+      "source": "<Slovak sentence containing exactly one mistake>",
+      "direction": "en-sk",
+      "translation": "<English meaning of the intended sentence>",
+      "modelAnswer": "<the same sentence, corrected>",
+      "keyPoints": ["<what the mistake was and the rule behind the correction>"]
+    }}
+  ]
+}}
+
+Rules:
+- The accuracy rules apply to modelAnswer and to every word of source except the one deliberate mistake.
+- The mistake is in word choice or grammar: a wrong case ending, wrong verb form, wrong gender agreement, wrong preposition, or a wrong word. It is never a missing or wrong diacritic, capital letter or punctuation mark, because the learners cannot type those.
+- source and modelAnswer differ in one word, or in one word and the word that must agree with it.
+- The mistake is one that English speakers learning Slovak really make.
+- direction is always "en-sk".
+- Every sentence is different from the others in the set and from the sentences the user message lists as already used.
+- The session focus in the user message decides what the sentences are about.
+
+Level:
+- Beginner (A1-A2): short present-tense sentences with a mistake in a basic ending or a common word.
+- Intermediate (B1-B2): longer sentences with a mistake in case government, tense or aspect.
+- Advanced (C1-C2): complex sentences with a subtle mistake in aspect, word order or idiom."""
+
 TRANSLATION_EVALUATE_PROMPT = f"""{GENERATION_ACCURACY}
 
 {GRADING_TOLERANCE}

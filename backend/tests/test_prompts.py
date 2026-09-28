@@ -14,6 +14,8 @@ GENERATION_PROMPTS = [
     prompts.VOCAB_BATCH_PROMPT,
     prompts.GRAMMAR_LESSON_PROMPT,
     prompts.TRANSLATION_BATCH_PROMPT,
+    prompts.FILL_BLANK_BATCH_PROMPT,
+    prompts.ERROR_CORRECTION_BATCH_PROMPT,
 ]
 
 
@@ -45,3 +47,7 @@ def test_old_shared_block_is_gone():
 
 def test_quote_escaping_workaround_is_gone():
     assert 'escaped as \\"' not in prompts.GRAMMAR_LESSON_PROMPT
+
+
+def test_error_correction_never_uses_accent_mistakes():
+    assert "never a missing or wrong diacritic" in prompts.ERROR_CORRECTION_BATCH_PROMPT
