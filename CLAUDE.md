@@ -9,7 +9,7 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 ## Architecture
 - **Backend:** FastAPI (Python 3.11+) at `backend/app/`
 - **Frontend:** React 19 + TypeScript + Vite + Tailwind v4 at `frontend/src/`
-- **LLM:** Anthropic Claude Haiku (`claude-haiku-4-20250414`) via Python SDK
+- **LLM:** Claude Sonnet 5 through OpenRouter (`anthropic/claude-sonnet-5`); production sets `SLOVAK_LLM_PROVIDER=openrouter`
 - **Database:** SQLite via `aiosqlite` at `backend/data/slovak.db`
 - **Deployment:** GitHub Pages (frontend), backend hosted separately
 
@@ -22,6 +22,9 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 - `app/prompts.py` — System prompts per learning mode
 - `app/models.py` — Pydantic models (exercise data mirrors frontend TypeScript types)
 - `app/config.py` — Settings via pydantic-settings
+- `app/composition.py` — Session focus, slot plan, question and exercise validation
+- `app/scoring.py` — Answer normalization and grading
+- `app/schemas.py` — JSON schemas that constrain model output
 
 ## Key Frontend Files
 - `src/App.tsx` — HashRouter, UserProvider
@@ -46,7 +49,11 @@ Backend: http://localhost:8888/docs | Frontend: http://localhost:5173
 - Ports: backend 8888, frontend 5173
 - Exercise data stored as JSON columns in SQLite (mirrors frontend type shapes)
 - Backend is source of truth for all scoring — no client-side evaluation
-- Session create takes a free-text 'instructions' field (max 300 chars) — passed to LLM prompts and persisted in the exercises JSON blob; vocab word selection is deterministic (SRS slots + exclusion list) in app/composition.py
+- Session create takes `instructions` (free text, max 300 chars) and `include_review` (default false). The focus block built from topic + instructions opens every generation prompt.
+- Accents, capitalisation and punctuation never cost points. `scoring.normalize_answer` is the single place that decides what counts as the same answer.
+- Review words appear only when `include_review` is true, and only words learned in vocabulary mode with an English meaning are eligible.
+- Vocabulary progress is saved as each first answer arrives, not at the end of the session.
+- Translation topics choose the exercise kind: `translate`, `fill_blank`, `error_correction`.
 
 ## Environment
 Copy `backend/.env.example` to `backend/.env` and set:
