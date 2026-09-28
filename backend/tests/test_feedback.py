@@ -33,9 +33,10 @@ FULL_LLM = {
 def fake_llm(monkeypatch):
     captured = {}
 
-    async def fake_ask_json(prompt, system_prompt=None):
+    async def fake_ask_json(prompt, system_prompt=None, **kwargs):
         captured["prompt"] = prompt
         captured["system"] = system_prompt
+        captured["kwargs"] = kwargs
         return dict(FULL_LLM)
 
     monkeypatch.setattr(sessions_module, "ask_json", fake_ask_json)
@@ -69,3 +70,19 @@ async def test_conversation_score_still_from_llm(db, fake_llm, sample_conversati
     feedback = await end_session(db, session["id"])
     assert feedback["overall_score"] == 6.5
     assert feedback["scores"][0]["category"] == "Fluency"
+
+
+async def test_feedback_call_uses_schema_and_low_effort(db, fake_llm, sample_vocab_session):
+    from app.schemas import FEEDBACK_SCHEMA
+
+    session = {
+        **sample_vocab_session,
+        "id": f"fb-{uuid.uuid4().hex[:8]}",
+        "completed": False,
+        "feedback": None,
+    }
+    await db_create_session(db, session)
+    await end_session(db, session["id"])
+    assert fake_llm["kwargs"]["schema"] is FEEDBACK_SCHEMA
+    assert fake_llm["kwargs"]["effort"] == "low"
+    assert fake_llm["kwargs"]["max_tokens"] == 8000

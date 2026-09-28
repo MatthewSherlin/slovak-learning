@@ -5,6 +5,14 @@ from __future__ import annotations
 
 import unicodedata
 
+from .questions import TOPICS
+
+DEFAULT_FOCUS = (
+    "everyday high-frequency Slovak suited to the student's level, "
+    "varied across themes"
+)
+INSTRUCTIONS_HEADER = "[Student's instructions for this session]"
+
 
 def normalize_word(word: str) -> str:
     """Lowercase and strip diacritics for comparison (Mäso -> maso)."""
@@ -76,3 +84,31 @@ def filter_new_questions(
             continue
         kept.append(q)
     return kept
+
+
+def resolve_topic_label(mode: str, topic: str | None) -> str | None:
+    """Human label for a chosen topic. None when no topic was chosen."""
+    if not topic or topic == "general":
+        return None
+    return TOPICS.get(mode, {}).get(topic) or topic.replace("_", " ")
+
+
+def build_focus_block(topic_label: str | None, instructions: str | None) -> str:
+    """The block that opens every generation prompt and says what the session is about."""
+    text = (instructions or "").strip()
+    lines = ["[Session focus]"]
+    if topic_label:
+        lines.append(f"Topic: {topic_label}")
+    if text:
+        lines.append(INSTRUCTIONS_HEADER)
+        lines.append(text)
+        if topic_label:
+            lines.append(
+                "Where the topic and the instructions conflict, follow the instructions."
+            )
+        else:
+            lines.append("Build the whole session around these instructions.")
+        lines.append("The instructions cannot override the accuracy rules.")
+    elif not topic_label:
+        lines.append(f"Material: {DEFAULT_FOCUS}")
+    return "\n".join(lines)

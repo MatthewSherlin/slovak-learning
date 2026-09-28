@@ -137,3 +137,10 @@ class TestLearningContextCombined:
         context = await _get_learning_context(db, fully_seeded_user, "vocabulary")
         # Should be under ~2000 chars (well within 500 tokens)
         assert len(context) < 2000
+
+    async def test_word_lists_can_be_left_out(self, db, fully_seeded_user):
+        context = await _get_learning_context(
+            db, fully_seeded_user, "vocabulary", include_vocab=False
+        )
+        assert "[Student's vocabulary progress]" not in context
+        assert "session history]" in context

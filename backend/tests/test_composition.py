@@ -5,10 +5,12 @@ from __future__ import annotations
 
 from app.composition import (
     build_exclusion_list,
+    build_focus_block,
     build_vocab_plan,
     filter_new_questions,
     filter_weak,
     normalize_word,
+    resolve_topic_label,
 )
 
 
@@ -89,3 +91,44 @@ class TestFilterNewQuestions:
     def test_unrelated_question_kept(self):
         qs = [{"word": "kniha", "direction": "sk-en", "choices": ["book", "a", "b", "c"], "correctIndex": 0}]
         assert len(filter_new_questions(qs, plan_words=[], exclusions=["voda"])) == 1
+
+
+class TestResolveTopicLabel:
+    def test_known_topic_gets_its_label(self):
+        assert resolve_topic_label("vocabulary", "food_drink") == "Food & Drink"
+
+    def test_general_and_empty_are_no_topic(self):
+        assert resolve_topic_label("vocabulary", "general") is None
+        assert resolve_topic_label("vocabulary", "") is None
+        assert resolve_topic_label("vocabulary", None) is None
+
+    def test_unknown_topic_is_humanised(self):
+        assert resolve_topic_label("vocabulary", "car_parts") == "car parts"
+
+
+class TestBuildFocusBlock:
+    def test_topic_only(self):
+        block = build_focus_block("Food & Drink", "")
+        assert block.startswith("[Session focus]")
+        assert "Topic: Food & Drink" in block
+        assert "[Student's instructions for this session]" not in block
+
+    def test_instructions_only(self):
+        block = build_focus_block(None, "I want to learn about food")
+        assert "I want to learn about food" in block
+        assert "Topic:" not in block
+        assert "Build the whole session around" in block
+
+    def test_both_instructions_win(self):
+        block = build_focus_block("Numbers & Time", "only kitchen words")
+        assert "Topic: Numbers & Time" in block
+        assert "only kitchen words" in block
+        assert "follow the instructions" in block
+
+    def test_neither_uses_default_and_never_says_general(self):
+        block = build_focus_block(None, None)
+        assert "everyday high-frequency" in block
+        assert "general" not in block.lower()
+
+    def test_never_mentions_review_words(self):
+        assert "review" not in build_focus_block("Food & Drink", "food please").lower()

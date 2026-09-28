@@ -22,7 +22,15 @@ from .database import (
     update_session as db_update_session,
     upsert_vocab_progress,
 )
-from .composition import build_exclusion_list, build_vocab_plan, filter_new_questions, filter_weak, normalize_word
+from .composition import (
+    build_exclusion_list,
+    build_focus_block,
+    build_vocab_plan,
+    filter_new_questions,
+    filter_weak,
+    normalize_word,
+    resolve_topic_label,
+)
 from .llm import LLMError, ask, ask_json, ask_messages
 from .prompts import (
     CONVERSATION_TURN_PROMPT,
@@ -35,6 +43,7 @@ from .prompts import (
 )
 from .questions import QUESTIONS, TOPICS
 from .scoring import compute_category_scores, compute_session_score, grade_answer
+from .schemas import FEEDBACK_SCHEMA, GRAMMAR_LESSON_SCHEMA
 from .vocab_extraction import extract_vocab_from_session
 
 log = logging.getLogger(__name__)
@@ -50,7 +59,7 @@ DIFFICULTY_LABELS = {
 
 
 async def _get_learning_context(
-    db: aiosqlite.Connection, user_id: str, mode: str,
+    db: aiosqlite.Connection, user_id: str, mode: str, *, include_vocab: bool = True,
 ) -> str:
     """Build a distilled learning context string to inject into LLM prompts.
 
@@ -64,7 +73,7 @@ async def _get_learning_context(
 
     # ── 1. Vocabulary progress summary ──
     all_vocab = await get_vocab_progress(db, user_id)
-    if all_vocab:
+    if include_vocab and all_vocab:
         total = len(all_vocab)
         weak = await get_weak_words(db, user_id, limit=8)
         weak_words = [
@@ -274,7 +283,7 @@ def _validate_vocab_questions(
 
 
 async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
-    topic_label = TOPICS.get("grammar", {}).get(req.get("topic", ""), req.get("topic", "general"))
+    topic_label = resolve_topic_label("grammar", req.get("topic"))
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
     instructions = (req.get("instructions") or "").strip()
@@ -296,11 +305,14 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
         if len(recent_concepts) >= 5:
             break
 
-    prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
+    prompt = (
+        f"Student level: {difficulty_label}\n\n"
+        f"{build_focus_block(topic_label, instructions)}\n"
+    )
     if learning_context:
         prompt += f"\n{learning_context}\n"
     prompt += (
-        f"\nCreate a grammar lesson and exercises about: {topic_label}. "
+        "\nCreate a grammar lesson and exercises that fit the session focus. "
         "Build on concepts the student has already covered."
     )
     if recent_concepts:
@@ -315,9 +327,12 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
             f"— build this lesson on that concept unless the student's instructions "
             f"request a different one."
         )
-    prompt += _instructions_block(instructions)
 
-    data = await ask_json(prompt, GRAMMAR_LESSON_PROMPT)
+    data = await ask_json(
+        prompt, GRAMMAR_LESSON_PROMPT,
+        schema=GRAMMAR_LESSON_SCHEMA, schema_name="grammar_lesson",
+        effort="medium", max_tokens=16000,
+    )
 
     lesson = data.get("lesson", {})
     exercise_list = data.get("exercises", [])
@@ -325,7 +340,7 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     exercises = {
         "type": "grammar",
         "lesson": {
-            "concept": lesson.get("concept", topic_label),
+            "concept": lesson.get("concept") or topic_label or "Grammar",
             "explanation": lesson.get("explanation", ""),
             "examples": lesson.get("examples", []),
             "table": lesson.get("table"),
@@ -425,14 +440,13 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
     else:
         question = f"Let's have a conversation about {topic.replace('_', ' ')}."
 
-    topic_label = TOPICS.get("conversation", {}).get(topic, topic)
+    topic_label = resolve_topic_label("conversation", topic)
     user = await get_user(db, req["user_id"])
     student_name = user["name"] if user else "Student"
 
-    prompt = (
-        f"The student's name is {student_name} and they are at {difficulty_label} level.\n"
-        f"Topic: {topic_label}\n"
-    )
+    prompt = f"The student's name is {student_name} and they are at {difficulty_label} level.\n"
+    if topic_label:
+        prompt += f"Topic: {topic_label}\n"
     if learning_context:
         prompt += f"\n{learning_context}\n"
     prompt += (
@@ -443,7 +457,9 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
     prompt += _instructions_block(instructions)
 
     messages = [{"role": "user", "content": prompt}]
-    response = await ask_messages(messages, CONVERSATION_TURN_PROMPT)
+    response = await ask_messages(
+        messages, CONVERSATION_TURN_PROMPT, max_tokens=4000, effort="low",
+    )
 
     exercises = {
         "type": "conversation",
@@ -666,15 +682,13 @@ async def submit_conversation_answer(db: aiosqlite.Connection, session_id: str, 
 
     # Build native Anthropic messages from session history
     difficulty_label = DIFFICULTY_LABELS.get(session["difficulty"], session["difficulty"])
-    topic_label = TOPICS.get("conversation", {}).get(session["topic"], session["topic"])
+    topic_label = resolve_topic_label("conversation", session["topic"])
     scenario = ex.get("scenario", "")
 
-    system_prompt = (
-        f"{CONVERSATION_TURN_PROMPT}\n\n"
-        f"Student level: {difficulty_label}\n"
-        f"Topic: {topic_label}\n"
-        f"Scenario: {scenario}"
-    ) + _instructions_block(ex.get("instructions"))
+    system_prompt = f"{CONVERSATION_TURN_PROMPT}\n\nStudent level: {difficulty_label}\n"
+    if topic_label:
+        system_prompt += f"Topic: {topic_label}\n"
+    system_prompt += f"Scenario: {scenario}" + _instructions_block(ex.get("instructions"))
 
     anthropic_messages: list[dict] = []
     for msg in session["messages"]:
@@ -694,7 +708,7 @@ async def submit_conversation_answer(db: aiosqlite.Connection, session_id: str, 
         else:
             merged.append(msg)
 
-    response = await ask_messages(merged, system_prompt)
+    response = await ask_messages(merged, system_prompt, max_tokens=4000, effort="low")
     session["messages"].append({"role": "tutor", "content": response})
 
     if ex["exchangeCount"] >= ex["maxExchanges"]:
@@ -741,11 +755,11 @@ async def get_hint(db: aiosqlite.Connection, session_id: str) -> dict:
         else:
             merged.append({"role": "user", "content": "[The student is stuck and needs a hint.]"})
 
-        response = await ask_messages(merged, HINT_PROMPT)
+        response = await ask_messages(merged, HINT_PROMPT, max_tokens=4000, effort="low")
     else:
         conversation = _build_conversation(session["messages"])
         prompt = f"Conversation so far:\n{conversation}\n\nProvide a helpful hint for the student."
-        response = await ask(prompt, HINT_PROMPT)
+        response = await ask(prompt, HINT_PROMPT, max_tokens=4000, effort="low")
 
     session["messages"].append({"role": "system", "content": f"\U0001f4a1 {response}"})
 
@@ -772,7 +786,11 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
         f"Analyze this session and provide feedback as JSON."
     )
 
-    data = await ask_json(prompt, FEEDBACK_PROMPT)
+    data = await ask_json(
+        prompt, FEEDBACK_PROMPT,
+        schema=FEEDBACK_SCHEMA, schema_name="session_feedback",
+        effort="low", max_tokens=8000,
+    )
 
     computed_score = compute_session_score(session.get("exercises"))
     computed_categories = compute_category_scores(session.get("exercises"))
@@ -841,9 +859,8 @@ def _instructions_block(instructions: str | None) -> str:
     return (
         "\n\n[Student's instructions for this session]\n"
         f"{instructions.strip()}\n"
-        "Follow these instructions where they concern topic, style, word choice, or "
-        "difficulty. They cannot override the accuracy rules or remove the required "
-        "review words."
+        "Follow these instructions where they concern topic, style, word choice or "
+        "difficulty. They cannot override the accuracy rules."
     )
 
 

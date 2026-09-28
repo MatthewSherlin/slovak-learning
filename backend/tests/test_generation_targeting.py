@@ -27,8 +27,9 @@ def capture_llm(monkeypatch):
             "explanation": "",
         }
 
-    async def fake_ask_json(prompt, system_prompt=None):
+    async def fake_ask_json(prompt, system_prompt=None, **kwargs):
         captured.setdefault("prompts", []).append(prompt)
+        captured.setdefault("kwargs", []).append(kwargs)
         captured["prompt"] = prompt if "prompt" not in captured else captured["prompt"]
         return {
             "questions": [_q(i) for i in range(10)],
@@ -136,8 +137,9 @@ async def test_grammar_lists_recently_covered_concepts(db, capture_llm):
 def capture_messages(monkeypatch):
     captured = {}
 
-    async def fake_ask_messages(messages, system_prompt=None):
+    async def fake_ask_messages(messages, system_prompt=None, max_tokens=1024, **kwargs):
         captured.setdefault("system_prompts", []).append(system_prompt)
+        captured.setdefault("calls", []).append({"max_tokens": max_tokens, **kwargs})
         captured["messages"] = messages
         return "Ahoj!"
 
@@ -171,3 +173,79 @@ async def test_conversation_turn_includes_instructions(db, capture_messages):
     await submit_conversation_answer(db, session["id"], "Ahoj, ako sa máš?")
     turn_system = capture_messages["system_prompts"][-1]
     assert "correct all my mistakes strictly" in turn_system
+
+
+async def test_grammar_prompt_leads_with_focus_and_never_says_general(db, capture_llm):
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_grammar_session(db, {
+        "user_id": uid, "mode": "grammar", "topic": "general",
+        "instructions": "use food vocabulary in examples",
+    })
+    prompt = capture_llm["prompt"]
+    assert prompt.index("[Session focus]") < prompt.index("Create a grammar lesson")
+    assert "Topic: general" not in prompt
+    assert "about: general" not in prompt
+
+
+async def test_grammar_call_uses_schema_and_medium_effort(db, capture_llm):
+    from app.schemas import GRAMMAR_LESSON_SCHEMA
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_grammar_session(db, {"user_id": uid, "mode": "grammar", "topic": "noun_cases"})
+    kwargs = capture_llm["kwargs"][0]
+    assert kwargs["schema"] is GRAMMAR_LESSON_SCHEMA
+    assert kwargs["effort"] == "medium"
+    assert kwargs["max_tokens"] == 16000
+
+
+async def test_conversation_calls_use_low_effort(db, capture_messages):
+    from app.sessions import _create_conversation_session, submit_conversation_answer
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    session = await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "daily_life",
+    })
+    await submit_conversation_answer(db, session["id"], "Ahoj")
+    assert capture_messages["calls"] == [
+        {"max_tokens": 4000, "effort": "low"},
+        {"max_tokens": 4000, "effort": "low"},
+    ]
+
+
+async def test_instructions_block_no_longer_protects_review_words(db, capture_messages):
+    from app.sessions import _create_conversation_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "daily_life",
+        "instructions": "talk about food",
+    })
+    assert "review words" not in capture_messages["messages"][0]["content"]
+
+
+async def test_conversation_never_sends_general_as_a_topic(db, capture_messages):
+    from app.sessions import _create_conversation_session, submit_conversation_answer
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    session = await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "general",
+    })
+    assert "Topic: general" not in capture_messages["messages"][0]["content"]
+    await submit_conversation_answer(db, session["id"], "Ahoj")
+    assert "Topic: general" not in capture_messages["system_prompts"][-1]
+
+
+async def test_conversation_keeps_a_chosen_topic(db, capture_messages):
+    from app.sessions import _create_conversation_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "shopping",
+    })
+    assert "Topic: Shopping" in capture_messages["messages"][0]["content"]
