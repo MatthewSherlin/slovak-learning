@@ -51,6 +51,37 @@ class TestInstructionsLimits:
             })
         assert resp.status_code == 200
 
+    async def test_include_review_reaches_session_creation(self, client, monkeypatch):
+        from app import main as main_module
+
+        seen: dict = {}
+
+        async def fake_create(db, req):
+            seen.update(req)
+            return {"id": "x"}
+
+        monkeypatch.setattr(main_module, "create_session", fake_create)
+        async with client as c:
+            resp = await c.post("/api/sessions", json={
+                "user_id": "matt", "mode": "vocabulary", "include_review": True,
+            })
+        assert resp.status_code == 200
+        assert seen["include_review"] is True
+
+    async def test_include_review_defaults_to_false(self, client, monkeypatch):
+        from app import main as main_module
+
+        seen: dict = {}
+
+        async def fake_create(db, req):
+            seen.update(req)
+            return {"id": "x"}
+
+        monkeypatch.setattr(main_module, "create_session", fake_create)
+        async with client as c:
+            await c.post("/api/sessions", json={"user_id": "matt", "mode": "vocabulary"})
+        assert seen["include_review"] is False
+
 
 @pytest.mark.asyncio
 class TestUserExistence:

@@ -12,6 +12,7 @@ import aiosqlite
 from .database import (
     create_session as db_create_session,
     get_due_words,
+    get_review_candidates,
     get_session as db_get_session,
     get_user,
     get_vocab_progress,
@@ -27,8 +28,8 @@ from .composition import (
     build_focus_block,
     build_vocab_plan,
     filter_new_questions,
-    filter_weak,
     normalize_word,
+    question_defect,
     resolve_topic_label,
 )
 from .llm import LLMError, ask, ask_json, ask_messages
@@ -43,7 +44,7 @@ from .prompts import (
 )
 from .questions import QUESTIONS, TOPICS
 from .scoring import compute_category_scores, compute_session_score, grade_answer
-from .schemas import FEEDBACK_SCHEMA, GRAMMAR_LESSON_SCHEMA
+from .schemas import FEEDBACK_SCHEMA, GRAMMAR_LESSON_SCHEMA, VOCAB_BATCH_SCHEMA
 from .vocab_extraction import extract_vocab_from_session
 
 log = logging.getLogger(__name__)
@@ -162,44 +163,41 @@ async def create_session(db: aiosqlite.Connection, req: dict) -> dict:
 
 
 async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
-    topic_label = TOPICS.get("vocabulary", {}).get(req.get("topic", ""), req.get("topic", "general"))
+    topic_label = resolve_topic_label("vocabulary", req.get("topic"))
     difficulty = req.get("difficulty", "beginner")
     difficulty_label = DIFFICULTY_LABELS.get(difficulty, difficulty)
     instructions = (req.get("instructions") or "").strip()
+    include_review = bool(req.get("include_review"))
+    focus = build_focus_block(topic_label, instructions)
 
-    learning_context = await _get_learning_context(db, req["user_id"], "vocabulary")
-
-    due = await get_due_words(db, req["user_id"], limit=8)
-    weak = filter_weak(await get_weak_words(db, req["user_id"], limit=10))
-    plan = build_vocab_plan(due, weak, total=10)
-    plan_words = plan["review"] + plan["reinforce"]
+    due = await get_review_candidates(db, req["user_id"], limit=8) if include_review else []
+    plan = build_vocab_plan(due, total=10, include_review=include_review)
+    plan_words = plan["review"]
     all_vocab = await get_vocab_progress(db, req["user_id"])
     exclusions = build_exclusion_list(all_vocab, plan_words)
 
-    prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
-    if learning_context:
-        prompt += f"\n{learning_context}\n"
+    prompt = f"Student level: {difficulty_label}\n\n{focus}\n"
     if plan_words:
-        listed = ", ".join(
-            f"{w['slovak']} ({w['english']})" if w.get("english") else w["slovak"]
-            for w in plan_words
-        )
+        listed = ", ".join(f"{w['slovak']} ({w['english']})" for w in plan_words)
         prompt += (
-            f"\nREQUIRED REVIEW WORDS — these are due for review; create one question "
-            f"for each of these exact Slovak words: {listed}\n"
+            "\nREQUIRED REVIEW WORDS — these are due for review; create one question "
+            f"for each of these exact Slovak words, whatever the session focus: {listed}\n"
         )
     prompt += (
-        f"\nThen add {plan['new_count']} NEW vocabulary questions about: {topic_label}. "
-        "Choose words the student has not seen before."
+        f"\nAdd {plan['new_count']} NEW vocabulary questions. "
+        "Every new word fits the session focus."
     )
     if exclusions:
         prompt += (
-            "\n\nDO NOT use any of these already-seen words for the new questions: "
-            + ", ".join(exclusions)
+            "\n\nThe student has already seen these words. Do not use any of them "
+            "for the new questions: " + ", ".join(exclusions)
         )
-    prompt += _instructions_block(instructions)
 
-    data = await ask_json(prompt, VOCAB_BATCH_PROMPT)
+    data = await ask_json(
+        prompt, VOCAB_BATCH_PROMPT,
+        schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
+        effort="medium", max_tokens=16000,
+    )
     questions = _validate_vocab_questions(
         data.get("questions", []), plan_words, exclusions
     )
@@ -215,11 +213,15 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
                 used_words.append(w)
         used = ", ".join(sorted(used_words))
         retry_prompt = (
-            f"Student level: {difficulty_label}\n"
-            f"Generate exactly {missing} vocabulary quiz questions about: {topic_label}. "
-            f"Do NOT use any of these words: {used}"
-        ) + _instructions_block(instructions)
-        more = await ask_json(retry_prompt, VOCAB_BATCH_PROMPT)
+            f"Student level: {difficulty_label}\n\n{focus}\n\n"
+            f"Generate exactly {missing} vocabulary quiz questions that fit the "
+            f"session focus. Do NOT use any of these words: {used}"
+        )
+        more = await ask_json(
+            retry_prompt, VOCAB_BATCH_PROMPT,
+            schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
+            effort="medium", max_tokens=16000,
+        )
         questions = _validate_vocab_questions(
             questions + more.get("questions", []), plan_words, exclusions
         )
@@ -250,34 +252,30 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
 def _validate_vocab_questions(
     questions: list[dict], plan_words: list[dict], exclusions: list[str],
 ) -> list[dict]:
-    """Structural validation (dedupe, 4 unique choices, index bounds) + exclusion filter."""
+    """Drop defective, excluded and duplicate questions; flag the review ones."""
+    plan_keys: set[str] = set()
+    for w in plan_words:
+        plan_keys.add(normalize_word(w["slovak"]))
+        if w.get("english"):
+            plan_keys.add(normalize_word(w["english"]))
+
     seen_words: set[str] = set()
     valid: list[dict] = []
     for q in filter_new_questions(questions, plan_words, exclusions):
+        defect = question_defect(q)
+        if defect:
+            log.info("Dropping vocab question %r: %s", q.get("word"), defect)
+            continue
         # Dedupe on both the display word and the correct answer so the same
         # pair can't appear twice via opposite directions (mäso→meat, meat→mäso).
-        keys = {normalize_word(q.get("word", ""))}
-        raw_choices = q.get("choices", [])
-        idx = q.get("correctIndex", 0)
-        if 0 <= idx < len(raw_choices):
-            keys.add(normalize_word(raw_choices[idx]))
+        keys = {normalize_word(q["word"]), normalize_word(q["choices"][q["correctIndex"]])}
         if keys & seen_words:
             continue
-        seen_words |= keys
-
-        choices = q.get("choices", [])
-        if len(choices) < 4:
-            while len(choices) < 4:
-                choices.append("---")
-        q["choices"] = choices[:4]
-
-        if q.get("correctIndex", 0) >= len(q["choices"]):
-            q["correctIndex"] = 0
-
         lower_choices = [c.strip().lower() for c in q["choices"]]
         if len(set(lower_choices)) < len(lower_choices):
             continue
-
+        seen_words |= keys
+        q["review"] = bool(keys & plan_keys)
         valid.append(q)
     return valid
 
@@ -375,10 +373,7 @@ async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> di
     instructions = (req.get("instructions") or "").strip()
     learning_context = await _get_learning_context(db, req["user_id"], "translation")
 
-    due = await get_due_words(db, req["user_id"], limit=6)
-    weak = filter_weak(await get_weak_words(db, req["user_id"], limit=6))
-    seen_keys = {w["slovak"] for w in due}
-    review_words = (due + [w for w in weak if w["slovak"] not in seen_keys])[:6]
+    review_words = await get_due_words(db, req["user_id"], limit=6)
 
     prompt = f"Student level: {difficulty_label}\nTopic: {topic_label}\n"
     if learning_context:

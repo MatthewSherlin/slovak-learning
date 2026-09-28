@@ -581,13 +581,35 @@ async def get_weak_words(db: aiosqlite.Connection, user_id: str, limit: int = 10
 
 
 async def get_due_words(db: aiosqlite.Connection, user_id: str, limit: int = 20) -> list[dict]:
-    """Words due for review now, weakest accuracy first."""
+    """Words due for review now, most overdue first."""
     now = datetime.now(timezone.utc).isoformat()
     cursor = await db.execute(
         """SELECT slovak, english, times_seen, times_correct, last_seen_at, source_mode, due_at
            FROM vocabulary_progress
            WHERE user_id = ? AND due_at IS NOT NULL AND due_at <= ?
-           ORDER BY CAST(times_correct AS REAL) / MAX(times_seen, 1) ASC, due_at ASC
+           ORDER BY due_at ASC
+           LIMIT ?""",
+        (user_id, now, limit),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def get_review_candidates(
+    db: aiosqlite.Connection, user_id: str, limit: int = 8,
+) -> list[dict]:
+    """Due words that can be quizzed: learned as vocabulary, with a meaning.
+
+    Grammar blanks and words lifted from feedback are inflected fragments,
+    often without an English meaning, so they never enter a quiz.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = await db.execute(
+        """SELECT slovak, english, times_seen, times_correct, last_seen_at, source_mode, due_at
+           FROM vocabulary_progress
+           WHERE user_id = ? AND due_at IS NOT NULL AND due_at <= ?
+             AND source_mode = 'vocabulary' AND english != ''
+           ORDER BY due_at ASC
            LIMIT ?""",
         (user_id, now, limit),
     )

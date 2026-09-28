@@ -7,7 +7,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.database import get_db, get_due_words, get_vocab_progress, upsert_vocab_progress
+from app.database import (
+    get_db,
+    get_due_words,
+    get_review_candidates,
+    get_vocab_progress,
+    upsert_vocab_progress,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -101,3 +107,28 @@ async def test_init_backfills_null_due_at(db):
 
     due = await get_due_words(db, uid)
     assert [w["slovak"] for w in due] == ["hrad"]
+
+
+async def test_due_words_come_most_overdue_first(db):
+    uid = f"srs_{uuid.uuid4().hex[:8]}"
+    await upsert_vocab_progress(db, uid, [_word("nový", False), _word("starý", False)])
+    long_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    await db.execute(
+        "UPDATE vocabulary_progress SET due_at = ? WHERE user_id = ? AND slovak = 'starý'",
+        (long_ago, uid),
+    )
+    await db.commit()
+    due = await get_due_words(db, uid)
+    assert [w["slovak"] for w in due][:2] == ["starý", "nový"]
+
+
+async def test_review_candidates_are_quiz_words_with_a_meaning(db):
+    uid = f"srs_{uuid.uuid4().hex[:8]}"
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+        {"slovak": "knihu", "english": "", "correct": False, "source_mode": "grammar"},
+        {"slovak": "vodu", "english": "water", "correct": False, "source_mode": "translation"},
+        {"slovak": "bez", "english": "", "correct": False, "source_mode": "vocabulary"},
+    ])
+    candidates = await get_review_candidates(db, uid)
+    assert [w["slovak"] for w in candidates] == ["hrad"]

@@ -40,8 +40,9 @@ def llm(monkeypatch):
     """Queue-based fake: each call pops the next canned response."""
     state = {"prompts": [], "responses": []}
 
-    async def fake_ask_json(prompt, system_prompt=None):
+    async def fake_ask_json(prompt, system_prompt=None, **kwargs):
         state["prompts"].append(prompt)
+        state.setdefault("kwargs", []).append(kwargs)
         return state["responses"].pop(0)
 
     monkeypatch.setattr(sessions_module, "ask_json", fake_ask_json)
@@ -92,17 +93,129 @@ async def test_seen_words_excluded_and_filtered(db, llm):
     assert "kniha" in llm["prompts"][0]  # sent as an exclusion
 
 
-async def test_due_words_fill_review_slots(db, llm):
+async def test_due_words_ignored_by_default(db, llm):
     uid = f"vc_{uuid.uuid4().hex[:8]}"
     await _seed_user(db, uid)
     await upsert_vocab_progress(db, uid, [
         {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
     ])
-    llm["responses"] = [{"questions": [_q("hrad")] + [_q(f"s{i}") for i in range(9)]}]
-    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
-    assert "REQUIRED REVIEW WORDS" in llm["prompts"][0]
+    llm["responses"] = [{"questions": [_q(f"s{i}") for i in range(10)]}]
+    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "food_drink"})
+    assert "REQUIRED REVIEW WORDS" not in llm["prompts"][0]
+    assert all(q["review"] is False for q in session["exercises"]["questions"])
+    # a due word is still a seen word, so it is excluded from the new slots
     assert "hrad" in llm["prompts"][0]
-    assert "hrad" in [q["word"] for q in session["exercises"]["questions"]]
+
+
+async def test_review_words_added_on_request(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [{"questions": [_q("hrad", "castle")] + [_q(f"s{i}") for i in range(9)]}]
+    session = await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "food_drink", "include_review": True,
+    })
+    assert "REQUIRED REVIEW WORDS" in llm["prompts"][0]
+    flags = {q["word"]: q["review"] for q in session["exercises"]["questions"]}
+    assert flags["hrad"] is True
+    assert flags["s0"] is False
+
+
+async def test_only_quiz_words_are_review_candidates(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "knihu", "english": "", "correct": False, "source_mode": "grammar"},
+        {"slovak": "vodu", "english": "water (accusative)", "correct": False, "source_mode": "translation"},
+        {"slovak": "prázdny", "english": "", "correct": False, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [{"questions": [_q(f"s{i}") for i in range(10)]}]
+    await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general", "include_review": True,
+    })
+    assert "REQUIRED REVIEW WORDS" not in llm["prompts"][0]
+
+
+async def test_duplicate_review_question_kept_once(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [
+        {"questions": [_q("hrad", "castle"), _q("hrad", "castle")] + [_q(f"s{i}") for i in range(8)]},
+        {"questions": [_q("s8")]},
+    ]
+    session = await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general", "include_review": True,
+    })
+    words = [q["word"] for q in session["exercises"]["questions"]]
+    assert words.count("hrad") == 1
+    assert len(words) == 10
+
+
+async def test_missing_review_question_does_not_block_the_session(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [{"questions": [_q(f"s{i}") for i in range(10)]}]
+    session = await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general", "include_review": True,
+    })
+    assert len(session["exercises"]["questions"]) == 10
+
+
+async def test_prompt_leads_with_focus_and_omits_word_lists(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await upsert_vocab_progress(db, uid, [
+        {"slovak": "kniha", "english": "book", "correct": True, "source_mode": "vocabulary"},
+    ])
+    llm["responses"] = [{"questions": [_q(f"s{i}") for i in range(10)]}]
+    await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general",
+        "instructions": "I want to learn about food",
+    })
+    prompt = llm["prompts"][0]
+    assert prompt.index("I want to learn about food") < prompt.index("NEW vocabulary questions")
+    assert "about: general" not in prompt
+    assert "Topic: general" not in prompt
+    assert "[Student's vocabulary progress]" not in prompt
+    assert "Recently learned words" not in prompt
+
+
+async def test_meta_answer_question_dropped_and_topped_up(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    bad = {
+        "word": "na zdravie", "direction": "sk-en",
+        "choices": ["cheers", "bless you", "all of the above", "to your health"],
+        "correctIndex": 2, "explanation": "",
+    }
+    llm["responses"] = [
+        {"questions": [bad] + [_q(f"s{i}") for i in range(9)]},
+        {"questions": [_q("s9")]},
+    ]
+    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    words = [q["word"] for q in session["exercises"]["questions"]]
+    assert "na zdravie" not in words
+    assert len(words) == 10
+
+
+async def test_vocab_call_uses_schema_and_medium_effort(db, llm):
+    from app.schemas import VOCAB_BATCH_SCHEMA
+
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    llm["responses"] = [{"questions": [_q(f"s{i}") for i in range(10)]}]
+    await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    assert llm["kwargs"][0]["schema"] is VOCAB_BATCH_SCHEMA
+    assert llm["kwargs"][0]["effort"] == "medium"
+    assert llm["kwargs"][0]["max_tokens"] == 16000
 
 
 async def test_retry_then_llm_error_when_underdelivering(db, llm):

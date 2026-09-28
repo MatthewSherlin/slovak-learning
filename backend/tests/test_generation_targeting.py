@@ -49,13 +49,15 @@ async def _seed_user(db, uid):
     await db.commit()
 
 
-async def test_vocab_prompt_includes_due_words(db, capture_llm):
+async def test_vocab_prompt_includes_due_words_when_review_requested(db, capture_llm):
     uid = f"gt_{uuid.uuid4().hex[:8]}"
     await _seed_user(db, uid)
     await upsert_vocab_progress(db, uid, [
         {"slovak": "hrad", "english": "castle", "correct": False, "source_mode": "vocabulary"},
     ])
-    await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    await _create_vocab_session(db, {
+        "user_id": uid, "mode": "vocabulary", "topic": "general", "include_review": True,
+    })
     assert "hrad" in capture_llm["prompt"]
     assert "due for review" in capture_llm["prompt"]
 

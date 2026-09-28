@@ -8,8 +8,10 @@ from app.composition import (
     build_focus_block,
     build_vocab_plan,
     filter_new_questions,
-    filter_weak,
+    has_non_latin_letters,
+    is_meta_answer,
     normalize_word,
+    question_defect,
     resolve_topic_label,
 )
 
@@ -27,35 +29,22 @@ class TestNormalizeWord:
         assert normalize_word("voda") == "voda"
 
 
-class TestFilterWeak:
-    def test_keeps_below_threshold(self):
-        words = [_w("hrad", seen=4, correct=1), _w("voda", seen=4, correct=4)]
-        assert [w["slovak"] for w in filter_weak(words)] == ["hrad"]
-
-    def test_unseen_words_dropped(self):
-        assert filter_weak([_w("x", seen=0, correct=0)]) == []
-
-
 class TestBuildVocabPlan:
-    def test_caps_review_at_4_and_reinforce_at_2(self):
+    def test_no_review_words_by_default(self):
         due = [_w(f"d{i}") for i in range(6)]
-        weak = [_w(f"w{i}") for i in range(5)]
-        plan = build_vocab_plan(due, weak, total=10)
-        assert len(plan["review"]) == 4
-        assert len(plan["reinforce"]) == 2
-        assert plan["new_count"] == 4
+        plan = build_vocab_plan(due, total=10)
+        assert plan == {"review": [], "new_count": 10}
 
-    def test_weak_words_already_due_not_duplicated(self):
-        due = [_w("hrad")]
-        weak = [_w("hrad"), _w("veža")]
-        plan = build_vocab_plan(due, weak, total=10)
-        assert [w["slovak"] for w in plan["reinforce"]] == ["veža"]
-        assert plan["new_count"] == 8
+    def test_review_on_request_caps_at_4(self):
+        due = [_w(f"d{i}") for i in range(6)]
+        plan = build_vocab_plan(due, total=10, include_review=True)
+        assert [w["slovak"] for w in plan["review"]] == ["d0", "d1", "d2", "d3"]
+        assert plan["new_count"] == 6
 
-    def test_empty_history_all_new(self):
-        plan = build_vocab_plan([], [], total=10)
-        assert plan["review"] == [] and plan["reinforce"] == []
-        assert plan["new_count"] == 10
+    def test_review_on_request_with_nothing_due(self):
+        assert build_vocab_plan([], total=10, include_review=True) == {
+            "review": [], "new_count": 10,
+        }
 
 
 class TestBuildExclusionList:
@@ -64,9 +53,13 @@ class TestBuildExclusionList:
         exclusions = build_exclusion_list(all_vocab, plan_words=[_w("hrad")])
         assert exclusions == ["voda", "čaj"]
 
-    def test_caps_at_150(self):
-        all_vocab = [_w(f"slovo{i}") for i in range(200)]
-        assert len(build_exclusion_list(all_vocab, plan_words=[])) == 150
+    def test_caps_at_1000(self):
+        all_vocab = [_w(f"slovo{i}") for i in range(1200)]
+        assert len(build_exclusion_list(all_vocab, plan_words=[])) == 1000
+
+    def test_300_words_all_excluded(self):
+        all_vocab = [_w(f"slovo{i}") for i in range(300)]
+        assert len(build_exclusion_list(all_vocab, plan_words=[])) == 300
 
 
 class TestFilterNewQuestions:
@@ -132,3 +125,53 @@ class TestBuildFocusBlock:
 
     def test_never_mentions_review_words(self):
         assert "review" not in build_focus_block("Food & Drink", "food please").lower()
+
+
+def _question(**over) -> dict:
+    q = {
+        "word": "chlieb", "direction": "sk-en",
+        "choices": ["bread", "butter", "milk", "cheese"], "correctIndex": 0,
+    }
+    q.update(over)
+    return q
+
+
+class TestQuestionDefect:
+    def test_good_question_has_no_defect(self):
+        assert question_defect(_question()) is None
+
+    def test_meta_answer_as_correct_choice(self):
+        q = _question(word="na zdravie", choices=["cheers", "bless you", "all of the above", "x"],
+                      correctIndex=2)
+        assert question_defect(q) == "meta answer among the choices"
+
+    def test_meta_answer_as_distractor(self):
+        q = _question(choices=["bread", "butter", "None of the above.", "cheese"])
+        assert question_defect(q) == "meta answer among the choices"
+
+    def test_cyrillic_in_slovak_word(self):
+        assert question_defect(_question(word="čít\u0430\u043b")) == "non-Latin letters in Slovak text"
+
+    def test_cyrillic_in_slovak_choices_for_en_sk(self):
+        q = _question(word="bread", direction="en-sk",
+                      choices=["chlieb", "\u0445\u043b\u0435\u0431", "maslo", "syr"])
+        assert question_defect(q) == "non-Latin letters in Slovak text"
+
+    def test_word_equal_to_answer(self):
+        q = _question(word="Hotel", choices=["hotel", "house", "shop", "school"])
+        assert question_defect(q) == "word equals its answer"
+
+    def test_index_out_of_range(self):
+        assert question_defect(_question(correctIndex=4)) == "correct index out of range"
+        assert question_defect(_question(correctIndex=-1)) == "correct index out of range"
+
+    def test_wrong_number_of_choices(self):
+        assert question_defect(_question(choices=["bread", "butter"])) == "needs exactly four choices"
+
+    def test_slovak_diacritics_are_latin(self):
+        assert has_non_latin_letters("ťažký ľúbiť ôsmy") is False
+
+    def test_meta_answer_detection(self):
+        assert is_meta_answer("All of the Above") is True
+        assert is_meta_answer("both") is True
+        assert is_meta_answer("bread") is False

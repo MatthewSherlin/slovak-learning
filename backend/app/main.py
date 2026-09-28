@@ -12,8 +12,8 @@ from .config import settings
 from .database import (
     get_db,
     get_dashboard_stats,
-    get_due_words,
     get_leaderboard,
+    get_review_candidates,
     get_user,
     get_users,
     get_user_preferences,
@@ -188,7 +188,7 @@ async def recommendations(user_id: str):
 
         sessions = await list_sessions(db, user_id)
         in_progress = next((s for s in sessions if not s["completed"]), None)
-        due = await get_due_words(db, user_id, limit=20)
+        due = await get_review_candidates(db, user_id, limit=20)
         weakest = await get_weakest_concepts(db, user_id, limit=1)
         weakest_concept = weakest[0] if weakest else None
 
@@ -287,6 +287,7 @@ async def create(req: CreateSessionRequest):
             "topic": req.topic,
             "difficulty": req.difficulty.value,
             "instructions": req.instructions,
+            "include_review": req.include_review,
         })
         return session
 

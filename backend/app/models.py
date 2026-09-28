@@ -61,6 +61,7 @@ class VocabQuestion(BaseModel):
     correctIndex: int
     explanation: str
     pronunciation: str = ""  # simple phonetic hint for the Slovak word (e.g. VOH-dah)
+    review: bool = False  # a due word the learner asked to review
 
 
 class VocabExerciseData(BaseModel):
@@ -72,6 +73,8 @@ class VocabExerciseData(BaseModel):
     retryQueue: list[int] = []
     phase: str = "questions"  # "questions" | "retry" | "complete"
     instructions: str | None = None
+    srsPerAnswer: bool = False  # progress is saved as each answer arrives
+    progressRecorded: bool = False  # end-of-session progress already saved
 
 
 # ── Grammar exercise types ───────────────────────────────────────────
@@ -102,6 +105,7 @@ class GrammarExerciseData(BaseModel):
     tiers: list[str | None] = []
     phase: str = "lesson"  # "lesson" | "exercises" | "complete"
     instructions: str | None = None
+    progressRecorded: bool = False
 
 
 # ── Translation exercise types ───────────────────────────────────────
@@ -216,6 +220,7 @@ class CreateSessionRequest(BaseModel):
     topic: str = "general"
     difficulty: Difficulty = Difficulty.beginner
     instructions: str | None = Field(default=None, max_length=300)
+    include_review: bool = False
 
 
 class AnswerRequest(BaseModel):
