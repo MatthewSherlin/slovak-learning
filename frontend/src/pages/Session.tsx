@@ -10,6 +10,7 @@ import GrammarMode from '../components/GrammarMode';
 import TranslationMode from '../components/TranslationMode';
 import ConversationMode from '../components/ConversationMode';
 import { getSession, submitAnswer, requestHint, endSession } from '../lib/api';
+import { useUser } from '../components/UserPicker';
 import type { Session as SessionType, SessionFeedback } from '../lib/types';
 
 // Legacy chat UI for old sessions that don't have structured exercises
@@ -208,6 +209,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
 export default function Session() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useUser();
   const [session, setSession] = useState<SessionType | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -274,6 +276,25 @@ export default function Session() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingDots text="Loading session" />
+      </div>
+    );
+  }
+
+  // Ownership guard: a deep link or stale history entry can point at another
+  // profile's session — answering would silently record against their account.
+  if (user && session.user_id !== user.id) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        <h2 className="text-lg font-bold text-text-primary mb-2">Not your session</h2>
+        <p className="text-sm text-text-muted mb-6">
+          This session belongs to another profile.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          className="px-5 py-2.5 rounded-xl bg-surface-2 text-text-secondary text-sm font-medium border-none cursor-pointer"
+        >
+          Go Home
+        </button>
       </div>
     );
   }

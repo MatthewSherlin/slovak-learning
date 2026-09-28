@@ -73,10 +73,12 @@ export function useUser() {
 interface UserPickerProps {
   open: boolean;
   onClose: () => void;
+  /** When false (no active profile yet) the X is hidden — closing would be a no-op */
+  dismissible?: boolean;
   onSelect: (user: User) => void;
 }
 
-export default function UserPicker({ open, onClose, onSelect }: UserPickerProps) {
+export default function UserPicker({ open, onClose, onSelect, dismissible = true }: UserPickerProps) {
   const { users, refreshUsers } = useUser();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -125,12 +127,14 @@ export default function UserPicker({ open, onClose, onSelect }: UserPickerProps)
                   Pick your profile to track progress
                 </p>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors"
-              >
-                <X size={18} />
-              </button>
+              {dismissible && (
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg text-text-faint hover:text-text-primary hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
 
             <div className="overflow-y-auto px-6 pb-6">

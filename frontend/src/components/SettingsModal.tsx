@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Shield, X, Check, AlertCircle, Sun, Moon } from 'lucide-react';
+import { Lock, Shield, X, Check, AlertCircle, Sun, Moon, Users } from 'lucide-react';
 import { useUser } from './UserPicker';
 import { useTheme } from './ThemeProvider';
 import { setPin, verifyPin, removePin } from '../lib/api';
@@ -257,6 +257,28 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
               </div>
             </div>
 
+            {/* Switch profile — shared-device escape hatch: clearing the user
+                reopens the profile picker via the AppShell effect */}
+            <div className="rounded-xl border border-border bg-surface-2 p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-accent-muted flex items-center justify-center">
+                    <Users size={18} className="text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">Profile</h3>
+                    <p className="text-xs text-text-muted">Signed in as {user.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { onClose(); setUser(null); }}
+                  className="px-4 py-2 rounded-xl bg-surface-3 text-text-primary text-sm font-medium border-none cursor-pointer hover:bg-surface-hover transition-colors"
+                >
+                  Switch
+                </button>
+              </div>
+            </div>
+
             {/* PIN Section */}
             <div className="rounded-xl border border-border bg-surface-2 p-5">
               <div className="flex items-center gap-3 mb-4">
@@ -331,7 +353,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setView('idle'); setPin_(''); setNewPin(''); }}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-surface-3 text-text-secondary text-sm font-medium border-none cursor-pointer hover:bg-surface-hover transition-colors"
+                        disabled={loading}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-surface-3 text-text-secondary text-sm font-medium border-none cursor-pointer hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>

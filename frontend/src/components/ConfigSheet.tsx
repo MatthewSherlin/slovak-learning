@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getTopics, createSession } from '../lib/api';
+import { getTopics, createSession, listSessions } from '../lib/api';
 import type { Difficulty, LearningMode, Topic } from '../lib/types';
 import BrandedLoader from './BrandedLoader';
 
@@ -106,6 +106,7 @@ export default function ConfigSheet({
   const [focusText, setFocusText] = useState('');
   const [focusError, setFocusError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   // Reset state each time the sheet opens for a (potentially different) mode
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function ConfigSheet({
     setFocusText('');
     setFocusError(null);
     setStarting(false);
+    setStartError(null);
     setTopics([]);
     setSelectedTopic(recommendedTopic ?? null);
 
@@ -121,6 +123,25 @@ export default function ConfigSheet({
       .then(setTopics)
       .catch(() => setTopics([]));
   }, [open, mode, recommendedTopic]);
+
+  /** A create request can die client-side (iOS kills long fetches; cold
+   *  backend takes >60s) while the backend still finishes the session.
+   *  Look for that orphaned session so we can enter it instead of leaving
+   *  it stranded on the Continue card — or worse, creating a duplicate. */
+  const findOrphanedSession = useCallback(async (): Promise<string | null> => {
+    try {
+      const sessions = await listSessions(userId);
+      const fresh = sessions.find(
+        (s) =>
+          !s.completed &&
+          s.mode === mode &&
+          Date.now() - new Date(s.created_at).getTime() < 3 * 60_000,
+      );
+      return fresh?.id ?? null;
+    } catch {
+      return null;
+    }
+  }, [userId, mode]);
 
   const handleStart = useCallback(async () => {
     const instructions = focusText.trim();
@@ -131,6 +152,7 @@ export default function ConfigSheet({
     }
 
     setFocusError(null);
+    setStartError(null);
     setStarting(true);
 
     try {
@@ -143,9 +165,22 @@ export default function ConfigSheet({
       });
       navigate(`/session/${session.id}`);
     } catch {
+      // Keep the loader up and poll: the backend may still be finishing
+      // the session this request started.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const orphanId = await findOrphanedSession();
+        if (orphanId) {
+          navigate(`/session/${orphanId}`);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 10_000));
+      }
       setStarting(false);
+      setStartError(
+        "Couldn't start the session — the tutor may still be waking up. Try again in a moment.",
+      );
     }
-  }, [userId, mode, difficulty, selectedTopic, focusText, navigate]);
+  }, [userId, mode, difficulty, selectedTopic, focusText, navigate, findOrphanedSession]);
 
   // Show full-screen branded loader while creating the session (LLM call)
   if (starting) {
@@ -376,6 +411,13 @@ export default function ConfigSheet({
                 margin: '0 0 16px 0',
               }}>
                 {focusError}
+              </p>
+            )}
+
+            {/* Start error */}
+            {startError && (
+              <p style={{ fontSize: '12px', color: '#ef4444', margin: '0 0 12px 0' }}>
+                {startError}
               </p>
             )}
 

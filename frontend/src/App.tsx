@@ -48,6 +48,7 @@ function AppShell() {
       {showTabBar && <TabBar />}
       <UserPicker
         open={pickerOpen}
+        dismissible={!!user}
         onClose={() => { if (user) setPickerOpen(false); }}
         onSelect={handleUserSelect}
       />

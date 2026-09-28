@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { WifiOff, RefreshCw, Play, Settings } from 'lucide-react';
+import { WifiOff, RefreshCw, Play, Settings, X } from 'lucide-react';
 import HomeSkeleton from '../components/HomeSkeleton';
 import ConfigSheet from '../components/ConfigSheet';
 import SettingsModal from '../components/SettingsModal';
@@ -11,6 +11,7 @@ import {
   getDashboard,
   getLeaderboard,
   getSession,
+  deleteSession,
 } from '../lib/api';
 import type {
   ExerciseData,
@@ -117,8 +118,12 @@ interface SessionProgress {
 function computeProgress(exercises: ExerciseData): SessionProgress | null {
   switch (exercises.type) {
     case 'vocabulary': {
-      const answered = exercises.answers.filter((a) => a !== null && a !== undefined).length;
       const total = exercises.questions.length;
+      // During retry the first pass already filled every answer slot — count
+      // mastered words instead, matching VocabMode's own progress display.
+      const answered = exercises.phase === 'retry'
+        ? total - exercises.retryQueue.length
+        : exercises.answers.filter((a) => a !== null && a !== undefined).length;
       return total > 0 ? { answered, total } : null;
     }
     case 'grammar': {
@@ -216,6 +221,18 @@ export default function Home() {
     }
   };
 
+  const handleDismissSession = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const id = recs?.in_progress_session?.id;
+    if (!id) return;
+    try {
+      await deleteSession(id);
+    } catch {
+      // Refetch either way — if the delete failed the card simply reappears.
+    }
+    loadData();
+  };
+
   // ── Skeleton ─────────────────────────────────────────────────────
   if (loading) {
     return <HomeSkeleton />;
@@ -274,8 +291,12 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="max-w-lg mx-auto px-5 pb-6"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}
+      className="max-w-lg mx-auto px-5"
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)',
+        // Clear the fixed 60px tab bar plus the home-indicator inset.
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)',
+      }}
     >
       {/* ── Header: date + greeting + streak + avatar ── */}
       <div className="flex items-center justify-between mb-7">
@@ -331,11 +352,14 @@ export default function Home() {
 
       {/* ── Continue card (only when in_progress_session exists) ── */}
       {inProgress && (
-        <motion.button
+        <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
           onClick={handleContinue}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleContinue(); }}
           className="w-full text-left rounded-[22px] p-5 mb-7 border cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-[0.99]"
           style={{
             background: 'linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), #151926',
@@ -344,6 +368,15 @@ export default function Home() {
             overflow: 'hidden',
           }}
         >
+          {/* Dismiss: delete the stale session so it stops resurfacing */}
+          <button
+            aria-label="Discard this session"
+            onClick={handleDismissSession}
+            className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center border-none cursor-pointer"
+            style={{ background: 'rgba(255,255,255,0.07)', color: '#6b7289' }}
+          >
+            <X size={13} />
+          </button>
           <div className="flex items-center gap-4">
             {/* Progress ring — only shown when real progress data is available */}
             {progressRingProps && (
@@ -393,7 +426,7 @@ export default function Home() {
               <Play size={18} fill="#ffffff" color="#ffffff" />
             </div>
           </div>
-        </motion.button>
+        </motion.div>
       )}
 
       {/* ── Practice header ── */}
