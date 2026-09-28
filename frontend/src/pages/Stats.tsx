@@ -194,7 +194,7 @@ function OverviewPanel() {
             >
               XP race
             </span>
-            <span className="text-[11px] text-text-faint">this month</span>
+            <span className="text-[11px] text-text-faint">all time</span>
           </div>
           <div className="flex flex-col gap-2.5">
             {sortedLb.map((entry) => (
@@ -371,6 +371,7 @@ function HistoryPanel() {
   const [error, setError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   const load = useCallback(() => {
@@ -399,11 +400,14 @@ function HistoryPanel() {
     const id = pendingDeleteId;
     setPendingDeleteId(null);
     setDeleteError(null);
+    setDeletingId(id);
     try {
       await deleteSession(id);
       setSessions((prev) => prev.filter((s) => s.id !== id));
     } catch {
       setDeleteError('Failed to delete session. Please try again.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -478,7 +482,9 @@ function HistoryPanel() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
               onClick={() => navigate(`/session/${session.id}`)}
-              className="group flex items-center gap-4 p-4 rounded-xl bg-surface border border-border hover:border-border-focus cursor-pointer transition-all duration-200"
+              className={`group flex items-center gap-4 p-4 rounded-xl bg-surface border border-border hover:border-border-focus cursor-pointer transition-all duration-200 ${
+                deletingId === session.id ? 'opacity-40 pointer-events-none' : ''
+              }`}
             >
               {session.overall_score !== null ? (
                 <ScoreBadge score={session.overall_score} size="sm" />
@@ -527,7 +533,7 @@ function HistoryPanel() {
                   <button
                     onClick={(e) => handleDeleteRequest(session.id, e)}
                     aria-label="Delete session"
-                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
+                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 rounded-lg text-text-faint hover:text-danger hover:bg-danger-muted cursor-pointer bg-transparent border-none transition-all"
                   >
                     <Trash2 size={13} />
                   </button>

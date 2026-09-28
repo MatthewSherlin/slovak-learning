@@ -124,13 +124,15 @@ export default function TradeInSheet({
   }, [selected, submitting, userId, onSuccess]);
 
   const handleClose = useCallback(() => {
+    // Never close while a trade is in flight — the server would complete it
+    // without the user ever seeing the result.
+    if (submitting) return;
     // Reset state on close
     setSelected(new Set());
     setError(null);
     setXpGained(null);
-    setSubmitting(false);
     onClose();
-  }, [onClose]);
+  }, [submitting, onClose]);
 
   return (
     <AnimatePresence>

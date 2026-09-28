@@ -73,9 +73,10 @@ export default function ShowcasePicker({
   );
 
   const handleClose = useCallback(() => {
+    if (saving) return; // don't dismiss mid-save; onSuccess must land in-view
     setError(null);
     onClose();
-  }, [onClose]);
+  }, [saving, onClose]);
 
   const cards = collection.cards;
 
@@ -135,6 +136,12 @@ export default function ShowcasePicker({
                 flexShrink: 0,
               }}
             />
+
+            {saving && (
+              <p style={{ fontSize: 12, color: '#5ea4f7', textAlign: 'center', margin: '0 0 8px 0' }}>
+                Saving…
+              </p>
+            )}
 
             {/* Header row */}
             <div
