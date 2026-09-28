@@ -365,7 +365,7 @@ describe('GrammarMode', () => {
   });
 
   // ── Tier UI ─────────────────────────────────────────────────────────────
-  it('accent tier shows "Takmer!" label and diacritics note', async () => {
+  it('accent tier shows as correct with the accented spelling', async () => {
     const { submitGrammarAnswer } = await import('../../lib/api');
     const mockSubmit = vi.mocked(submitGrammarAnswer);
     mockSubmit.mockResolvedValueOnce(
@@ -374,7 +374,6 @@ describe('GrammarMode', () => {
 
     const user = userEvent.setup();
     const session = makeFirstExerciseSession();
-    // GrammarWrapper holds session in state so setSession(updated) works correctly
     render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText('Type the missing word...');
@@ -382,9 +381,21 @@ describe('GrammarMode', () => {
     await user.keyboard('{Enter}');
 
     await waitFor(() => {
-      expect(screen.getByText('Takmer!')).toBeTruthy();
+      expect(screen.getByText(/With accents/)).toBeTruthy();
     });
-    expect(screen.getByText(/Watch the diacritics/)).toBeTruthy();
+    expect(screen.getByText('Correct!')).toBeTruthy();
+    expect(screen.queryByText('Takmer!')).toBeNull();
+    expect(screen.queryByText(/Watch the diacritics/)).toBeNull();
+  });
+
+  it('turns off autocorrect on the Slovak answer box', () => {
+    const session = makeFirstExerciseSession();
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
+    const input = screen.getByPlaceholderText('Type the missing word...');
+    expect(input.getAttribute('autocorrect')).toBe('off');
+    expect(input.getAttribute('autocapitalize')).toBe('none');
+    expect(input.getAttribute('autocomplete')).toBe('off');
+    expect(input.getAttribute('spellcheck')).toBe('false');
   });
 
   it('exact tier shows "Correct!" label', async () => {
@@ -470,7 +481,7 @@ describe('GrammarMode', () => {
 
     // Build a single-exercise session so the FIRST submit is also the LAST.
     // The mock backend response flips phase to 'complete' and sets tier 'accent'
-    // (the amber "Takmer!" case — a wrong-diacritics but correct answer).
+    // (a correct answer typed without its accents).
     const initialSession: Session = {
       id: 'grammar-session-last',
       user_id: 'user-1',
@@ -505,10 +516,10 @@ describe('GrammarMode', () => {
     await user.type(input, 'hovorim');
     await user.keyboard('{Enter}');
 
-    // After submitting the last exercise, the tier feedback ("Takmer!") MUST be
-    // visible — the session should NOT have auto-ended yet.
+    // After submitting the last exercise, the result panel MUST be visible —
+    // the session should NOT have auto-ended yet.
     await waitFor(() => {
-      expect(screen.getByText('Takmer!')).toBeTruthy();
+      expect(screen.getByText(/With accents/)).toBeTruthy();
     });
 
     // endSession and getSession must NOT have been called at this point:

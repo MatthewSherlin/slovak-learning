@@ -15,6 +15,7 @@ import SessionHeader from './SessionHeader';
 import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
+import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { submitAnswer, requestHint, endSession, getSession } from '../lib/api';
 import type { Session, SessionFeedback, Difficulty, ConversationExerciseData } from '../lib/types';
 
@@ -441,6 +442,7 @@ function ConversationModeInner({
                       onKeyDown={handleKeyDown}
                       placeholder="Type your response in Slovak... (Enter to send)"
                       rows={1}
+                      {...SLOVAK_INPUT_PROPS}
                       className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[13.5px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors leading-relaxed"
                     />
                   </div>

@@ -49,6 +49,7 @@ export interface VocabQuestion {
   correctIndex: number;
   explanation: string;
   pronunciation?: string;
+  review?: boolean;
 }
 
 export interface VocabExerciseData {
@@ -92,9 +93,15 @@ export interface GrammarExerciseData {
 }
 
 // -- Translation exercise types --
+export type TranslationKind = 'translate' | 'fill_blank' | 'error_correction';
+
 export interface TranslationExercise {
+  /** Absent on sessions created before kinds existed; treat as 'translate'. */
+  kind?: TranslationKind;
   source: string;
   direction: 'sk-en' | 'en-sk';
+  /** English meaning, shown as context for fill_blank and error_correction. */
+  translation?: string | null;
   modelAnswer: string;
   keyPoints: string[];
 }
@@ -103,6 +110,8 @@ export interface TranslationAnswer {
   userAnswer: string;
   score: number;
   feedback: string;
+  /** Set when the answer was graded without the model. */
+  tier?: 'exact' | 'accent' | null;
 }
 
 export interface TranslationExerciseData {

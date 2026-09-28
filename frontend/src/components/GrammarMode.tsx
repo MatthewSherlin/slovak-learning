@@ -10,6 +10,7 @@ import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import MarkdownTable from './MarkdownTable';
 import { renderInlineMd } from '../lib/mdlite';
+import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { advanceGrammarPhase, submitGrammarAnswer, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
 import type { Session, SessionFeedback, GrammarExerciseData } from '../lib/types';
@@ -176,12 +177,14 @@ function GrammarModeInner({
   }, [isMultipleChoice]);
 
   // Auto-advance after correct answer
+  // An accent-free answer is correct; it stays a little longer so the learner
+  // can read the accented spelling.
   useEffect(() => {
     if (showResult && lastCorrect) {
-      const timer = setTimeout(handleNext, 1400);
+      const timer = setTimeout(handleNext, lastTier === 'accent' ? 2600 : 1400);
       return () => clearTimeout(timer);
     }
-  }, [showResult, lastCorrect, handleNext]);
+  }, [showResult, lastCorrect, lastTier, handleNext]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !showResult) {
@@ -457,9 +460,7 @@ function GrammarModeInner({
 
   // Determine blank display state for the sentence card
   const blankDisplayClass = showResult
-    ? lastTier === 'accent'
-      ? 'border-warning/40 bg-warning/5 text-warning'
-      : lastCorrect
+    ? lastCorrect
       ? 'border-success/40 bg-success/5 text-success'
       : 'border-danger/40 bg-danger/5 text-danger'
     : 'border-mode-grammar/40 bg-mode-grammar/5 text-mode-grammar';
@@ -538,9 +539,7 @@ function GrammarModeInner({
 
                       let cardClass = 'bg-surface-2 border-border hover:border-mode-grammar/50 hover:bg-mode-grammar/5';
                       if (isRight) {
-                        cardClass = lastTier === 'accent'
-                          ? 'bg-warning/10 border-warning/50 ring-2 ring-warning/30'
-                          : 'bg-success/10 border-success/50 ring-2 ring-success/30';
+                        cardClass = 'bg-success/10 border-success/50 ring-2 ring-success/30';
                       } else if (isThisSelected && !lastCorrect) {
                         cardClass = 'bg-danger/10 border-danger/50';
                       } else if (isWrong) {
@@ -574,7 +573,7 @@ function GrammarModeInner({
                             <motion.div
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
-                              className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${lastTier === 'accent' ? 'bg-warning' : 'bg-success'}`}
+                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-success flex items-center justify-center shadow-md"
                             >
                               <Check size={12} className="text-white" />
                             </motion.div>
@@ -638,6 +637,7 @@ function GrammarModeInner({
                       onKeyDown={handleKeyDown}
                       placeholder="Type the missing word..."
                       autoFocus
+                      {...SLOVAK_INPUT_PROPS}
                       className="flex-1 bg-surface-2 border border-border rounded-xl px-4 py-3 text-[14px] text-text-primary placeholder:text-text-faint focus:border-border-focus transition-colors"
                     />
                     <motion.button
@@ -679,26 +679,13 @@ function TierFeedback({
   isLast: boolean;
 }) {
   const isAccent = tier === 'accent';
-  const isExact = tier === 'exact' || (wasCorrect && tier == null);
   const isWrong = !wasCorrect;
 
-  // accent = correct (counted as correct) but diacritics note
-  const panelClass = isWrong
-    ? 'bg-danger/5 border-danger/20'
-    : isAccent
-    ? 'bg-warning/5 border-warning/20'
-    : 'bg-success/5 border-success/20';
+  const panelClass = isWrong ? 'bg-danger/5 border-danger/20' : 'bg-success/5 border-success/20';
+  const iconClass = isWrong ? 'text-danger' : 'text-success';
+  const labelClass = iconClass;
 
-  const iconClass = isWrong ? 'text-danger' : isAccent ? 'text-warning' : 'text-success';
-  const labelClass = isWrong ? 'text-danger' : isAccent ? 'text-warning' : 'text-success';
-
-  const label = isWrong
-    ? 'Not quite'
-    : isAccent
-    ? 'Takmer!'
-    : streak >= 3
-    ? `${streak} in a row!`
-    : 'Correct!';
+  const label = isWrong ? 'Not quite' : streak >= 3 ? `${streak} in a row!` : 'Correct!';
 
   return (
     <motion.div
@@ -715,11 +702,11 @@ function TierFeedback({
 
       {isAccent && (
         <p className="text-[12px] text-text-secondary ml-[23px]">
-          Watch the diacritics: <strong className="text-warning">{correctAnswer}</strong>
+          With accents: <strong className="text-success">{correctAnswer}</strong>
         </p>
       )}
 
-      {isExact && !isAccent && explanation && (
+      {!isWrong && explanation && (
         <p className="text-[12px] text-text-muted ml-[23px] mt-1">{renderInlineMd(explanation)}</p>
       )}
 

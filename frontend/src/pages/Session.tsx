@@ -9,6 +9,7 @@ import VocabMode from '../components/VocabMode';
 import GrammarMode from '../components/GrammarMode';
 import TranslationMode from '../components/TranslationMode';
 import ConversationMode from '../components/ConversationMode';
+import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { getSession, submitAnswer, requestHint, endSession } from '../lib/api';
 import { useUser } from '../components/UserPicker';
 import type { Session as SessionType, SessionFeedback } from '../lib/types';
@@ -186,6 +187,7 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
                   onKeyDown={handleKeyDown}
                   placeholder="Type your response... (Enter to send, Shift+Enter for new line)"
                   rows={1}
+                  {...SLOVAK_INPUT_PROPS}
                   className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[13.5px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors leading-relaxed"
                 />
               </div>
