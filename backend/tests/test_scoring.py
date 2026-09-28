@@ -67,12 +67,12 @@ class TestGradeAnswer:
         assert grade_answer("mám vodu", "mám    vodu").tier == "exact"
 
     def test_curly_and_straight_apostrophes_match(self):
-        assert grade_answer("don't", "don't").tier == "exact"
-        assert grade_answer("don't", "dont").tier == "exact"
+        assert grade_answer("don’t", "don’t").tier == "exact"
+        assert grade_answer("don’t", "dont").tier == "exact"
 
     def test_combining_accent_matches_precomposed(self):
         # i + U+0301, as produced by some on-screen keyboards
-        assert grade_answer("vidím", "vidím").tier == "exact"
+        assert grade_answer("vidím", "vidím").tier == "exact"
 
     def test_punctuation_only_answer_is_wrong(self):
         assert grade_answer("vidím", "...").tier == "wrong"

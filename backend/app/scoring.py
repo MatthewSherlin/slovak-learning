@@ -10,7 +10,7 @@ import re
 import unicodedata
 from typing import NamedTuple
 
-_APOSTROPHES = re.compile(r"['''`´]")
+_APOSTROPHES = re.compile("['‘’`´]")
 _NON_WORD = re.compile(r"[^\w\s]", re.UNICODE)
 
 
@@ -35,7 +35,11 @@ def normalize_answer(s: str, *, strip_diacritics: bool = True) -> str:
     if strip_diacritics:
         text = strip_accents(text)
     text = _APOSTROPHES.sub("", text)
-    text = _NON_WORD.sub(" ", text)
+    # Replace non-word chars with space, but preserve combining marks
+    text = "".join(
+        " " if (_NON_WORD.match(ch) and not unicodedata.combining(ch)) else ch
+        for ch in text
+    )
     return " ".join(text.split())
 
 
