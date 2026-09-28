@@ -99,16 +99,24 @@ FARM_ITEM_CATALOG = {
 async def _cleanup_bad_vocab_rows(db: aiosqlite.Connection) -> None:
     """Remove rows whose meaning is an "of the above" quiz option, or whose
     Slovak text has letters from another script. Safe to run repeatedly."""
-    cursor = await db.execute("SELECT id, slovak, english FROM vocabulary_progress")
-    bad_ids = [
-        row[0]
-        for row in await cursor.fetchall()
-        if is_quiz_artifact(row[2] or "") or has_non_latin_letters(row[1] or "")
-    ]
-    for row_id in bad_ids:
+    cursor = await db.execute("SELECT id, user_id, slovak, english FROM vocabulary_progress")
+    removed = 0
+    for row_id, user_id, slovak, english in await cursor.fetchall():
+        if is_quiz_artifact(english or ""):
+            reason = "quiz option as meaning"
+        elif has_non_latin_letters(slovak or ""):
+            reason = "non-Latin letters"
+        else:
+            continue
+        # The delete cannot be undone, so say exactly what went.
+        log.warning(
+            "Removing vocabulary row for user %s: %r / %r (%s)",
+            user_id, slovak, english, reason,
+        )
         await db.execute("DELETE FROM vocabulary_progress WHERE id = ?", (row_id,))
-    if bad_ids:
-        log.info("Removed %d unusable vocabulary rows", len(bad_ids))
+        removed += 1
+    if removed:
+        log.info("Removed %d unusable vocabulary rows", removed)
 
 
 async def init_db() -> None:

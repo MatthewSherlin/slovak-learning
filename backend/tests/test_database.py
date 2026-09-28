@@ -372,3 +372,42 @@ async def test_init_removes_unusable_vocab_rows(db):
 
     kept = {w["slovak"] for w in await get_vocab_progress(db, uid)}
     assert kept == {"chlieb", "ťažký", "oba", "ani jeden"}
+
+
+async def test_cleanup_logs_each_removed_row(db, caplog):
+    import logging
+
+    uid = f"clean_{uuid.uuid4().hex[:8]}"
+    await db.execute(
+        "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, 'C', 'C', '#000')",
+        (uid,),
+    )
+    for slovak, english in [
+        ("na zdravie", "all of the above"),
+        ("\u0441\u0442\u043e\u043b", "table"),
+        ("chlieb", "bread"),
+    ]:
+        await db.execute(
+            """INSERT INTO vocabulary_progress
+               (user_id, slovak, english, times_seen, times_correct, last_seen_at,
+                source_mode, created_at, due_at, interval_days)
+               VALUES (?, ?, ?, 1, 1, '2026-01-01T00:00:00+00:00', 'vocabulary',
+                       '2026-01-01T00:00:00+00:00', '2026-01-02T00:00:00+00:00', 1)""",
+            (uid, slovak, english),
+        )
+    await db.commit()
+
+    with caplog.at_level(logging.WARNING, logger="app.database"):
+        await init_db()
+
+    mine = [
+        r.getMessage() for r in caplog.records
+        if r.levelno == logging.WARNING and uid in r.getMessage()
+    ]
+    assert len(mine) == 2
+    quiz = next(m for m in mine if "na zdravie" in m)
+    assert "all of the above" in quiz
+    assert "quiz option as meaning" in quiz
+    script = next(m for m in mine if "\u0441\u0442\u043e\u043b" in m)
+    assert "table" in script
+    assert "non-Latin letters" in script
