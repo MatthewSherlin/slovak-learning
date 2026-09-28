@@ -444,17 +444,18 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
     user = await get_user(db, req["user_id"])
     student_name = user["name"] if user else "Student"
 
-    prompt = f"The student's name is {student_name} and they are at {difficulty_label} level.\n"
-    if topic_label:
-        prompt += f"Topic: {topic_label}\n"
+    prompt = (
+        f"The student's name is {student_name} and they are at {difficulty_label} level.\n\n"
+        f"{build_focus_block(topic_label, instructions)}\n"
+    )
     if learning_context:
         prompt += f"\n{learning_context}\n"
     prompt += (
-        f"\nStart the conversation with this scenario: {question}\n\n"
+        f"\nStart the conversation with this scenario: {question}\n"
+        "If the scenario and the session focus conflict, follow the session focus.\n\n"
         f"Begin now — greet {student_name} and start the conversation. "
         f"Remember: ONLY 2-3 sentences maximum for your first message."
     )
-    prompt += _instructions_block(instructions)
 
     messages = [{"role": "user", "content": prompt}]
     response = await ask_messages(
@@ -685,10 +686,13 @@ async def submit_conversation_answer(db: aiosqlite.Connection, session_id: str, 
     topic_label = resolve_topic_label("conversation", session["topic"])
     scenario = ex.get("scenario", "")
 
-    system_prompt = f"{CONVERSATION_TURN_PROMPT}\n\nStudent level: {difficulty_label}\n"
-    if topic_label:
-        system_prompt += f"Topic: {topic_label}\n"
-    system_prompt += f"Scenario: {scenario}" + _instructions_block(ex.get("instructions"))
+    system_prompt = (
+        f"{CONVERSATION_TURN_PROMPT}\n\n"
+        f"Student level: {difficulty_label}\n\n"
+        f"{build_focus_block(topic_label, ex.get('instructions'))}\n\n"
+        f"Scenario: {scenario}\n"
+        "If the scenario and the session focus conflict, follow the session focus."
+    )
 
     anthropic_messages: list[dict] = []
     for msg in session["messages"]:
@@ -776,7 +780,7 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
 
     conversation = _build_conversation(session["messages"])
     mode_label = session["mode"].replace("_", " ").title()
-    topic_label = TOPICS.get(session["mode"], {}).get(session["topic"], session["topic"])
+    topic_label = resolve_topic_label(session["mode"], session["topic"]) or "no set topic"
 
     prompt = (
         f"Mode: {mode_label}\n"

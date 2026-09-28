@@ -249,3 +249,48 @@ async def test_conversation_keeps_a_chosen_topic(db, capture_messages):
         "user_id": uid, "mode": "conversation", "topic": "shopping",
     })
     assert "Topic: Shopping" in capture_messages["messages"][0]["content"]
+
+
+async def test_conversation_opener_leads_with_focus(db, capture_messages):
+    from app.sessions import _create_conversation_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "general",
+        "instructions": "talk about food",
+    })
+    opener = capture_messages["messages"][0]["content"]
+    assert opener.index("[Session focus]") < opener.index("Start the conversation")
+    assert opener.index("talk about food") < opener.index("Start the conversation")
+    assert "follow the session focus" in opener
+
+
+async def test_conversation_turn_carries_focus(db, capture_messages):
+    from app.sessions import _create_conversation_session, submit_conversation_answer
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    session = await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "shopping",
+        "instructions": "talk about food",
+    })
+    await submit_conversation_answer(db, session["id"], "Ahoj")
+    turn_system = capture_messages["system_prompts"][-1]
+    assert "[Session focus]" in turn_system
+    assert "Topic: Shopping" in turn_system
+    assert "talk about food" in turn_system
+    assert "follow the session focus" in turn_system
+
+
+async def test_conversation_with_no_choices_uses_default_focus(db, capture_messages):
+    from app.sessions import _create_conversation_session
+
+    uid = f"gt_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    await _create_conversation_session(db, {
+        "user_id": uid, "mode": "conversation", "topic": "general",
+    })
+    opener = capture_messages["messages"][0]["content"]
+    assert "everyday high-frequency" in opener
+    assert "general" not in opener.lower().replace("get-to-know-you", "")

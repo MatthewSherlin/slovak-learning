@@ -86,3 +86,17 @@ async def test_feedback_call_uses_schema_and_low_effort(db, fake_llm, sample_voc
     assert fake_llm["kwargs"]["schema"] is FEEDBACK_SCHEMA
     assert fake_llm["kwargs"]["effort"] == "low"
     assert fake_llm["kwargs"]["max_tokens"] == 8000
+
+
+async def test_feedback_prompt_never_says_general(db, fake_llm, sample_vocab_session):
+    session = {
+        **sample_vocab_session,
+        "id": f"fb-{uuid.uuid4().hex[:8]}",
+        "topic": "general",
+        "completed": False,
+        "feedback": None,
+    }
+    await db_create_session(db, session)
+    await end_session(db, session["id"])
+    assert "Topic: general" not in fake_llm["prompt"]
+    assert "Topic: no set topic" in fake_llm["prompt"]
