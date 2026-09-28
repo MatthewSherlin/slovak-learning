@@ -27,6 +27,14 @@ class LLMError(Exception):
     """
 
 
+class LLMUnavailableError(LLMError):
+    """Transient failures persisted through every retry."""
+
+
+class LLMCreditsError(LLMError):
+    """The provider account has no credits left. Retrying will not help."""
+
+
 class _TransientLLMError(Exception):
     """Internal: a retryable failure (rate limit, connection, 5xx)."""
 
@@ -51,7 +59,7 @@ def _get_client() -> anthropic.AsyncAnthropic:
 def _get_http() -> httpx.AsyncClient:
     global _http
     if _http is None:
-        _http = httpx.AsyncClient(timeout=60.0)
+        _http = httpx.AsyncClient(timeout=90.0)
     return _http
 
 
@@ -63,7 +71,9 @@ async def _with_retries(call: Callable[[], Awaitable[T]]) -> T:
             return await call()
         except _TransientLLMError as e:
             if attempt == _MAX_ATTEMPTS - 1:
-                raise LLMError(f"LLM unavailable after {_MAX_ATTEMPTS} attempts: {e}") from e
+                raise LLMUnavailableError(
+                    f"LLM unavailable after {_MAX_ATTEMPTS} attempts: {e}"
+                ) from e
             log.warning("Transient LLM failure (attempt %d): %s", attempt + 1, e)
             await asyncio.sleep(delay + random.uniform(0, delay / 2 if delay else 0))
             delay *= 2
@@ -96,10 +106,16 @@ async def _anthropic_chat(
 def _parse_openrouter_response(data: dict) -> str:
     """Extract message text from an OpenAI-style chat completion payload."""
     if "error" in data:
-        raise LLMError(f"OpenRouter error: {data['error'].get('message', data['error'])}")
+        err = data["error"]
+        message = err.get("message", err) if isinstance(err, dict) else err
+        if isinstance(err, dict) and err.get("code") == 402:
+            raise LLMCreditsError(f"OpenRouter is out of credits: {message}")
+        raise LLMError(f"OpenRouter error: {message}")
     choices = data.get("choices") or []
     if not choices:
         raise LLMError("Empty response from LLM")
+    if choices[0].get("finish_reason") == "length":
+        raise LLMError("LLM response truncated at max_tokens")
     content = choices[0].get("message", {}).get("content")
     if not content:
         raise LLMError("Empty response from LLM")
@@ -107,25 +123,42 @@ def _parse_openrouter_response(data: dict) -> str:
 
 
 async def _openrouter_chat(
-    messages: list[dict], system_prompt: str | None, max_tokens: int
+    messages: list[dict],
+    system_prompt: str | None,
+    max_tokens: int,
+    *,
+    effort: str | None = None,
+    schema: dict | None = None,
+    schema_name: str = "response",
 ) -> str:
     """Single OpenRouter (OpenAI-compatible) API call."""
     payload_messages = []
     if system_prompt:
         payload_messages.append({"role": "system", "content": system_prompt})
     payload_messages.extend(messages)
+    payload: dict = {
+        "model": settings.openrouter_model,
+        "max_tokens": max_tokens,
+        "messages": payload_messages,
+    }
+    if effort:
+        # exclude: the reasoning text is never shown, so don't ship it back
+        payload["reasoning"] = {"effort": effort, "exclude": True}
+    if schema is not None:
+        payload["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": schema_name, "strict": True, "schema": schema},
+        }
     try:
         resp = await _get_http().post(
             f"{settings.openrouter_base_url}/chat/completions",
             headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},
-            json={
-                "model": settings.openrouter_model,
-                "max_tokens": max_tokens,
-                "messages": payload_messages,
-            },
+            json=payload,
         )
     except httpx.TransportError as e:
         raise _TransientLLMError(str(e)) from e
+    if resp.status_code == 402:
+        raise LLMCreditsError("OpenRouter is out of credits")
     if resp.status_code == 429 or resp.status_code >= 500:
         raise _TransientLLMError(f"OpenRouter HTTP {resp.status_code}")
     if resp.status_code != 200:
@@ -133,25 +166,49 @@ async def _openrouter_chat(
     return _parse_openrouter_response(resp.json())
 
 
-async def _chat(messages: list[dict], system_prompt: str | None, max_tokens: int) -> str:
+async def _chat(
+    messages: list[dict],
+    system_prompt: str | None,
+    max_tokens: int,
+    *,
+    effort: str | None = None,
+    schema: dict | None = None,
+    schema_name: str = "response",
+) -> str:
     """Route to the configured provider, with retries."""
     if settings.llm_provider == "openrouter":
-        return await _with_retries(lambda: _openrouter_chat(messages, system_prompt, max_tokens))
+        return await _with_retries(lambda: _openrouter_chat(
+            messages, system_prompt, max_tokens,
+            effort=effort, schema=schema, schema_name=schema_name,
+        ))
     return await _with_retries(lambda: _anthropic_chat(messages, system_prompt, max_tokens))
 
 
-async def ask(prompt: str, system_prompt: str | None = None, max_tokens: int = 4096) -> str:
+async def ask(
+    prompt: str,
+    system_prompt: str | None = None,
+    max_tokens: int = 4096,
+    *,
+    effort: str | None = None,
+    schema: dict | None = None,
+    schema_name: str = "response",
+) -> str:
     """Send a prompt to the LLM and return the text response."""
-    return await _chat([{"role": "user", "content": prompt}], system_prompt, max_tokens)
+    return await _chat(
+        [{"role": "user", "content": prompt}], system_prompt, max_tokens,
+        effort=effort, schema=schema, schema_name=schema_name,
+    )
 
 
 async def ask_messages(
     messages: list[dict],
     system_prompt: str,
     max_tokens: int = 1024,
+    *,
+    effort: str | None = None,
 ) -> str:
     """Send a multi-turn conversation to the LLM using messages format."""
-    return await _chat(messages, system_prompt, max_tokens)
+    return await _chat(messages, system_prompt, max_tokens, effort=effort)
 
 
 def _repair_json(text: str) -> str:
@@ -235,13 +292,35 @@ def _extract_json(text: str) -> dict:
     raise LLMError(f"Failed to extract JSON from response: {text[:300]}")
 
 
-async def ask_json(prompt: str, system_prompt: str | None = None) -> dict:
+async def ask_json(
+    prompt: str,
+    system_prompt: str | None = None,
+    *,
+    schema: dict | None = None,
+    schema_name: str = "response",
+    effort: str | None = None,
+    max_tokens: int = 4096,
+) -> dict:
     """Send a prompt to the LLM and parse the JSON response.
 
-    If the first response isn't parseable JSON, retries once with an
-    explicit JSON-only instruction before giving up.
+    With a schema the provider enforces the shape. If that call is rejected
+    (a provider that refuses the schema, a truncated reply), the request is
+    repeated as plain text JSON. An unparseable plain reply is retried once
+    with an explicit JSON-only instruction.
     """
-    raw = await ask(prompt, system_prompt)
+    if schema is not None:
+        try:
+            raw = await ask(
+                prompt, system_prompt, max_tokens,
+                effort=effort, schema=schema, schema_name=schema_name,
+            )
+            return _extract_json(raw)
+        except (LLMCreditsError, LLMUnavailableError):
+            raise
+        except LLMError as e:
+            log.warning("Structured output call failed (%s); using text JSON", e)
+
+    raw = await ask(prompt, system_prompt, max_tokens, effort=effort)
     try:
         return _extract_json(raw)
     except LLMError:
@@ -250,5 +329,5 @@ async def ask_json(prompt: str, system_prompt: str | None = None) -> dict:
             f"{prompt}\n\nRespond with ONLY valid JSON. "
             "No prose, no markdown fences, no explanations."
         )
-        raw = await ask(strict_prompt, system_prompt)
+        raw = await ask(strict_prompt, system_prompt, max_tokens, effort=effort)
         return _extract_json(raw)

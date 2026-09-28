@@ -58,7 +58,7 @@ from .models import (
     UpdatePreferencesRequest,
     VocabAnswerRequest,
 )
-from .llm import LLMError
+from .llm import LLMCreditsError, LLMError
 from .questions import QUESTIONS, TOPICS
 from .sessions import (
     advance_grammar_phase,
@@ -88,6 +88,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(LLMCreditsError)
+async def llm_credits_handler(request: Request, exc: LLMCreditsError) -> JSONResponse:
+    """The AI account is empty. Say so plainly; retrying cannot help."""
+    logging.getLogger(__name__).error("LLM out of credits on %s: %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "The tutor is out of AI credits.", "code": "tutor_out_of_credits"},
+    )
 
 
 @app.exception_handler(LLMError)

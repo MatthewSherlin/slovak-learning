@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app import sessions as sessions_module
-from app.llm import LLMError, _extract_json
+from app.llm import LLMCreditsError, LLMError, _extract_json
 from app.main import app
 
 
@@ -71,3 +71,19 @@ class TestSessionCreationLLMFailure:
         async with client as c:
             resp = await c.post("/api/sessions/nonexistent/end")
         assert resp.status_code == 404
+
+    async def test_out_of_credits_returns_503_with_code(self, client, monkeypatch):
+        async def boom(*args, **kwargs):
+            raise LLMCreditsError("no credits")
+
+        monkeypatch.setattr(sessions_module, "ask_json", boom)
+
+        async with client as c:
+            resp = await c.post("/api/sessions", json={
+                "user_id": "matt",
+                "mode": "vocabulary",
+                "topic": "food_drink",
+                "difficulty": "beginner",
+            })
+        assert resp.status_code == 503
+        assert resp.json()["code"] == "tutor_out_of_credits"

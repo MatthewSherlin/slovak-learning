@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("OPENROUTER_API_KEY", "SLOVAK_OPENROUTER_API_KEY"),
     )
-    openrouter_model: str = "google/gemini-2.5-flash"
+    openrouter_model: str = "anthropic/claude-sonnet-5"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
     db_path: Path = Path(__file__).resolve().parent.parent / "data" / "slovak.db"
