@@ -155,6 +155,10 @@ async def _openrouter_chat(
             headers={"Authorization": f"Bearer {settings.openrouter_api_key}"},
             json=payload,
         )
+    except httpx.TimeoutException as e:
+        # A reply that did not arrive in 90s will not arrive in time on a
+        # retry either; the learner's phone has already given up.
+        raise LLMUnavailableError(f"LLM request timed out: {e}") from e
     except httpx.TransportError as e:
         raise _TransientLLMError(str(e)) from e
     if resp.status_code == 402:

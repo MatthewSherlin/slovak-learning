@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from app import llm
@@ -188,6 +189,18 @@ class _FakeHttp:
         return self.responses.pop(0)
 
 
+class _RaisingHttp:
+    """Fake HTTP client whose every request fails with the given error."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+        self.attempts = 0
+
+    async def post(self, url: str, headers: dict | None = None, json: dict | None = None) -> None:
+        self.attempts += 1
+        raise self.error
+
+
 @pytest.fixture
 def openrouter(monkeypatch):
     def install(responses: list[_FakeResponse]) -> _FakeHttp:
@@ -256,3 +269,19 @@ class TestOpenRouterPayload:
         with pytest.raises(LLMUnavailableError):
             await llm.ask_json("p", schema=SCHEMA)
         assert len(fake.payloads) == 3
+
+    async def test_timeout_is_not_retried(self, monkeypatch):
+        fake = _RaisingHttp(httpx.ReadTimeout("slow"))
+        monkeypatch.setattr(settings, "llm_provider", "openrouter")
+        monkeypatch.setattr(llm, "_get_http", lambda: fake)
+        with pytest.raises(LLMUnavailableError, match="timed out"):
+            await llm.ask_json("p", schema=SCHEMA)
+        assert fake.attempts == 1
+
+    async def test_connection_error_is_still_retried(self, monkeypatch):
+        fake = _RaisingHttp(httpx.ConnectError("refused"))
+        monkeypatch.setattr(settings, "llm_provider", "openrouter")
+        monkeypatch.setattr(llm, "_get_http", lambda: fake)
+        with pytest.raises(LLMUnavailableError):
+            await llm.ask_json("p", schema=SCHEMA)
+        assert fake.attempts == 3
