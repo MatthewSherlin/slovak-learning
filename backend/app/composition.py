@@ -165,6 +165,7 @@ def build_focus_block(topic_label: str | None, instructions: str | None) -> str:
 
 _BLANK = re.compile(r"_{3,}")
 _DIRECTIONS = ("en-sk", "sk-en")
+_FIXED_DIRECTION_KINDS = ("fill_blank", "error_correction")
 
 
 def filter_translation_items(
@@ -174,18 +175,24 @@ def filter_translation_items(
 
     Drops items in the wrong direction, malformed items for the kind,
     sentences used in recent sessions, and duplicates. The kind is set here
-    rather than trusted from the model.
+    rather than trusted from the model, and so is the direction for the kinds
+    whose direction is fixed (a Slovak sentence answered in Slovak).
     """
     seen = {normalize_answer(s) for s in recent_sources}
     kept: list[dict] = []
     for raw in items:
         source = _BLANK.sub("____", (raw.get("source") or "").strip())
         answer = (raw.get("modelAnswer") or "").strip()
-        item_direction = raw.get("direction")
-        if not source or not answer or item_direction not in _DIRECTIONS:
+        if not source or not answer:
             continue
-        if direction and item_direction != direction:
-            continue
+        if kind in _FIXED_DIRECTION_KINDS:
+            item_direction = "en-sk"
+        else:
+            item_direction = raw.get("direction")
+            if item_direction not in _DIRECTIONS:
+                continue
+            if direction and item_direction != direction:
+                continue
         blanks = source.count("____")
         if kind == "fill_blank" and blanks != 1:
             continue

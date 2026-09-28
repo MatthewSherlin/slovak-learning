@@ -256,3 +256,23 @@ class TestFilterTranslationItems:
         ]
         kept = filter_translation_items(items, "error_correction", "en-sk", [])
         assert [i["source"] for i in kept] == ["Mám voda."]
+
+    def test_fill_blank_keeps_items_whatever_direction_the_model_wrote(self):
+        items = [
+            _item(source="Mám ____.", modelAnswer="vodu", direction="sk-en"),
+            _item(source="Pijem ____.", modelAnswer="čaj", direction=None),
+            _item(source="Vidím ____.", modelAnswer="psa", direction="sideways"),
+        ]
+        kept = filter_translation_items(items, "fill_blank", "en-sk", [])
+        assert [i["source"] for i in kept] == ["Mám ____.", "Pijem ____.", "Vidím ____."]
+        assert {i["direction"] for i in kept} == {"en-sk"}
+
+    def test_error_correction_keeps_items_whatever_direction_the_model_wrote(self):
+        items = [_item(source="Mám voda.", modelAnswer="Mám vodu.", direction="sk-en")]
+        del items[0]["direction"]
+        items.append(_item(source="Vidím pes.", modelAnswer="Vidím psa.", direction="sk-en"))
+        kept = filter_translation_items(items, "error_correction", "en-sk", [])
+        assert [i["direction"] for i in kept] == ["en-sk", "en-sk"]
+
+    def test_translate_still_drops_a_missing_direction(self):
+        assert filter_translation_items([_item(direction=None)], "translate", None, []) == []
