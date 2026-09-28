@@ -45,6 +45,34 @@
   --color-mode-conversation: #f5c45e;
   --color-mode-translation: #f0a8d0;
 
+  /* Folded in from hand-typed hex/rgba duplicates so the light theme works
+     (task: colours come from theme tokens). Dark values are the exact
+     values that were hand-typed; light values were chosen to sit with the
+     rest of the light palette. */
+  --color-on-accent: #ffffff;
+  --color-surface-sunken: #0e1017;
+  --color-surface-card: #151926;
+  --color-surface-sheet: #161a28;
+  --color-score-danger: #f87171;
+  --color-score-danger-from: #e05555;
+  --color-score-good-from: #3dcb8c;
+  --color-score-warn-from: #d9a63e;
+  --color-accent-gradient-end: #38bdf8;
+  --color-error-text: #ef4444;
+  --color-tabbar-bg: rgba(14, 16, 23, 0.92);
+  --color-surface-button: #1e2130;
+  --color-backdrop: rgba(5, 6, 10, 0.55);
+  --color-shadow-badge: rgba(0, 0, 0, 0.35);
+  --color-overlay-03: rgba(255, 255, 255, 0.03);
+  --color-overlay-04: rgba(255, 255, 255, 0.04);
+  --color-overlay-05: rgba(255, 255, 255, 0.05);
+  --color-overlay-06: rgba(255, 255, 255, 0.06);
+  --color-overlay-07: rgba(255, 255, 255, 0.07);
+  --color-overlay-08: rgba(255, 255, 255, 0.08);
+  --color-overlay-09: rgba(255, 255, 255, 0.09);
+  --color-overlay-12: rgba(255, 255, 255, 0.12);
+  --color-overlay-15: rgba(255, 255, 255, 0.15);
+
   /* Typography */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
@@ -96,30 +124,31 @@
   --color-glass-bg: rgba(255, 255, 255, 0.80);
 
   --map-opacity: 0.04;
-}
 
-/* -- Design-system shorthand tokens (dark default) ----------- */
-
-:root {
-  --bg: #0a0b10;
-  --surface: #0e1017;
-  --surface-2: #151926;
-  --border: #262b3d;
-  --text: #eef1f8;
-  --text-dim: #6b7289;
-  --accent: #5ea4f7;
-  --accent-hover: #7bb5ff;
-}
-
-[data-theme="light"] {
-  --bg: #f4f5fa;
-  --surface: #ffffff;
-  --surface-2: #f0f2f7;
-  --border: #d8dce8;
-  --text: #1a1e2e;
-  --text-dim: #6b7289;
-  --accent: #4a93e8;
-  --accent-hover: #3a7fd4;
+  /* Folded-in tokens, light values */
+  --color-on-accent: #ffffff;
+  --color-surface-sunken: #f8f9fc;
+  --color-surface-card: #ffffff;
+  --color-surface-sheet: #ffffff;
+  --color-score-danger: #d44a4a;
+  --color-score-danger-from: #e05555;
+  --color-score-good-from: #3dcb8c;
+  --color-score-warn-from: #d9a63e;
+  --color-accent-gradient-end: #38bdf8;
+  --color-error-text: #d44a4a;
+  --color-tabbar-bg: rgba(255, 255, 255, 0.85);
+  --color-surface-button: #f0f2f7;
+  --color-backdrop: rgba(10, 12, 18, 0.45);
+  --color-shadow-badge: rgba(20, 24, 38, 0.18);
+  --color-overlay-03: rgba(26, 30, 46, 0.05);
+  --color-overlay-04: rgba(26, 30, 46, 0.06);
+  --color-overlay-05: rgba(26, 30, 46, 0.07);
+  --color-overlay-06: rgba(26, 30, 46, 0.08);
+  --color-overlay-07: rgba(26, 30, 46, 0.09);
+  --color-overlay-08: rgba(26, 30, 46, 0.10);
+  --color-overlay-09: rgba(26, 30, 46, 0.11);
+  --color-overlay-12: rgba(26, 30, 46, 0.14);
+  --color-overlay-15: rgba(26, 30, 46, 0.18);
 }
 
 /* -- Card frame keyframes ---------------- */

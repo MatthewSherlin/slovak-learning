@@ -31,7 +31,7 @@ export default function BrandedLoader({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0e1017',
+        background: 'var(--color-surface-sunken)',
         padding: '24px',
       }}
     >
@@ -64,7 +64,7 @@ export default function BrandedLoader({
             cy="48"
             r="43"
             fill="none"
-            stroke="#5ea4f7"
+            stroke="var(--color-accent)"
             strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray="70 200"
@@ -78,7 +78,7 @@ export default function BrandedLoader({
             position: 'absolute',
             inset: 18,
             borderRadius: 20,
-            background: 'linear-gradient(135deg, #5ea4f7, #38bdf8)',
+            background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-gradient-end))',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -88,9 +88,9 @@ export default function BrandedLoader({
         >
           {/* Slovak letter icon */}
           <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-            <rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="white" />
-            <rect x="10" y="7" width="12" height="3.2" rx="1" fill="white" />
-            <rect x="8" y="14" width="16" height="3.2" rx="1" fill="white" />
+            <rect x="14.25" y="2" width="3.5" height="28" rx="1" fill="var(--color-on-accent)" />
+            <rect x="10" y="7" width="12" height="3.2" rx="1" fill="var(--color-on-accent)" />
+            <rect x="8" y="14" width="16" height="3.2" rx="1" fill="var(--color-on-accent)" />
           </svg>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function BrandedLoader({
           fontWeight: 800,
           margin: '0 0 6px 0',
           textAlign: 'center',
-          color: '#eef1f8',
+          color: 'var(--color-text-primary)',
           fontFamily: 'Inter, sans-serif',
         }}
       >
@@ -113,7 +113,7 @@ export default function BrandedLoader({
       <p
         style={{
           fontSize: 12.5,
-          color: '#6b7289',
+          color: 'var(--color-text-muted)',
           margin: '0 0 24px 0',
           textAlign: 'center',
           fontFamily: 'Inter, sans-serif',
@@ -127,7 +127,7 @@ export default function BrandedLoader({
         <p
           style={{
             fontSize: 10,
-            color: '#4a5068',
+            color: 'var(--color-text-faint)',
             margin: '16px 0 0 0',
             fontFamily: 'Inter, sans-serif',
           }}

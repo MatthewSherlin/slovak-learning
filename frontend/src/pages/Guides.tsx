@@ -19,9 +19,9 @@ const guides: Guide[] = [
   {
     id: 'pronunciation',
     icon: Volume2,
-    color: 'text-[#5de4a5]',
+    color: 'text-[var(--color-success)]',
     iconBg: 'bg-[rgba(93,228,165,0.12)]',
-    accentColor: '#5de4a5',
+    accentColor: 'var(--color-success)',
     title: 'Slovak Pronunciation',
     subtitle: 'Master the sounds that make Slovak unique',
     sections: [
@@ -46,9 +46,9 @@ const guides: Guide[] = [
   {
     id: 'cases',
     icon: BookText,
-    color: 'text-[#a78bfa]',
+    color: 'text-[var(--color-mode-grammar)]',
     iconBg: 'bg-[rgba(167,139,250,0.12)]',
-    accentColor: '#a78bfa',
+    accentColor: 'var(--color-mode-grammar)',
     title: 'Case System Overview',
     subtitle: 'The 6 cases of Slovak nouns and how to use them',
     sections: [
@@ -81,9 +81,9 @@ const guides: Guide[] = [
   {
     id: 'phrases',
     icon: MessageCircle,
-    color: 'text-[#f5c45e]',
+    color: 'text-[var(--color-warning)]',
     iconBg: 'bg-[rgba(245,196,94,0.12)]',
-    accentColor: '#f5c45e',
+    accentColor: 'var(--color-warning)',
     title: 'Essential Phrases',
     subtitle: 'Survival Slovak for everyday situations',
     sections: [
@@ -206,12 +206,12 @@ export default function Guides() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: gi * 0.08 }}
-              className="bg-[#151926] border border-white/[0.06] rounded-[22px] overflow-hidden"
+              className="bg-[var(--color-surface-card)] border border-[var(--color-overlay-06)] rounded-[22px] overflow-hidden"
             >
               {/* Guide Header */}
               <button
                 onClick={() => toggleGuide(guide.id)}
-                className="w-full flex items-center gap-3.5 p-[18px] text-left bg-transparent border-none cursor-pointer hover:bg-white/[0.03] transition-colors"
+                className="w-full flex items-center gap-3.5 p-[18px] text-left bg-transparent border-none cursor-pointer hover:bg-[var(--color-overlay-03)] transition-colors"
               >
                 <div
                   className={`${guide.iconBg} ${guide.color} w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0`}
@@ -220,14 +220,14 @@ export default function Guides() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-[15px] font-bold text-text-primary m-0">{guide.title}</h3>
-                  <p className="text-[12px] text-[#6b7289] mt-0.5 m-0">
+                  <p className="text-[12px] text-[var(--color-text-muted)] mt-0.5 m-0">
                     {totalSections} sections{readCount > 0 ? ` · ${readCount} read` : ' · 0 read'}
                   </p>
                 </div>
                 {isOpen ? (
-                  <ChevronUp size={16} className="text-[#4a5068] shrink-0" />
+                  <ChevronUp size={16} className="text-[var(--color-text-faint)] shrink-0" />
                 ) : (
-                  <ChevronDown size={16} className="text-[#4a5068] shrink-0" />
+                  <ChevronDown size={16} className="text-[var(--color-text-faint)] shrink-0" />
                 )}
               </button>
 
@@ -251,13 +251,13 @@ export default function Guides() {
                         return (
                           <div
                             key={si}
-                            className="rounded-[14px] bg-white/[0.03] overflow-hidden"
+                            className="rounded-[14px] bg-[var(--color-overlay-03)] overflow-hidden"
                             style={{ minHeight: 44, boxSizing: 'border-box' }}
                           >
                             {/* Section row */}
                             <button
                               onClick={() => toggleSection(sectionId, sectionKey)}
-                              className="w-full flex items-center gap-3 px-3.5 py-[13px] text-left bg-transparent border-none cursor-pointer hover:bg-white/[0.04] transition-colors"
+                              className="w-full flex items-center gap-3 px-3.5 py-[13px] text-left bg-transparent border-none cursor-pointer hover:bg-[var(--color-overlay-04)] transition-colors"
                             >
                               {/* Read indicator */}
                               {isRead ? (
@@ -270,17 +270,17 @@ export default function Guides() {
                               ) : (
                                 <div
                                   className="w-5 h-5 rounded-full border shrink-0"
-                                  style={{ borderColor: 'rgba(255,255,255,0.15)', boxSizing: 'border-box' }}
+                                  style={{ borderColor: 'var(--color-overlay-15)', boxSizing: 'border-box' }}
                                 />
                               )}
                               <span
-                                className={`flex-1 text-[13.5px] font-semibold ${isRead ? 'text-text-primary' : 'text-[#a3aabe]'}`}
+                                className={`flex-1 text-[13.5px] font-semibold ${isRead ? 'text-text-primary' : 'text-[var(--color-text-secondary)]'}`}
                               >
                                 {section.heading}
                               </span>
                               <ChevronDown
                                 size={14}
-                                className="text-[#4a5068] shrink-0 transition-transform"
+                                className="text-[var(--color-text-faint)] shrink-0 transition-transform"
                                 style={{ transform: sectionOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
                               />
                             </button>
@@ -295,7 +295,7 @@ export default function Guides() {
                                   transition={{ duration: 0.2 }}
                                   className="overflow-hidden"
                                 >
-                                  <div className="px-4 py-3 border-t border-white/[0.06]">
+                                  <div className="px-4 py-3 border-t border-[var(--color-overlay-06)]">
                                     <div className="text-[12.5px] text-text-secondary leading-relaxed prose prose-invert prose-sm max-w-none">
                                       <ReactMarkdown>{section.content}</ReactMarkdown>
                                     </div>

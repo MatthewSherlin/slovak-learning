@@ -144,23 +144,23 @@ function VocabModeInner({
   // ── Completion / ending loading screen ─────────────────────────────────
   if (ex.phase === 'complete') {
     return (
-      <div className="flex flex-col h-dvh" style={{ background: '#0e1017' }}>
+      <div className="flex flex-col h-dvh" style={{ background: 'var(--color-surface-sunken)' }}>
         <div className="flex-1 flex items-center justify-center px-5">
           {endError ? (
             /* Never trap the user on a spinner: failed feedback gets a retry */
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <p className="text-[13px] mb-4" style={{ color: '#f07070' }}>{endError}</p>
+              <p className="text-[13px] mb-4" style={{ color: 'var(--color-danger)' }}>{endError}</p>
               <button
                 onClick={handleEnd}
                 style={{
                   padding: '12px 24px', borderRadius: 14, border: 'none',
-                  background: '#5ea4f7', color: '#fff', fontSize: 14,
+                  background: 'var(--color-accent)', color: 'var(--color-on-accent)', fontSize: 14,
                   fontWeight: 700, cursor: 'pointer', marginBottom: 12,
                 }}
               >
                 Try again
               </button>
-              <a href="#/" style={{ fontSize: 12, color: '#6b7289' }}>Back to Home</a>
+              <a href="#/" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Back to Home</a>
             </div>
           ) : (
             <ResultsLoader />
@@ -184,13 +184,13 @@ function VocabModeInner({
   const pronunciationPill: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 7,
     padding: '7px 14px', borderRadius: 999,
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'var(--color-overlay-05)',
+    border: '1px solid var(--color-overlay-07)',
   };
   const pronunciationText: React.CSSProperties = {
     fontSize: 12,
     fontFamily: "'JetBrains Mono', monospace",
-    color: '#a3aabe',
+    color: 'var(--color-text-secondary)',
   };
   // 44px-tall tap target around the pill; the negative margin keeps the card its original height.
   const pronunciationTapArea: React.CSSProperties = {
@@ -205,7 +205,7 @@ function VocabModeInner({
 
   // ── Active quiz ───────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-dvh" style={{ background: '#0e1017' }}>
+    <div className="flex flex-col h-dvh" style={{ background: 'var(--color-surface-sunken)' }}>
       {/* Header: back + progress segments + streak, edge to edge like the other modes */}
       <SessionHeader
         session={session}
@@ -223,7 +223,7 @@ function VocabModeInner({
                 style={{
                   height: 6,
                   borderRadius: 999,
-                  background: filled ? '#5de4a5' : 'rgba(255,255,255,0.09)',
+                  background: filled ? 'var(--color-success)' : 'var(--color-overlay-09)',
                   transition: 'background 0.3s',
                 }}
               />
@@ -242,8 +242,8 @@ function VocabModeInner({
               background: 'rgba(245,196,94,0.12)', flexShrink: 0,
             }}
           >
-            <Flame size={12} color="#f5c45e" />
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#f5c45e', fontVariantNumeric: 'tabular-nums' }}>
+            <Flame size={12} color="var(--color-warning)" />
+            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-warning)', fontVariantNumeric: 'tabular-nums' }}>
               {streak}
             </span>
           </motion.div>
@@ -253,16 +253,16 @@ function VocabModeInner({
       {/* Progress label */}
       <div style={{ paddingTop: 16, paddingLeft: 20, paddingRight: 20, paddingBottom: 4 }}>
         {ex.phase === 'retry' ? (
-          <p data-testid="retry-progress" style={{ fontSize: 11, color: '#f5c45e', fontWeight: 600, margin: 0 }}>
+          <p data-testid="retry-progress" style={{ fontSize: 11, color: 'var(--color-warning)', fontWeight: 600, margin: 0 }}>
             Retry round · {ex.retryQueue.length} left
           </p>
         ) : (
-          <p data-testid="questions-progress" style={{ fontSize: 11, color: '#6b7289', fontWeight: 500, margin: 0 }}>
+          <p data-testid="questions-progress" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500, margin: 0 }}>
             {currentInPhase} / {totalInPhase}
           </p>
         )}
         {submitError && (
-          <p style={{ fontSize: 11, color: '#f07070', fontWeight: 600, margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: 11, color: 'var(--color-danger)', fontWeight: 600, margin: '4px 0 0 0' }}>
             {submitError}
           </p>
         )}
@@ -280,7 +280,7 @@ function VocabModeInner({
           >
             {/* Direction label */}
             <p style={{
-              fontSize: 12, color: '#6b7289', textAlign: 'center',
+              fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center',
               textTransform: 'uppercase', letterSpacing: '0.12em',
               fontWeight: 600, margin: '0 0 20px 0',
             }}>
@@ -288,7 +288,7 @@ function VocabModeInner({
               {currentQuestion.review && (
                 <span style={{
                   marginLeft: 8, padding: '2px 8px', borderRadius: 999,
-                  background: 'rgba(245,196,94,0.12)', color: '#f5c45e',
+                  background: 'rgba(245,196,94,0.12)', color: 'var(--color-warning)',
                   letterSpacing: '0.08em',
                 }}>
                   Review
@@ -303,8 +303,8 @@ function VocabModeInner({
                 padding: '44px 24px',
                 textAlign: 'center',
                 marginBottom: 28,
-                background: 'radial-gradient(circle at 50% 0%, rgba(93,228,165,0.08), transparent 65%), #151926',
-                border: '1px solid rgba(255,255,255,0.07)',
+                background: 'radial-gradient(circle at 50% 0%, rgba(93,228,165,0.08), transparent 65%), var(--color-surface-card)',
+                border: '1px solid var(--color-overlay-07)',
               }}
             >
               <div style={{
@@ -312,7 +312,7 @@ function VocabModeInner({
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 marginBottom: 10,
-                color: '#eef1f8',
+                color: 'var(--color-text-primary)',
               }}>
                 {currentQuestion.word}
               </div>
@@ -327,7 +327,7 @@ function VocabModeInner({
                   style={{ ...pronunciationTapArea, cursor: 'pointer' }}
                 >
                   <span style={pronunciationPill}>
-                    <Volume2 size={14} color="#5ea4f7" />
+                    <Volume2 size={14} color="var(--color-accent)" />
                     <span style={pronunciationText}>
                       {currentQuestion.pronunciation ? `/${currentQuestion.pronunciation}/` : 'Listen'}
                     </span>
@@ -359,22 +359,22 @@ function VocabModeInner({
                 const isRight = showResult && isThisCorrect;
                 const isDimmed = showResult && !isThisCorrect && !isThisSelected;
 
-                let borderColor = 'rgba(255,255,255,0.07)';
-                let bg = '#151926';
+                let borderColor = 'var(--color-overlay-07)';
+                let bg = 'var(--color-surface-card)';
                 let boxShadow = 'none';
                 let opacity = isDimmed ? 0.5 : 1;
-                let textColor = isDimmed ? '#4a5068' : '#eef1f8';
+                let textColor = isDimmed ? 'var(--color-text-faint)' : 'var(--color-text-primary)';
 
                 if (isRight) {
-                  borderColor = '#5de4a5';
+                  borderColor = 'var(--color-success)';
                   bg = 'rgba(93,228,165,0.1)';
                   boxShadow = '0 0 20px rgba(93,228,165,0.15)';
-                  textColor = '#eef1f8';
+                  textColor = 'var(--color-text-primary)';
                   opacity = 1;
                 } else if (isWrongSelected) {
-                  borderColor = '#f07070';
+                  borderColor = 'var(--color-danger)';
                   bg = 'rgba(240,112,112,0.1)';
-                  textColor = '#eef1f8';
+                  textColor = 'var(--color-text-primary)';
                 }
 
                 return (
@@ -411,12 +411,12 @@ function VocabModeInner({
                         style={{
                           position: 'absolute', top: -9, right: -9,
                           width: 26, height: 26, borderRadius: 999,
-                          background: '#5de4a5',
+                          background: 'var(--color-success)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.35)',
+                          boxShadow: '0 4px 10px var(--color-shadow-badge)',
                         }}
                       >
-                        <Check size={13} color="#0e1017" strokeWidth={3.2} />
+                        <Check size={13} color="var(--color-surface-sunken)" strokeWidth={3.2} />
                       </motion.div>
                     )}
                     {/* Wrong selected badge */}
@@ -427,12 +427,12 @@ function VocabModeInner({
                         style={{
                           position: 'absolute', top: -9, right: -9,
                           width: 26, height: 26, borderRadius: 999,
-                          background: '#f07070',
+                          background: 'var(--color-danger)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.35)',
+                          boxShadow: '0 4px 10px var(--color-shadow-badge)',
                         }}
                       >
-                        <X size={13} color="#0e1017" strokeWidth={3.2} />
+                        <X size={13} color="var(--color-surface-sunken)" strokeWidth={3.2} />
                       </motion.div>
                     )}
                     <span>{choice}</span>
@@ -467,12 +467,12 @@ function VocabModeInner({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{
                       width: 30, height: 30, borderRadius: 999,
-                      background: '#5de4a5',
+                      background: 'var(--color-success)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <Check size={15} color="#0e1017" strokeWidth={3.2} />
+                      <Check size={15} color="var(--color-surface-sunken)" strokeWidth={3.2} />
                     </div>
-                    <span style={{ fontSize: 17, fontWeight: 800, color: '#5de4a5' }}>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--color-success)' }}>
                       {streak >= 3 ? `${streak} in a row!` : 'Správne!'}
                     </span>
                   </div>
@@ -488,8 +488,8 @@ function VocabModeInner({
                     width: '100%', height: 52,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 16,
-                    background: '#5de4a5',
-                    color: '#0e1017',
+                    background: 'var(--color-success)',
+                    color: 'var(--color-surface-sunken)',
                     fontSize: 16,
                     fontWeight: 800,
                     border: 'none',
@@ -506,23 +506,23 @@ function VocabModeInner({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <div style={{
                     width: 30, height: 30, borderRadius: 999,
-                    background: '#f07070',
+                    background: 'var(--color-danger)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <X size={15} color="#0e1017" strokeWidth={3.2} />
+                    <X size={15} color="var(--color-surface-sunken)" strokeWidth={3.2} />
                   </div>
                   <div>
-                    <span style={{ fontSize: 17, fontWeight: 800, color: '#f07070' }}>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--color-danger)' }}>
                       Not quite
                     </span>
-                    <p style={{ fontSize: 12, color: '#a3aabe', margin: '4px 0 0 0' }}>
+                    <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '4px 0 0 0' }}>
                       The answer is{' '}
-                      <strong style={{ color: '#5de4a5' }}>
+                      <strong style={{ color: 'var(--color-success)' }}>
                         {currentQuestion.choices[currentQuestion.correctIndex]}
                       </strong>
                     </p>
                     {currentQuestion.explanation && (
-                      <p style={{ fontSize: 12, color: '#6b7289', margin: '3px 0 0 0' }}>
+                      <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '3px 0 0 0' }}>
                         {renderInlineMd(currentQuestion.explanation)}
                       </p>
                     )}
@@ -537,9 +537,9 @@ function VocabModeInner({
                     width: '100%', height: 52,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 16,
-                    background: '#1e2130',
+                    background: 'var(--color-surface-button)',
                     border: '1px solid rgba(240,112,112,0.3)',
-                    color: '#eef1f8',
+                    color: 'var(--color-text-primary)',
                     fontSize: 16,
                     fontWeight: 700,
                     cursor: pending ? 'pointer' : 'wait',
@@ -551,7 +551,7 @@ function VocabModeInner({
               </>
             )}
             {endError && (
-              <p style={{ color: '#f07070', fontSize: 12, textAlign: 'center', marginTop: 8 }}>{endError}</p>
+              <p style={{ color: 'var(--color-danger)', fontSize: 12, textAlign: 'center', marginTop: 8 }}>{endError}</p>
             )}
           </motion.div>
         )}

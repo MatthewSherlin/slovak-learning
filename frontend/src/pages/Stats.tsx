@@ -35,10 +35,10 @@ function resolveTab(raw: string | null): Tab {
 // ── Shared constants ─────────────────────────────────────────────────
 
 const modeLabels: Record<string, { label: string; color: string; barColor: string }> = {
-  vocabulary: { label: 'Vocabulary', color: 'text-success', barColor: '#5de4a5' },
-  grammar: { label: 'Grammar', color: 'text-mode-grammar', barColor: '#a78bfa' },
-  conversation: { label: 'Conversation', color: 'text-warning', barColor: '#f5c45e' },
-  translation: { label: 'Translation', color: 'text-mode-translation', barColor: '#f0a8d0' },
+  vocabulary: { label: 'Vocabulary', color: 'text-success', barColor: 'var(--color-mode-vocab)' },
+  grammar: { label: 'Grammar', color: 'text-mode-grammar', barColor: 'var(--color-mode-grammar)' },
+  conversation: { label: 'Conversation', color: 'text-warning', barColor: 'var(--color-mode-conversation)' },
+  translation: { label: 'Translation', color: 'text-mode-translation', barColor: 'var(--color-mode-translation)' },
 };
 
 const modeTextColors: Record<string, string> = {
@@ -79,7 +79,7 @@ function TabSegments({
   return (
     <div
       className="flex rounded-[14px] p-1 gap-1 mb-6"
-      style={{ background: '#151926' }}
+      style={{ background: 'var(--color-surface-card)' }}
     >
       {tabs.map((t) => (
         <button
@@ -183,14 +183,14 @@ function OverviewPanel() {
         <div
           className="rounded-[22px] p-[18px] mb-4"
           style={{
-            background: 'linear-gradient(120deg, rgba(245,196,94,0.1), transparent 60%), #151926',
+            background: 'linear-gradient(120deg, rgba(245,196,94,0.1), transparent 60%), var(--color-surface-card)',
             border: '1px solid rgba(245,196,94,0.18)',
           }}
         >
           <div className="flex items-center justify-between mb-3">
             <span
               className="text-[12px] font-bold uppercase tracking-[0.08em]"
-              style={{ color: '#f5c45e' }}
+              style={{ color: 'var(--color-mode-conversation)' }}
             >
               XP race
             </span>
@@ -207,7 +207,7 @@ function OverviewPanel() {
                 </div>
                 <div
                   className="flex-1 h-3 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                  style={{ background: 'var(--color-overlay-06)' }}
                 >
                   <motion.div
                     initial={{ width: 0 }}
@@ -235,25 +235,25 @@ function OverviewPanel() {
             label: 'Day streak',
             value: streakDays.toString(),
             unit: 'days',
-            valueColor: '#f5c45e',
+            valueColor: 'var(--color-mode-conversation)',
           },
           {
             label: 'Avg score',
             value: stats.avg_score !== null ? stats.avg_score.toFixed(1) : '--',
             unit: '/10',
-            valueColor: '#5ea4f7',
+            valueColor: 'var(--color-accent)',
           },
           {
             label: 'Words learned',
             value: stats.vocab_count.toString(),
             unit: null,
-            valueColor: '#5de4a5',
+            valueColor: 'var(--color-mode-vocab)',
           },
           {
             label: 'Sessions',
             value: stats.completed_sessions.toString(),
             unit: 'done',
-            valueColor: '#eef1f8',
+            valueColor: 'var(--color-text-primary)',
           },
         ].map((card, i) => (
           <motion.div
@@ -262,7 +262,7 @@ function OverviewPanel() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             className="rounded-[18px] p-4"
-            style={{ background: '#151926', border: '1px solid rgba(255,255,255,0.06)' }}
+            style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-overlay-06)' }}
           >
             <p className="text-[11px] font-semibold text-text-faint mb-1.5">{card.label}</p>
             <div className="flex items-baseline gap-1">
@@ -287,12 +287,12 @@ function OverviewPanel() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="rounded-[22px] p-5"
-          style={{ background: '#151926', border: '1px solid rgba(255,255,255,0.06)' }}
+          style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-overlay-06)' }}
         >
           <h3 className="text-[14px] font-bold text-text-primary mb-4">By category</h3>
           <div className="flex flex-col gap-3.5">
             {Object.entries(stats.scores_by_mode).map(([mode, score]) => {
-              const info = modeLabels[mode] || { label: mode, barColor: '#5ea4f7', color: 'text-accent' };
+              const info = modeLabels[mode] || { label: mode, barColor: 'var(--color-accent)', color: 'text-accent' };
               return (
                 <div key={mode}>
                   <div className="flex justify-between mb-1.5">
@@ -306,7 +306,7 @@ function OverviewPanel() {
                   </div>
                   <div
                     className="h-[7px] rounded-full"
-                    style={{ background: 'rgba(255,255,255,0.06)' }}
+                    style={{ background: 'var(--color-overlay-06)' }}
                   >
                     <motion.div
                       initial={{ width: 0 }}

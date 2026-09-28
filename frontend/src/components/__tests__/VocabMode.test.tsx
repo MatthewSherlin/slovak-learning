@@ -211,9 +211,11 @@ describe('VocabMode', () => {
       answers: [0, 3, 2],
     });
     const { container } = render(<VocabMode session={session} setSession={noop} />);
-    // jsdom converts hex to rgb; look for segments with green fill (rgb(93, 228, 165))
-    const filled = Array.from(container.querySelectorAll('div')).filter(
-      el => el.getAttribute('style')?.includes('rgb(93, 228, 165)')
+    // Filled segments carry data-filled="true" (colour now comes from a theme token,
+    // which jsdom does not resolve in a raw style attribute — see the segment's
+    // data-testid="progress-segment" in VocabMode.tsx).
+    const filled = Array.from(
+      container.querySelectorAll('[data-testid="progress-segment"][data-filled="true"]')
     );
     expect(filled.length).toBe(1);
   });
@@ -240,9 +242,11 @@ describe('VocabMode', () => {
       answers: [0, 1, 2],
     });
     const { container } = render(<VocabMode session={session} setSession={noop} />);
-    // jsdom converts hex to rgb; look for segments with green fill (rgb(93, 228, 165))
-    const filled = Array.from(container.querySelectorAll('div')).filter(
-      el => el.getAttribute('style')?.includes('rgb(93, 228, 165)')
+    // Filled segments carry data-filled="true" (colour now comes from a theme token,
+    // which jsdom does not resolve in a raw style attribute — see the segment's
+    // data-testid="progress-segment" in VocabMode.tsx).
+    const filled = Array.from(
+      container.querySelectorAll('[data-testid="progress-segment"][data-filled="true"]')
     );
     expect(filled.length).toBe(2);
   });

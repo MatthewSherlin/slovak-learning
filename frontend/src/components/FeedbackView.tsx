@@ -32,15 +32,15 @@ function encouragementMessage(score: number): string {
 }
 
 function barGradient(score: number): string {
-  if (score >= 8) return 'linear-gradient(90deg, #3dcb8c, #5de4a5)';
-  if (score >= 5) return 'linear-gradient(90deg, #d9a63e, #f5c45e)';
-  return 'linear-gradient(90deg, #e05555, #f87171)';
+  if (score >= 8) return 'linear-gradient(90deg, var(--color-score-good-from), var(--color-success))';
+  if (score >= 5) return 'linear-gradient(90deg, var(--color-score-warn-from), var(--color-warning))';
+  return 'linear-gradient(90deg, var(--color-score-danger-from), var(--color-score-danger))';
 }
 
 function scoreColor(score: number): string {
-  if (score >= 8) return '#5de4a5';
-  if (score >= 5) return '#f5c45e';
-  return '#f87171';
+  if (score >= 8) return 'var(--color-success)';
+  if (score >= 5) return 'var(--color-warning)';
+  return 'var(--color-score-danger)';
 }
 
 function formatTopic(topic: string): string {
@@ -52,15 +52,15 @@ function formatMode(mode: string): string {
 }
 
 const VOCAB_OUTCOME: Record<VocabOutcome, { label: string; color: string }> = {
-  first_try: { label: 'First try', color: '#5de4a5' },
-  retry: { label: 'On retry', color: '#f5c45e' },
-  missed: { label: 'Missed', color: '#f87171' },
+  first_try: { label: 'First try', color: 'var(--color-success)' },
+  retry: { label: 'On retry', color: 'var(--color-warning)' },
+  missed: { label: 'Missed', color: 'var(--color-score-danger)' },
 };
 
 const sectionStyle = {
   borderRadius: 22,
-  background: '#151926',
-  border: '1px solid rgba(255,255,255,0.06)',
+  background: 'var(--color-surface-card)',
+  border: '1px solid var(--color-overlay-06)',
   padding: 20,
   marginBottom: 14,
 };
@@ -69,7 +69,7 @@ const sectionTitleStyle = {
   fontSize: 14,
   fontWeight: 700,
   margin: '0 0 14px 0',
-  color: '#eef1f8',
+  color: 'var(--color-text-primary)',
 };
 
 const rowStyle = {
@@ -78,8 +78,8 @@ const rowStyle = {
   gap: 12,
   padding: '12px 14px',
   borderRadius: 14,
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.05)',
+  background: 'var(--color-overlay-03)',
+  border: '1px solid var(--color-overlay-05)',
 };
 
 const rowStatusStyle = {
@@ -95,7 +95,7 @@ function AnswersHeading({ shown, total }: { shown: number; total: number }) {
   return (
     <>
       <h3 style={{ ...sectionTitleStyle, margin: '0 0 4px 0' }}>Your answers</h3>
-      <p style={{ fontSize: 12.5, color: '#a3aabe', margin: '0 0 14px 0' }}>
+      <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '0 0 14px 0' }}>
         {shown} of {total} answered
       </p>
     </>
@@ -137,8 +137,8 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             marginBottom: '20px',
             padding: '28px 20px',
             borderRadius: '26px',
-            background: 'radial-gradient(circle at 50% 0%, rgba(94,164,247,0.1), transparent 70%), #151926',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'radial-gradient(circle at 50% 0%, rgba(94,164,247,0.1), transparent 70%), var(--color-surface-card)',
+            border: '1px solid var(--color-overlay-07)',
           }}
         >
           {score !== null && (
@@ -152,13 +152,13 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                   <circle
                     cx="66" cy="66" r={RING_R}
                     fill="none"
-                    stroke="rgba(255,255,255,0.07)"
+                    stroke="var(--color-overlay-07)"
                     strokeWidth="9"
                   />
                   <motion.circle
                     cx="66" cy="66" r={RING_R}
                     fill="none"
-                    stroke="#5ea4f7"
+                    stroke="var(--color-accent)"
                     strokeWidth="9"
                     strokeLinecap="round"
                     strokeDasharray={RING_CIRCUMFERENCE}
@@ -184,7 +184,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                     style={{
                       fontSize: 38,
                       fontWeight: 800,
-                      color: '#5ea4f7',
+                      color: 'var(--color-accent)',
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '-0.02em',
                       lineHeight: 1,
@@ -192,7 +192,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                   >
                     {score}
                   </motion.span>
-                  <span style={{ fontSize: 11, color: '#6b7289', marginTop: 4 }}>out of 10</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>out of 10</span>
                 </div>
               </div>
 
@@ -203,7 +203,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                   fontWeight: 800,
                   margin: '0 0 6px 0',
                   letterSpacing: '-0.02em',
-                  color: '#eef1f8',
+                  color: 'var(--color-text-primary)',
                 }}
               >
                 {encouragement(score)}
@@ -211,7 +211,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               <p
                 style={{
                   fontSize: 13.5,
-                  color: '#6b7289',
+                  color: 'var(--color-text-muted)',
                   margin: '0 auto',
                   maxWidth: 280,
                   lineHeight: 1.55,
@@ -233,7 +233,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                   display: 'block',
                   fontSize: 38,
                   fontWeight: 800,
-                  color: '#5ea4f7',
+                  color: 'var(--color-accent)',
                   fontVariantNumeric: 'tabular-nums',
                   letterSpacing: '-0.02em',
                   lineHeight: 1,
@@ -241,7 +241,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               >
                 {conversation.sent}
               </motion.span>
-              <span style={{ display: 'block', fontSize: 11, color: '#6b7289', marginTop: 4 }}>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
                 of {conversation.max} messages sent
               </span>
             </div>
@@ -264,7 +264,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                 padding: '5px 11px',
                 borderRadius: 999,
                 background: 'rgba(93,228,165,0.12)',
-                color: '#5de4a5',
+                color: 'var(--color-success)',
               }}
             >
               {formatMode(session.mode)}
@@ -275,8 +275,8 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                 fontWeight: 600,
                 padding: '5px 11px',
                 borderRadius: 999,
-                background: 'rgba(255,255,255,0.06)',
-                color: '#a3aabe',
+                background: 'var(--color-overlay-06)',
+                color: 'var(--color-text-secondary)',
               }}
             >
               {formatTopic(session.topic)}
@@ -287,8 +287,8 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                 fontWeight: 600,
                 padding: '5px 11px',
                 borderRadius: 999,
-                background: 'rgba(255,255,255,0.06)',
-                color: '#a3aabe',
+                background: 'var(--color-overlay-06)',
+                color: 'var(--color-text-secondary)',
               }}
             >
               {formatMode(session.difficulty)}
@@ -304,8 +304,8 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             transition={{ delay: 0.1 }}
             style={{
               borderRadius: 22,
-              background: '#151926',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--color-surface-card)',
+              border: '1px solid var(--color-overlay-06)',
               padding: 20,
               marginBottom: 14,
             }}
@@ -315,7 +315,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                 fontSize: 14,
                 fontWeight: 700,
                 margin: '0 0 18px 0',
-                color: '#eef1f8',
+                color: 'var(--color-text-primary)',
               }}
             >
               Breakdown
@@ -331,7 +331,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                     }}
                   >
                     <span
-                      style={{ fontSize: 13, fontWeight: 600, color: '#eef1f8' }}
+                      style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}
                     >
                       {s.category}
                     </span>
@@ -350,7 +350,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                     style={{
                       height: 7,
                       borderRadius: 999,
-                      background: 'rgba(255,255,255,0.06)',
+                      background: 'var(--color-overlay-06)',
                       overflow: 'hidden',
                     }}
                   >
@@ -373,7 +373,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                     <p
                       style={{
                         fontSize: 12,
-                        color: '#6b7289',
+                        color: 'var(--color-text-muted)',
                         margin: '7px 0 0 0',
                         lineHeight: 1.55,
                       }}
@@ -400,8 +400,8 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               {vocab.map((row, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
                   <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#5de4a5' }}>{row.slovak}</span>
-                    <span style={{ fontSize: 13, color: '#a3aabe', marginLeft: 10 }}>{row.english}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-success)' }}>{row.slovak}</span>
+                    <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginLeft: 10 }}>{row.english}</span>
                   </div>
                   <span style={{ ...rowStatusStyle, color: VOCAB_OUTCOME[row.outcome].color }}>
                     {VOCAB_OUTCOME[row.outcome].label}
@@ -425,14 +425,14 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               {grammar.map((row, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
                   <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#eef1f8', margin: 0, lineHeight: 1.45 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.45 }}>
                       {row.sentence}
                     </p>
-                    <p style={{ fontSize: 12.5, color: '#a3aabe', margin: '4px 0 0 0' }}>
+                    <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '4px 0 0 0' }}>
                       You typed: {row.typed}
                     </p>
                   </div>
-                  <span style={{ ...rowStatusStyle, color: row.right ? '#5de4a5' : '#f87171' }}>
+                  <span style={{ ...rowStatusStyle, color: row.right ? 'var(--color-success)' : 'var(--color-score-danger)' }}>
                     {row.right ? 'Right' : 'Wrong'}
                   </span>
                 </motion.div>
@@ -454,13 +454,13 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               {translation.map((row, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
                   <div style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#eef1f8', margin: 0, lineHeight: 1.45 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.45 }}>
                       {row.source}
                     </p>
-                    <p style={{ fontSize: 12.5, color: '#a3aabe', margin: '4px 0 0 0', lineHeight: 1.45 }}>
+                    <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '4px 0 0 0', lineHeight: 1.45 }}>
                       You typed: {row.typed}
                     </p>
-                    <p style={{ fontSize: 12.5, color: '#6b7289', margin: '2px 0 0 0', lineHeight: 1.45 }}>
+                    <p style={{ fontSize: 12.5, color: 'var(--color-text-muted)', margin: '2px 0 0 0', lineHeight: 1.45 }}>
                       Model answer: {row.modelAnswer}
                     </p>
                   </div>
@@ -485,7 +485,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {conversation.corrections.map((text, i) => (
                 <motion.div key={i} {...listItemFade(i, reduceMotion)} style={rowStyle}>
-                  <span style={{ fontSize: 13, color: '#a3aabe', lineHeight: 1.55 }}>{text}</span>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.55 }}>{text}</span>
                 </motion.div>
               ))}
             </div>
@@ -508,9 +508,9 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: 16,
-              background: '#151926',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#a3aabe',
+              background: 'var(--color-surface-card)',
+              border: '1px solid var(--color-overlay-08)',
+              color: 'var(--color-text-secondary)',
               fontSize: 15,
               fontWeight: 600,
               cursor: 'pointer',
@@ -530,8 +530,8 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
               justifyContent: 'center',
               gap: 8,
               borderRadius: 16,
-              background: 'linear-gradient(90deg, #5ea4f7, #38bdf8)',
-              color: '#ffffff',
+              background: 'linear-gradient(90deg, var(--color-accent), var(--color-accent-gradient-end))',
+              color: 'var(--color-on-accent)',
               fontSize: 15,
               fontWeight: 700,
               border: 'none',

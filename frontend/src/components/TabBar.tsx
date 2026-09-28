@@ -16,10 +16,10 @@ export default function TabBar() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: 'rgba(14,16,23,0.92)',
+        background: 'var(--color-tabbar-bg)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
+        borderTop: '1px solid var(--color-overlay-07)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
       aria-label="Main navigation"
@@ -34,7 +34,7 @@ export default function TabBar() {
               aria-current={active ? 'page' : undefined}
               aria-label={label}
               className="relative flex flex-col items-center justify-center flex-1 gap-1 no-underline min-w-0"
-              style={{ color: active ? '#5ea4f7' : '#6b7289' }}
+              style={{ color: active ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
             >
               {/* Active indicator pill */}
               <AnimatePresence>
@@ -45,7 +45,7 @@ export default function TabBar() {
                     style={{
                       width: 32,
                       height: 3,
-                      background: '#5ea4f7',
+                      background: 'var(--color-accent)',
                       borderRadius: '0 0 4px 4px',
                     }}
                     initial={{ opacity: 0, scaleX: 0 }}
@@ -63,7 +63,7 @@ export default function TabBar() {
               />
               <span
                 className="text-[11px] font-semibold leading-none tracking-wide"
-                style={{ color: active ? '#5ea4f7' : '#6b7289' }}
+                style={{ color: active ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
               >
                 {label}
               </span>

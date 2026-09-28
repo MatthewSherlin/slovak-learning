@@ -75,14 +75,14 @@ const TRANSLATION_ICON = (
 const MODES: Record<LearningMode, ModeConfig> = {
   vocabulary: {
     label: 'Vocabulary',
-    color: '#5de4a5',
+    color: 'var(--color-mode-vocab)',
     bgColor: 'rgba(93,228,165,0.12)',
     icon: VOCAB_ICON,
     statFn: (s) => (s ? `${s.vocab_count} words learned` : 'Build your word bank'),
   },
   grammar: {
     label: 'Grammar',
-    color: '#a78bfa',
+    color: 'var(--color-mode-grammar)',
     bgColor: 'rgba(167,139,250,0.12)',
     icon: GRAMMAR_ICON,
     statFn: (s) => {
@@ -92,14 +92,14 @@ const MODES: Record<LearningMode, ModeConfig> = {
   },
   conversation: {
     label: 'Conversation',
-    color: '#f5c45e',
+    color: 'var(--color-mode-conversation)',
     bgColor: 'rgba(245,196,94,0.12)',
     icon: CONVO_ICON,
     statFn: () => 'Talk with the tutor',
   },
   translation: {
     label: 'Translation',
-    color: '#f0a8d0',
+    color: 'var(--color-mode-translation)',
     bgColor: 'rgba(240,168,208,0.12)',
     icon: TRANSLATION_ICON,
     statFn: () => 'SK ⇄ EN',
@@ -320,12 +320,12 @@ export default function Home() {
               }}
             >
               {/* Flame icon */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-mode-conversation)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
               </svg>
               <span
                 className="text-[13px] font-bold tabular-nums"
-                style={{ color: '#f5c45e' }}
+                style={{ color: 'var(--color-mode-conversation)' }}
               >
                 {streak}
               </span>
@@ -368,7 +368,7 @@ export default function Home() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleContinue(); }}
             className="w-full text-left rounded-[22px] p-5 border cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-[0.99]"
             style={{
-              background: 'linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), #151926',
+              background: 'linear-gradient(120deg, rgba(94,164,247,0.16), rgba(56,189,248,0.06) 70%), var(--color-surface-card)',
               borderColor: 'rgba(94,164,247,0.22)',
               position: 'relative',
               overflow: 'hidden',
@@ -379,17 +379,17 @@ export default function Home() {
               {progressRingProps && (
                 <div className="relative w-14 h-14 flex-shrink-0">
                   <svg viewBox="0 0 56 56" className="w-14 h-14" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="var(--color-overlay-08)" strokeWidth="5" />
                     <circle
                       cx="28" cy="28" r="24" fill="none"
-                      stroke="#a78bfa" strokeWidth="5" strokeLinecap="round"
+                      stroke="var(--color-mode-grammar)" strokeWidth="5" strokeLinecap="round"
                       strokeDasharray={progressRingProps.circumference}
                       strokeDashoffset={progressRingProps.dashOffset}
                     />
                   </svg>
                   <div
                     className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tabular-nums"
-                    style={{ color: '#a78bfa', fontFamily: "'JetBrains Mono', monospace" }}
+                    style={{ color: 'var(--color-mode-grammar)', fontFamily: "'JetBrains Mono', monospace" }}
                   >
                     {progressRingProps.label}
                   </div>
@@ -398,14 +398,14 @@ export default function Home() {
 
               {/* Text */}
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-[3px]" style={{ color: '#5ea4f7' }}>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-[3px]" style={{ color: 'var(--color-accent)' }}>
                   Continue session
                 </p>
                 <p className="text-[15px] font-bold text-text-primary leading-tight mb-0.5">
                   {inProgress.mode.charAt(0).toUpperCase() + inProgress.mode.slice(1)}
                   {inProgress.topic ? ` · ${inProgress.topic}` : ''}
                 </p>
-                <p className="text-[12px]" style={{ color: '#6b7289' }}>
+                <p className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
                   {sessionProgress
                     ? `${sessionProgress.total - sessionProgress.answered} exercise${sessionProgress.total - sessionProgress.answered !== 1 ? 's' : ''} left`
                     : 'Tap to resume'}
@@ -416,11 +416,11 @@ export default function Home() {
               <div
                 className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: '#5ea4f7',
+                  background: 'var(--color-accent)',
                   boxShadow: '0 8px 20px rgba(94,164,247,0.35)',
                 }}
               >
-                <Play size={18} fill="#ffffff" color="#ffffff" />
+                <Play size={18} fill="var(--color-on-accent)" color="var(--color-on-accent)" />
               </div>
             </div>
           </div>
@@ -434,7 +434,7 @@ export default function Home() {
           >
             <span
               className="w-7 h-7 rounded-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(rgba(255,255,255,0.07), rgba(255,255,255,0.07)), #151926', color: '#6b7289' }}
+              style={{ background: 'linear-gradient(var(--color-overlay-07), var(--color-overlay-07)), var(--color-surface-card)', color: 'var(--color-text-muted)' }}
             >
               <X size={13} />
             </span>
@@ -460,8 +460,8 @@ export default function Home() {
               disabled={!user}
               className="text-left rounded-[20px] p-4 border cursor-pointer transition-all duration-200 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
-                background: '#151926',
-                borderColor: 'rgba(255,255,255,0.06)',
+                background: 'var(--color-surface-card)',
+                borderColor: 'var(--color-overlay-06)',
                 minHeight: '118px',
                 boxSizing: 'border-box',
               }}
@@ -474,7 +474,7 @@ export default function Home() {
                 {cfg.icon}
               </div>
               <p className="text-[15px] font-bold text-text-primary mb-0.5">{cfg.label}</p>
-              <p className="text-[12px]" style={{ color: '#6b7289' }}>
+              <p className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
                 {cfg.statFn(stats)}
               </p>
             </motion.button>
@@ -502,7 +502,7 @@ export default function Home() {
                     style={{
                       background: 'rgba(94,164,247,0.08)',
                       borderColor: 'rgba(94,164,247,0.18)',
-                      color: '#5ea4f7',
+                      color: 'var(--color-accent)',
                     }}
                   >
                     {/* Sparkle icon */}
@@ -525,10 +525,10 @@ export default function Home() {
           borderColor: 'rgba(245,196,94,0.12)',
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f5c45e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-mode-conversation)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
         </svg>
-        <p className="text-[12.5px] leading-relaxed" style={{ color: '#a3aabe', margin: 0 }}>
+        <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--color-text-secondary)', margin: 0 }}>
           <em>"Pomaly, ale isto."</em> — Slowly but surely.
         </p>
       </div>

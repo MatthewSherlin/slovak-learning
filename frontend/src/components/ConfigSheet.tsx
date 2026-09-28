@@ -21,7 +21,7 @@ const MODE_META: Record<
   vocabulary: {
     title: 'Vocabulary session',
     subtitle: '10 flashcards · retry missed words',
-    color: '#5de4a5',
+    color: 'var(--color-mode-vocab)',
     bgColor: 'rgba(93,228,165,0.12)',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -33,7 +33,7 @@ const MODE_META: Record<
   grammar: {
     title: 'Grammar session',
     subtitle: 'Lesson + fill-in-the-blank exercises',
-    color: '#a78bfa',
+    color: 'var(--color-mode-grammar)',
     bgColor: 'rgba(167,139,250,0.12)',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -44,7 +44,7 @@ const MODE_META: Record<
   conversation: {
     title: 'Conversation session',
     subtitle: 'Chat with the AI tutor',
-    color: '#f5c45e',
+    color: 'var(--color-mode-conversation)',
     bgColor: 'rgba(245,196,94,0.12)',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -55,7 +55,7 @@ const MODE_META: Record<
   translation: {
     title: 'Translation session',
     subtitle: 'Translate sentences SK ⇄ EN',
-    color: '#f0a8d0',
+    color: 'var(--color-mode-translation)',
     bgColor: 'rgba(240,168,208,0.12)',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -234,7 +234,7 @@ export default function ConfigSheet({
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(5,6,10,0.55)',
+              background: 'var(--color-backdrop)',
               zIndex: 40,
             }}
           />
@@ -251,13 +251,13 @@ export default function ConfigSheet({
               right: 0,
               bottom: 0,
               zIndex: 50,
-              background: '#161a28',
+              background: 'var(--color-surface-sheet)',
               borderRadius: '28px 28px 0 0',
-              borderTop: '1px solid rgba(255,255,255,0.09)',
+              borderTop: '1px solid var(--color-overlay-09)',
               padding: '12px 20px calc(env(safe-area-inset-bottom) + 32px) 20px',
               maxHeight: '92dvh',
               overflowY: 'auto',
-              color: '#eef1f8',
+              color: 'var(--color-text-primary)',
               maxWidth: '500px',
               margin: '0 auto',
             }}
@@ -267,7 +267,7 @@ export default function ConfigSheet({
               width: '40px',
               height: '4px',
               borderRadius: '999px',
-              background: 'rgba(255,255,255,0.15)',
+              background: 'var(--color-overlay-15)',
               margin: '0 auto 20px auto',
             }} />
 
@@ -290,7 +290,7 @@ export default function ConfigSheet({
                 <h2 style={{ fontSize: '19px', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
                   {meta.title}
                 </h2>
-                <p style={{ fontSize: '12px', color: '#6b7289', margin: '2px 0 0 0' }}>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
                   {meta.subtitle}
                 </p>
               </div>
@@ -300,7 +300,7 @@ export default function ConfigSheet({
             <p style={{
               fontSize: '12px',
               fontWeight: 600,
-              color: '#a3aabe',
+              color: 'var(--color-text-secondary)',
               margin: '0 0 8px 0',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -309,7 +309,7 @@ export default function ConfigSheet({
             </p>
             <div style={{
               display: 'flex',
-              background: '#0e1017',
+              background: 'var(--color-surface-sunken)',
               borderRadius: '14px',
               padding: '4px',
               gap: '4px',
@@ -329,8 +329,8 @@ export default function ConfigSheet({
                       borderRadius: '11px',
                       fontSize: '13px',
                       fontWeight: isSelected ? 700 : 500,
-                      background: isSelected ? '#5ea4f7' : 'transparent',
-                      color: isSelected ? '#ffffff' : '#6b7289',
+                      background: isSelected ? 'var(--color-accent)' : 'transparent',
+                      color: isSelected ? 'var(--color-on-accent)' : 'var(--color-text-muted)',
                       border: 'none',
                       cursor: 'pointer',
                       transition: 'background 0.15s, color 0.15s',
@@ -346,13 +346,13 @@ export default function ConfigSheet({
             <p style={{
               fontSize: '12px',
               fontWeight: 600,
-              color: '#a3aabe',
+              color: 'var(--color-text-secondary)',
               margin: '0 0 8px 0',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
             }}>
               Topic{' '}
-              <span style={{ color: '#4a5068', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+              <span style={{ color: 'var(--color-text-faint)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
                 · optional
               </span>
             </p>
@@ -370,9 +370,9 @@ export default function ConfigSheet({
                         borderRadius: '999px',
                         fontSize: '13px',
                         fontWeight: isSelected ? 600 : 500,
-                        background: isSelected ? 'rgba(94,164,247,0.14)' : '#0e1017',
-                        color: isSelected ? '#5ea4f7' : '#6b7289',
-                        border: isSelected ? '1px solid rgba(94,164,247,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                        background: isSelected ? 'rgba(94,164,247,0.14)' : 'var(--color-surface-sunken)',
+                        color: isSelected ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                        border: isSelected ? '1px solid rgba(94,164,247,0.35)' : '1px solid var(--color-overlay-08)',
                         cursor: 'pointer',
                         transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                       }}
@@ -391,7 +391,7 @@ export default function ConfigSheet({
             <p style={{
               fontSize: '12px',
               fontWeight: 600,
-              color: '#a3aabe',
+              color: 'var(--color-text-secondary)',
               margin: '0 0 8px 0',
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -411,9 +411,9 @@ export default function ConfigSheet({
                 padding: '13px 16px',
                 borderRadius: '14px',
                 fontSize: '16px',
-                background: '#0e1017',
-                border: focusError ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(255,255,255,0.08)',
-                color: '#eef1f8',
+                background: 'var(--color-surface-sunken)',
+                border: focusError ? '1px solid rgba(239,68,68,0.6)' : '1px solid var(--color-overlay-08)',
+                color: 'var(--color-text-primary)',
                 resize: 'none',
                 outline: 'none',
                 marginBottom: focusError ? '6px' : '24px',
@@ -424,7 +424,7 @@ export default function ConfigSheet({
             {focusText.trim().length > 240 && (
               <p style={{
                 fontSize: '11px',
-                color: focusText.trim().length > MAX_INSTRUCTIONS_CHARS ? '#ef4444' : '#6b7289',
+                color: focusText.trim().length > MAX_INSTRUCTIONS_CHARS ? 'var(--color-error-text)' : 'var(--color-text-muted)',
                 margin: focusError ? '0 0 4px 0' : '-16px 0 8px 0',
                 textAlign: 'right',
               }}>
@@ -434,7 +434,7 @@ export default function ConfigSheet({
             {focusError && (
               <p style={{
                 fontSize: '12px',
-                color: '#ef4444',
+                color: 'var(--color-error-text)',
                 margin: '0 0 16px 0',
               }}>
                 {focusError}
@@ -458,11 +458,11 @@ export default function ConfigSheet({
                   padding: '12px 16px',
                   marginBottom: '20px',
                   borderRadius: '14px',
-                  background: '#0e1017',
+                  background: 'var(--color-surface-sunken)',
                   border: includeReview
                     ? '1px solid rgba(94,164,247,0.35)'
-                    : '1px solid rgba(255,255,255,0.08)',
-                  color: '#eef1f8',
+                    : '1px solid var(--color-overlay-08)',
+                  color: 'var(--color-text-primary)',
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}
@@ -471,7 +471,7 @@ export default function ConfigSheet({
                   <span style={{ display: 'block', fontSize: '14px', fontWeight: 600 }}>
                     Include review words
                   </span>
-                  <span style={{ display: 'block', fontSize: '12px', color: '#6b7289', marginTop: '2px' }}>
+                  <span style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                     Mix in words you are due to see again
                   </span>
                 </span>
@@ -483,7 +483,7 @@ export default function ConfigSheet({
                     height: '26px',
                     borderRadius: '999px',
                     padding: '3px',
-                    background: includeReview ? '#5ea4f7' : 'rgba(255,255,255,0.12)',
+                    background: includeReview ? 'var(--color-accent)' : 'var(--color-overlay-12)',
                     transition: 'background 0.15s',
                   }}
                 >
@@ -493,7 +493,7 @@ export default function ConfigSheet({
                       width: '20px',
                       height: '20px',
                       borderRadius: '999px',
-                      background: '#ffffff',
+                      background: 'var(--color-on-accent)',
                       transform: includeReview ? 'translateX(18px)' : 'translateX(0)',
                       transition: 'transform 0.15s',
                     }}
@@ -504,7 +504,7 @@ export default function ConfigSheet({
 
             {/* Start error */}
             {startError && (
-              <p style={{ fontSize: '12px', color: '#ef4444', margin: '0 0 12px 0' }}>
+              <p style={{ fontSize: '12px', color: 'var(--color-error-text)', margin: '0 0 12px 0' }}>
                 {startError}
               </p>
             )}
@@ -520,8 +520,8 @@ export default function ConfigSheet({
                 gap: '10px',
                 background: starting
                   ? 'rgba(94,164,247,0.5)'
-                  : 'linear-gradient(90deg, #5ea4f7, #38bdf8)',
-                color: '#ffffff',
+                  : 'linear-gradient(90deg, var(--color-accent), var(--color-accent-gradient-end))',
+                color: 'var(--color-on-accent)',
                 fontWeight: 700,
                 height: '52px',
                 borderRadius: '16px',
