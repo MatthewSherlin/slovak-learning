@@ -12,6 +12,8 @@ vi.mock('../../lib/api', () => ({
   getLeaderboard: vi.fn(),
   createSession: vi.fn(),
   getSession: vi.fn(),
+  getTopics: vi.fn(() => Promise.resolve([])),
+  listSessions: vi.fn(() => Promise.resolve([])),
 }));
 
 // ── Mock useUser ──────────────────────────────────────────────────────
@@ -200,6 +202,26 @@ describe('Home', () => {
     await waitFor(() => {
       expect(screen.queryByText('Review 5 due words')).not.toBeNull();
     });
+  });
+
+  it('opens the start sheet with review on when the review chip is tapped', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        recommended: [
+          { kind: 'review_vocab', label: 'Review 5 due words', mode: 'vocabulary' },
+        ],
+      })
+    );
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Review 5 due words')).not.toBeNull();
+    });
+    fireEvent.click(screen.getByText('Review 5 due words'));
+
+    const toggle = await screen.findByRole('switch', { name: /include review words/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
   });
 
   it('shows real "3/10" progress fraction in Continue card when getSession returns 3 of 10 answered', async () => {

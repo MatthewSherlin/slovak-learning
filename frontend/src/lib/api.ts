@@ -51,6 +51,7 @@ export const createSession = (data: {
   topic?: string;
   difficulty: Difficulty;
   instructions?: string;
+  include_review?: boolean;
 }): Promise<Session> =>
   apiFetch('/api/sessions', {
     method: 'POST',

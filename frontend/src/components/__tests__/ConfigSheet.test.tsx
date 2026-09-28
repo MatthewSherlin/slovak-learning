@@ -9,6 +9,7 @@ import type { Topic } from '../../lib/types';
 vi.mock('../../lib/api', () => ({
   getTopics: vi.fn(),
   createSession: vi.fn(),
+  listSessions: vi.fn(),
 }));
 
 // ── Mock useNavigate ────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ describe('ConfigSheet', () => {
       created_at: new Date().toISOString(),
       feedback: null,
     });
+    vi.mocked(api.listSessions).mockResolvedValue([]);
     mockNavigate.mockClear();
   });
 
@@ -181,5 +183,83 @@ describe('ConfigSheet', () => {
   it('renders the mode title in the header', async () => {
     renderSheet({ mode: 'grammar' });
     expect(screen.getByText(/grammar session/i)).toBeTruthy();
+  });
+
+  it('offers a review toggle on vocabulary, off by default', async () => {
+    renderSheet({ mode: 'vocabulary' });
+    const toggle = screen.getByRole('switch', { name: /include review words/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await waitFor(() => {
+      expect(api.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ include_review: false })
+      );
+    });
+  });
+
+  it('sends include_review when the toggle is switched on', async () => {
+    renderSheet({ mode: 'translation' });
+    fireEvent.click(screen.getByRole('switch', { name: /include review words/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+    await waitFor(() => {
+      expect(api.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ include_review: true })
+      );
+    });
+  });
+
+  it('has no review toggle on grammar or conversation', () => {
+    const { unmount } = renderSheet({ mode: 'grammar' });
+    expect(screen.queryByRole('switch', { name: /include review words/i })).toBeNull();
+    unmount();
+    renderSheet({ mode: 'conversation' });
+    expect(screen.queryByRole('switch', { name: /include review words/i })).toBeNull();
+  });
+
+  it('starts with the toggle on when opened from the review chip', () => {
+    renderSheet({ mode: 'vocabulary', recommendedReview: true });
+    const toggle = screen.getByRole('switch', { name: /include review words/i });
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('says so at once when the tutor is out of credits', async () => {
+    vi.mocked(api.createSession).mockRejectedValue(
+      new Error('{"detail":"The tutor is out of AI credits.","code":"tutor_out_of_credits"}')
+    );
+    renderSheet();
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('The tutor is out of AI credits.')).not.toBeNull();
+    });
+    expect(api.listSessions).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('recovers only a session with the same topic and difficulty', async () => {
+    vi.mocked(api.createSession).mockRejectedValue(new Error('network'));
+    const now = new Date().toISOString();
+    vi.mocked(api.listSessions).mockResolvedValue([
+      { id: 'other-topic', user_id: 'user-1', mode: 'vocabulary', topic: 'numbers',
+        difficulty: 'beginner', completed: false, overall_score: null,
+        question_preview: '', created_at: now },
+      { id: 'other-level', user_id: 'user-1', mode: 'vocabulary', topic: 'food',
+        difficulty: 'advanced', completed: false, overall_score: null,
+        question_preview: '', created_at: now },
+      { id: 'the-one', user_id: 'user-1', mode: 'vocabulary', topic: 'food',
+        difficulty: 'beginner', completed: false, overall_score: null,
+        question_preview: '', created_at: now },
+    ]);
+    renderSheet();
+    await waitFor(() => {
+      expect(screen.queryByText('Food & Drink')).not.toBeNull();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /food & drink/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start session/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/session/the-one');
+    });
   });
 });

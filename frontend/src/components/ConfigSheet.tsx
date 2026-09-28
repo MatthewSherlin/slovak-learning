@@ -73,6 +73,9 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
 
 const MAX_INSTRUCTIONS_CHARS = 300;
 
+/** Modes where due words can be mixed into the session. */
+const REVIEW_MODES: LearningMode[] = ['vocabulary', 'translation'];
+
 // ── Props ──────────────────────────────────────────────────────────────
 
 interface ConfigSheetProps {
@@ -84,6 +87,8 @@ interface ConfigSheetProps {
   userId: string;
   /** Pre-select a topic chip by topic ID (from Recommended chip) */
   recommendedTopic?: string;
+  /** Open with the review toggle already on (from the "Review due words" chip) */
+  recommendedReview?: boolean;
   /** Called when the sheet should close (backdrop tap or cancel) */
   onClose: () => void;
 }
@@ -95,6 +100,7 @@ export default function ConfigSheet({
   mode,
   userId,
   recommendedTopic,
+  recommendedReview,
   onClose,
 }: ConfigSheetProps) {
   const navigate = useNavigate();
@@ -107,6 +113,11 @@ export default function ConfigSheet({
   const [focusError, setFocusError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  // Seeded from recommendedReview on first mount so the switch never flashes
+  // "off" before the reset effect below runs (also handles later prop changes
+  // while the sheet stays mounted, e.g. tapping a different Recommended chip).
+  const [includeReview, setIncludeReview] = useState(recommendedReview ?? false);
+  const offersReview = REVIEW_MODES.includes(mode);
 
   // Reset state each time the sheet opens for a (potentially different) mode
   useEffect(() => {
@@ -118,11 +129,12 @@ export default function ConfigSheet({
     setStartError(null);
     setTopics([]);
     setSelectedTopic(recommendedTopic ?? null);
+    setIncludeReview(recommendedReview ?? false);
 
     getTopics(mode)
       .then(setTopics)
       .catch(() => setTopics([]));
-  }, [open, mode, recommendedTopic]);
+  }, [open, mode, recommendedTopic, recommendedReview]);
 
   /** A create request can die client-side (iOS kills long fetches; cold
    *  backend takes >60s) while the backend still finishes the session.
@@ -135,13 +147,15 @@ export default function ConfigSheet({
         (s) =>
           !s.completed &&
           s.mode === mode &&
+          s.topic === (selectedTopic ?? 'general') &&
+          s.difficulty === difficulty &&
           Date.now() - new Date(s.created_at).getTime() < 3 * 60_000,
       );
       return fresh?.id ?? null;
     } catch {
       return null;
     }
-  }, [userId, mode]);
+  }, [userId, mode, selectedTopic, difficulty]);
 
   const handleStart = useCallback(async () => {
     const instructions = focusText.trim();
@@ -162,9 +176,16 @@ export default function ConfigSheet({
         difficulty,
         topic: selectedTopic ?? undefined,
         instructions: instructions || undefined,
+        include_review: offersReview ? includeReview : undefined,
       });
       navigate(`/session/${session.id}`);
-    } catch {
+    } catch (e) {
+      // An empty AI account will not recover in the next minute: say so now.
+      if (e instanceof Error && e.message.includes('tutor_out_of_credits')) {
+        setStarting(false);
+        setStartError('The tutor is out of AI credits.');
+        return;
+      }
       // Keep the loader up and poll: the backend may still be finishing
       // the session this request started.
       for (let attempt = 0; attempt < 5; attempt++) {
@@ -180,7 +201,7 @@ export default function ConfigSheet({
         "Couldn't start the session — the tutor may still be waking up. Try again in a moment.",
       );
     }
-  }, [userId, mode, difficulty, selectedTopic, focusText, navigate, findOrphanedSession]);
+  }, [userId, mode, difficulty, selectedTopic, focusText, includeReview, offersReview, navigate, findOrphanedSession]);
 
   // Show full-screen branded loader while creating the session (LLM call)
   if (starting) {
@@ -229,7 +250,9 @@ export default function ConfigSheet({
               background: '#161a28',
               borderRadius: '28px 28px 0 0',
               borderTop: '1px solid rgba(255,255,255,0.09)',
-              padding: '12px 20px 32px 20px',
+              padding: '12px 20px calc(env(safe-area-inset-bottom) + 32px) 20px',
+              maxHeight: '92dvh',
+              overflowY: 'auto',
               color: '#eef1f8',
               maxWidth: '500px',
               margin: '0 auto',
@@ -412,6 +435,67 @@ export default function ConfigSheet({
               }}>
                 {focusError}
               </p>
+            )}
+
+            {/* Review toggle */}
+            {offersReview && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeReview}
+                aria-label="Include review words"
+                onClick={() => setIncludeReview((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  width: '100%',
+                  padding: '12px 16px',
+                  marginBottom: '20px',
+                  borderRadius: '14px',
+                  background: '#0e1017',
+                  border: includeReview
+                    ? '1px solid rgba(94,164,247,0.35)'
+                    : '1px solid rgba(255,255,255,0.08)',
+                  color: '#eef1f8',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span>
+                  <span style={{ display: 'block', fontSize: '14px', fontWeight: 600 }}>
+                    Include review words
+                  </span>
+                  <span style={{ display: 'block', fontSize: '12px', color: '#6b7289', marginTop: '2px' }}>
+                    Mix in words you are due to see again
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    flexShrink: 0,
+                    width: '44px',
+                    height: '26px',
+                    borderRadius: '999px',
+                    padding: '3px',
+                    background: includeReview ? '#5ea4f7' : 'rgba(255,255,255,0.12)',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'block',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '999px',
+                      background: '#ffffff',
+                      transform: includeReview ? 'translateX(18px)' : 'translateX(0)',
+                      transition: 'transform 0.15s',
+                    }}
+                  />
+                </span>
+              </button>
             )}
 
             {/* Start error */}

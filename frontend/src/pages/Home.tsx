@@ -165,6 +165,7 @@ export default function Home() {
   // Config sheet state
   const [sheetMode, setSheetMode] = useState<LearningMode | null>(null);
   const [sheetRecommendedTopic, setSheetRecommendedTopic] = useState<string | undefined>(undefined);
+  const [sheetRecommendedReview, setSheetRecommendedReview] = useState(false);
 
   const loadData = useCallback(() => {
     if (!user) return;
@@ -206,12 +207,14 @@ export default function Home() {
   const handleModeClick = (mode: LearningMode) => {
     if (!user) return;
     setSheetRecommendedTopic(undefined);
+    setSheetRecommendedReview(false);
     setSheetMode(mode);
   };
 
   const handleRecClick = (rec: RecommendedAction) => {
     if (!user) return;
     setSheetRecommendedTopic(undefined);
+    setSheetRecommendedReview(rec.kind === 'review_vocab');
     setSheetMode(rec.mode);
   };
 
@@ -521,6 +524,7 @@ export default function Home() {
           mode={sheetMode}
           userId={user.id}
           recommendedTopic={sheetRecommendedTopic}
+          recommendedReview={sheetRecommendedReview}
           onClose={() => setSheetMode(null)}
         />
       )}
