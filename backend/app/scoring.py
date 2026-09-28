@@ -79,6 +79,20 @@ def _vocab_credits(ex: dict) -> list[float]:
     ]
 
 
+def _grammar_credits(ex: dict) -> list[float]:
+    """Each grammar item's credit. An item answered before credits existed
+    has none and falls back to whether it was right; unanswered counts as 0."""
+    credits = ex.get("credits") or []
+    correct = ex.get("correct") or []
+    vals: list[float] = []
+    for i in range(max(len(credits), len(correct))):
+        credit = credits[i] if i < len(credits) else None
+        if credit is None:
+            credit = 1.0 if i < len(correct) and correct[i] is True else 0.0
+        vals.append(credit)
+    return vals
+
+
 def compute_session_score(exercises: dict | None) -> float | None:
     """Compute the 0-10 session score from answer data. None = unscorable."""
     if not exercises:
@@ -98,7 +112,7 @@ def compute_session_score(exercises: dict | None) -> float | None:
             if all(c is None for c in correct):
                 return None
             return _round1(sum(1.0 for c in correct if c) / len(correct) * 10)
-        vals = [c if c is not None else 0.0 for c in credits]
+        vals = _grammar_credits(exercises)
         return _round1(sum(vals) / len(vals) * 10)
     if kind == "translation":
         answers = exercises.get("answers", [])
@@ -137,9 +151,9 @@ def compute_category_scores(exercises: dict | None) -> list[dict]:
             })
         return cats
     if kind == "grammar":
-        credits = [c if c is not None else 0.0 for c in exercises.get("credits") or []]
-        if not credits:
+        if not exercises.get("credits"):
             return []
+        credits = _grammar_credits(exercises)
         accuracy = _round1(sum(credits) / len(credits) * 10)
         return [{"category": "Accuracy", "score": accuracy, "comment": ""}]
     if kind == "translation":

@@ -176,6 +176,31 @@ class TestCategoryScores:
         assert compute_category_scores({"type": "conversation"}) == []
 
 
+class TestGrammarBegunBeforeCredits:
+    """A lesson begun before credits existed and finished after: each item
+    without a credit falls back to its right-or-wrong value."""
+
+    EX = {
+        "type": "grammar", "lesson": {}, "exercises": [{}] * 10,
+        "currentIndex": 10, "answers": ["a"] * 10,
+        "correct": [True, False, True, False, True, False, False, True, False, True],
+        "credits": [None] * 7 + [1.0, 0.0, 1.0],
+        "phase": "complete",
+    }
+
+    def test_score_counts_every_item(self):
+        assert compute_session_score(self.EX) == 5.0
+
+    def test_accuracy_counts_every_item(self):
+        assert compute_category_scores(self.EX) == [
+            {"category": "Accuracy", "score": 5.0, "comment": ""},
+        ]
+
+    def test_an_item_with_neither_counts_as_unanswered(self):
+        ex = {**self.EX, "correct": [True] + [None] * 9, "credits": [None] * 9 + [1.0]}
+        assert compute_session_score(ex) == 2.0
+
+
 class TestPartialSessionScores:
     """Ending a session early must not inflate scores — unanswered counts as 0."""
 

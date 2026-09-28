@@ -68,6 +68,23 @@ class TestVocabModeExtraction:
         assert question_pair(q_sk) == ("chlieb", "bread")
         assert question_pair(q_en) == ("voda", "water")
 
+    def test_empty_slovak_words_filtered(self):
+        session = {
+            "mode": "vocabulary",
+            "exercises": {
+                "type": "vocabulary",
+                "questions": [
+                    {"word": "", "direction": "sk-en", "choices": ["empty"], "correctIndex": 0, "explanation": ""},
+                    {"word": "dobrý", "direction": "sk-en", "choices": ["good"], "correctIndex": 0, "explanation": ""},
+                ],
+                "answers": [0, 0],
+                "phase": "complete",
+            },
+            "feedback": None,
+        }
+        words = extract_vocab_from_session(session)
+        assert [w["slovak"] for w in words] == ["dobrý"]
+
     def test_deduplicates_by_slovak(self):
         """Duplicate slovak words should be deduplicated."""
         session = {
