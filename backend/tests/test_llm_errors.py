@@ -50,12 +50,12 @@ class TestSessionCreationLLMFailure:
         assert "unavailable" in resp.json()["detail"].lower()
         assert resp.json()["code"] == "tutor_unavailable"
 
-    async def test_end_session_returns_502_on_llm_error(
+    async def test_end_session_succeeds_while_the_model_is_unavailable(
         self, client, monkeypatch, sample_vocab_session
     ):
         from app.database import create_session as db_create_session, get_db
 
-        session = {**sample_vocab_session, "completed": False, "feedback": None}
+        session = {**sample_vocab_session, "user_id": "llm_err_user", "completed": False, "feedback": None}
         async with get_db() as db:
             await db_create_session(db, session)
 
@@ -66,7 +66,8 @@ class TestSessionCreationLLMFailure:
 
         async with client as c:
             resp = await c.post(f"/api/sessions/{session['id']}/end")
-        assert resp.status_code == 502
+        assert resp.status_code == 200
+        assert resp.json()["overall_score"] == 6.67
 
     async def test_session_not_found_still_404(self, client):
         async with client as c:

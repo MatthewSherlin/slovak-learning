@@ -38,7 +38,6 @@ from .llm import LLMError, ask, ask_json, ask_messages
 from .prompts import (
     CONVERSATION_TURN_PROMPT,
     ERROR_CORRECTION_BATCH_PROMPT,
-    FEEDBACK_PROMPT,
     FILL_BLANK_BATCH_PROMPT,
     GRAMMAR_LESSON_PROMPT,
     HINT_PROMPT,
@@ -49,7 +48,6 @@ from .prompts import (
 from .questions import QUESTIONS
 from .scoring import compute_category_scores, compute_session_score, grade_answer, normalize_answer
 from .schemas import (
-    FEEDBACK_SCHEMA,
     GRAMMAR_LESSON_SCHEMA,
     TRANSLATION_BATCH_SCHEMA,
     TRANSLATION_GRADE_SCHEMA,
@@ -168,11 +166,13 @@ async def _get_learning_context(
         for s in mode_sessions:
             fb = s["feedback"]
             topic_label = _history_topic_label(s)
-            score = fb.get("overall_score", "?")
+            score = fb.get("overall_score")
             strengths = fb.get("strengths", [])[:1]
             # Stored "improvements" are left out: text written before accents
             # stopped counting advises about accent marks.
-            part = f"- {topic_label} (score: {score}/10)"
+            part = f"- {topic_label}"
+            if score is not None:
+                part += f" (score: {score}/10)"
             if strengths:
                 part += f" | Strength: {strengths[0]}"
             digest_parts.append(part)
@@ -1043,75 +1043,81 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
     if session["completed"] and session.get("feedback"):
         return session["feedback"]
 
-    # Before the model call: a failed feedback request must not cost the
-    # learner their progress.
     await _record_deterministic_progress(db, session)
 
-    conversation = _build_conversation(session["messages"])
-    mode_label = session["mode"].replace("_", " ").title()
-    topic_label = resolve_topic_label(session["mode"], session["topic"]) or "no set topic"
-
-    prompt = (
-        f"Mode: {mode_label}\n"
-        f"Topic: {topic_label}\n"
-        f"Difficulty: {session['difficulty']}\n\n"
-        f"Full session transcript:\n{conversation}\n\n"
-        f"Analyze this session and provide feedback as JSON."
-    )
-
-    data = await ask_json(
-        prompt, FEEDBACK_PROMPT,
-        schema=FEEDBACK_SCHEMA, schema_name="session_feedback",
-        effort="low", max_tokens=8000,
-    )
-
-    computed_score = compute_session_score(session.get("exercises"))
-    computed_categories = compute_category_scores(session.get("exercises"))
-
-    if computed_score is not None:
-        overall = computed_score
-        scores = computed_categories
-    else:
-        # Conversation (and legacy/unscorable): LLM decides
-        overall = data.get("overall_score", 5)
-        scores = [
-            {"category": s.get("category", ""), "score": s.get("score", 5), "comment": s.get("comment", "")}
-            for s in data.get("scores", [])
-        ]
-
-    feedback = {
-        "overall_score": overall,
-        "scores": scores,
-        "strengths": data.get("strengths", []),
-        "improvements": data.get("improvements", []),
-        "sample_answer": data.get("sample_answer"),
-        "vocabulary_learned": [
-            {"slovak": v.get("slovak", ""), "english": v.get("english", ""), "example": v.get("example")}
-            for v in data.get("vocabulary_learned", [])
-        ],
-        "grammar_notes": data.get("grammar_notes", []),
-    }
-
+    feedback = _build_feedback(session)
     await db_update_session(
         db, session_id,
         completed=True,
         feedback_json=feedback,
     )
-
-    # Words that only the feedback can name. Vocabulary sessions with
-    # questions were already recorded from their answers.
-    ex = session.get("exercises") or {}
-    has_vocab_questions = ex.get("type") == "vocabulary" and bool(ex.get("questions"))
-    if not has_vocab_questions:
-        try:
-            words = extract_vocab_from_session({**session, "feedback": feedback})
-            if words:
-                await upsert_vocab_progress(db, session["user_id"], words)
-                log.info("Tracked %d words for user %s", len(words), session["user_id"])
-        except Exception:
-            log.exception("Failed to persist vocab progress for session %s", session_id)
-
     return feedback
+
+
+def _build_feedback(session: dict) -> dict:
+    """The results of a lesson, counted from its answers."""
+    ex = session.get("exercises") or {}
+    kind = ex.get("type")
+    vocabulary: list[dict] = []
+    if kind == "vocabulary":
+        for q in ex.get("questions") or []:
+            slovak, english = question_pair(q)
+            vocabulary.append({"slovak": slovak, "english": english, "example": None})
+    corrections = _tutor_corrections(session["messages"]) if kind == "conversation" else []
+    answered, total = _items_answered(session)
+    return {
+        "overall_score": compute_session_score(ex),
+        "scores": compute_category_scores(ex),
+        "strengths": [],
+        "improvements": [],
+        "sample_answer": None,
+        "vocabulary_learned": vocabulary,
+        "grammar_notes": [],
+        "items_answered": answered,
+        "items_total": total,
+        "corrections": corrections,
+    }
+
+
+def _items_answered(session: dict) -> tuple[int, int]:
+    """(answered, total) questions or exercises; for conversation, messages sent."""
+    ex = session.get("exercises") or {}
+    kind = ex.get("type")
+    if kind == "conversation":
+        sent = sum(1 for m in session["messages"] if m.get("role") == "student")
+        return sent, ex.get("maxExchanges", 0)
+    if kind == "vocabulary":
+        total = len(ex.get("questions") or [])
+        answers = ex.get("answers") or []
+        credits = ex.get("credits") or []
+        answered = sum(
+            1 for i in range(total)
+            if (i < len(credits) and credits[i] is not None)
+            or (i < len(answers) and answers[i] is not None)
+        )
+        return answered, total
+    if kind in ("grammar", "translation"):
+        answers = ex.get("answers") or []
+        return sum(1 for a in answers if a is not None), len(ex.get("exercises") or [])
+    return 0, 0
+
+
+CORRECTION_MARK = "\U0001F4DD"
+
+
+def _tutor_corrections(messages: list[dict]) -> list[str]:
+    """The tutor's correction lines, which start with the memo emoji."""
+    corrections: list[str] = []
+    for msg in messages:
+        if msg.get("role") != "tutor":
+            continue
+        for line in msg.get("content", "").split("\n"):
+            line = line.strip()
+            if line.startswith(CORRECTION_MARK):
+                text = line[len(CORRECTION_MARK):].strip()
+                if text:
+                    corrections.append(text)
+    return corrections
 
 
 # ── Helpers ──────────────────────────────────────────────────────────

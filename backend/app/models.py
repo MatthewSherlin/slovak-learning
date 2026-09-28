@@ -43,13 +43,17 @@ class VocabEntry(BaseModel):
 
 
 class SessionFeedback(BaseModel):
-    overall_score: float
+    overall_score: float | None  # None for conversation, which has no score
     scores: list[FeedbackScore]
     strengths: list[str]
     improvements: list[str]
     sample_answer: str | None = None
     vocabulary_learned: list[VocabEntry] = []
     grammar_notes: list[str] = []
+    # Absent from feedback stored before results were counted from answers.
+    items_answered: int | None = None
+    items_total: int | None = None
+    corrections: list[str] = []
 
 
 # ── Vocabulary exercise types ────────────────────────────────────────

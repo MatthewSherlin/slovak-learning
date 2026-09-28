@@ -312,7 +312,7 @@ async def list_all(user_id: Optional[str] = Query(None)):
                 "topic": s["topic"],
                 "difficulty": s["difficulty"],
                 "completed": s["completed"],
-                "overall_score": s["feedback"]["overall_score"] if s.get("feedback") else None,
+                "overall_score": s["feedback"].get("overall_score") if s.get("feedback") else None,
                 "question_preview": preview,
                 "created_at": s["created_at"],
             })

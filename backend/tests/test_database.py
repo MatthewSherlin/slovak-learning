@@ -320,6 +320,98 @@ async def test_leaderboard_total_vocab_uses_vocabulary_progress(db):
     assert tracked >= 1
 
 
+# ── XP and lessons without a score ──────────────────────────────────
+
+
+async def test_xp_for_a_stored_older_lesson_uses_the_old_formula():
+    from app.database import _calculate_xp
+
+    older = {"feedback": {
+        "overall_score": 7.5,
+        "vocabulary_learned": [{"slovak": w, "english": ""} for w in ("a", "b", "c")],
+    }}
+    assert _calculate_xp([older]) == 10 + 15 + 6
+
+
+async def test_xp_for_a_new_lesson_pays_per_item_answered_up_to_ten():
+    from app.database import _calculate_xp
+
+    words = [{"slovak": str(i), "english": "", "example": None} for i in range(12)]
+    full = {"feedback": {"overall_score": 8.0, "vocabulary_learned": words, "items_answered": 12}}
+    short = {"feedback": {"overall_score": 5.0, "vocabulary_learned": [], "items_answered": 3}}
+    assert _calculate_xp([full]) == 10 + 16 + 20
+    assert _calculate_xp([short]) == 10 + 10 + 6
+
+
+async def test_xp_for_a_lesson_without_a_score():
+    from app.database import _calculate_xp
+
+    convo = {"feedback": {"overall_score": None, "vocabulary_learned": [], "items_answered": 4}}
+    assert _calculate_xp([convo]) == 10 + 0 + 8
+
+
+async def _completed_lesson(db, user_id: str, mode: str, feedback: dict) -> None:
+    from app.database import create_session, update_session
+
+    sid = f"xp-{uuid.uuid4().hex[:8]}"
+    await create_session(db, {
+        "id": sid,
+        "user_id": user_id,
+        "mode": mode,
+        "topic": "general",
+        "difficulty": "beginner",
+        "completed": False,
+        "created_at": "2025-01-15T10:00:00+00:00",
+        "feedback": None,
+        "exercises": None,
+        "messages": [],
+    })
+    await update_session(db, sid, completed=True, feedback_json=feedback)
+
+
+NULL_SCORE_FEEDBACK = {
+    "overall_score": None, "scores": [], "strengths": [], "improvements": [],
+    "sample_answer": None, "vocabulary_learned": [], "grammar_notes": [],
+    "items_answered": 3, "items_total": 10, "corrections": [],
+}
+
+
+async def test_dashboard_counts_a_lesson_without_a_score_but_leaves_it_out_of_averages(db):
+    from app.database import get_dashboard_stats
+
+    uid = f"null-{uuid.uuid4().hex[:8]}"
+    await _completed_lesson(db, uid, "vocabulary", {"overall_score": 6.0, "items_answered": 10})
+    await _completed_lesson(db, uid, "conversation", NULL_SCORE_FEEDBACK)
+
+    stats = await get_dashboard_stats(db, uid)
+    assert stats["completed_sessions"] == 2
+    assert stats["avg_score"] == 6.0
+    assert stats["scores_by_mode"] == {"vocabulary": 6.0}
+    assert {s["overall_score"] for s in stats["recent_sessions"]} == {6.0, None}
+
+
+async def test_leaderboard_counts_a_lesson_without_a_score_but_leaves_it_out_of_averages(db):
+    from app.database import get_leaderboard
+
+    uid = f"null-{uuid.uuid4().hex[:8]}"
+    await db.execute(
+        "INSERT INTO users (id, name, avatar, color) VALUES (?, ?, ?, ?)",
+        (uid, "Null", "N", "#000000"),
+    )
+    await db.commit()
+    await _completed_lesson(db, uid, "conversation", NULL_SCORE_FEEDBACK)
+
+    entry = next(e for e in await get_leaderboard(db) if e["user_id"] == uid)
+    assert entry["completed_sessions"] == 1
+    assert entry["avg_score"] is None
+    assert entry["xp"] == 10 + 0 + 6
+
+    await _completed_lesson(db, uid, "grammar", {"overall_score": 8.0, "items_answered": 5})
+    entry = next(e for e in await get_leaderboard(db) if e["user_id"] == uid)
+    assert entry["completed_sessions"] == 2
+    assert entry["avg_score"] == 8.0
+
+
 # ── Streak timezone ─────────────────────────────────────────────────
 
 

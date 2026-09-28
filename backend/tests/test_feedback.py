@@ -1,4 +1,4 @@
-"""end_session: computed scores for objective modes, LLM narrative only."""
+"""end_session: the results are counted from the answers, with no model call."""
 
 from __future__ import annotations
 
@@ -7,156 +7,197 @@ import uuid
 import pytest
 
 from app import sessions as sessions_module
-from app.database import create_session as db_create_session
+from app.database import create_session as db_create_session, get_session, get_vocab_progress
 from app.sessions import end_session
 
 
 pytestmark = pytest.mark.asyncio
 
+MEMO = "\U0001F4DD"
 
-NARRATIVE_ONLY = {
-    "strengths": ["Good recall"],
-    "improvements": ["Practice diacritics"],
-    "sample_answer": None,
-    "vocabulary_learned": [{"slovak": "chlieb", "english": "bread", "example": None}],
-    "grammar_notes": [],
-}
-
-FULL_LLM = {
-    "overall_score": 6.5,
-    "scores": [{"category": "Fluency", "score": 7, "comment": "ok"}],
-    **NARRATIVE_ONLY,
+FEEDBACK_FIELDS = {
+    "overall_score", "scores", "strengths", "improvements", "sample_answer",
+    "vocabulary_learned", "grammar_notes", "items_answered", "items_total", "corrections",
 }
 
 
 @pytest.fixture
-def fake_llm(monkeypatch):
-    captured = {}
+def model_calls(monkeypatch):
+    calls: list[dict] = []
 
-    async def fake_ask_json(prompt, system_prompt=None, **kwargs):
-        captured["prompt"] = prompt
-        captured["system"] = system_prompt
-        captured["kwargs"] = kwargs
-        return dict(FULL_LLM)
+    async def recording_ask_json(prompt, system_prompt=None, **kwargs):
+        calls.append({"prompt": prompt, "system": system_prompt, **kwargs})
+        return {}
 
-    monkeypatch.setattr(sessions_module, "ask_json", fake_ask_json)
-    return captured
+    monkeypatch.setattr(sessions_module, "ask_json", recording_ask_json)
+    return calls
 
 
-async def test_vocab_score_computed_not_llm(db, fake_llm, sample_vocab_session):
-    session = {
-        **sample_vocab_session,
+def _unfinished(session: dict, **overrides) -> dict:
+    # A user of its own, so completed lessons do not leak into other tests.
+    return {
+        **session,
         "id": f"fb-{uuid.uuid4().hex[:8]}",
+        "user_id": f"fbu_{uuid.uuid4().hex[:8]}",
         "completed": False,
         "feedback": None,
+        **overrides,
     }
+
+
+def _assert_nothing_written_by_a_model(feedback: dict) -> None:
+    assert set(feedback) == FEEDBACK_FIELDS
+    assert feedback["strengths"] == []
+    assert feedback["improvements"] == []
+    assert feedback["grammar_notes"] == []
+    assert feedback["sample_answer"] is None
+
+
+async def test_vocabulary_results_from_answers(db, model_calls, sample_vocab_session):
+    session = _unfinished(sample_vocab_session)
     # 3 questions: answers [0,1,0] vs correctIndex [0,1,1] -> 2/3 correct
     await db_create_session(db, session)
     feedback = await end_session(db, session["id"])
-    assert feedback["overall_score"] == 6.67  # (1+1+0)/3*10 rounded
-    # categories computed deterministically, not the LLM's "Fluency"
-    assert all(s["category"] != "Fluency" for s in feedback["scores"])
-    assert feedback["strengths"] == ["Good recall"]  # narrative from LLM
+
+    assert model_calls == []
+    _assert_nothing_written_by_a_model(feedback)
+    assert feedback["overall_score"] == 6.67
+    assert {s["category"] for s in feedback["scores"]} == {
+        "Word recognition (SK→EN)", "Recall (EN→SK)",
+    }
+    assert feedback["vocabulary_learned"] == [
+        {"slovak": "chlieb", "english": "bread", "example": None},
+        {"slovak": "voda", "english": "water", "example": None},
+        {"slovak": "mäso", "english": "meat", "example": None},
+    ]
+    assert feedback["items_answered"] == 3
+    assert feedback["items_total"] == 3
+    assert feedback["corrections"] == []
 
 
-async def test_conversation_score_still_from_llm(db, fake_llm, sample_conversation_session):
+async def test_vocabulary_items_answered_counts_only_answered_questions(
+    db, model_calls, sample_vocab_session,
+):
+    session = _unfinished(sample_vocab_session)
+    session["exercises"]["answers"] = [0, None, None]
+    session["exercises"]["credits"] = [1.0, None, None]
+    await db_create_session(db, session)
+    feedback = await end_session(db, session["id"])
+    assert feedback["items_answered"] == 1
+    assert feedback["items_total"] == 3
+
+
+async def test_grammar_results_from_answers(db, model_calls, sample_grammar_session):
+    session = _unfinished(sample_grammar_session)
+    session["exercises"]["exercises"].append(
+        {"sentence": "Pijem ____.", "blank": "vodu", "hint": "", "explanation": ""},
+    )
+    session["exercises"]["answers"] = ["dom", "knihy", None]
+    session["exercises"]["correct"] = [True, False, None]
+    session["exercises"]["credits"] = [1.0, 0.0, None]
+    await db_create_session(db, session)
+    feedback = await end_session(db, session["id"])
+
+    assert model_calls == []
+    _assert_nothing_written_by_a_model(feedback)
+    assert feedback["overall_score"] == 3.33
+    assert feedback["scores"] == [{"category": "Accuracy", "score": 3.33, "comment": ""}]
+    assert feedback["vocabulary_learned"] == []
+    assert feedback["items_answered"] == 2
+    assert feedback["items_total"] == 3
+    assert feedback["corrections"] == []
+
+
+async def test_translation_results_from_answers(db, model_calls):
     session = {
-        **sample_conversation_session,
         "id": f"fb-{uuid.uuid4().hex[:8]}",
+        "user_id": f"fbu_{uuid.uuid4().hex[:8]}",
+        "mode": "translation",
+        "topic": "english_to_slovak",
+        "difficulty": "beginner",
         "completed": False,
+        "created_at": "2025-01-18T10:00:00+00:00",
         "feedback": None,
+        "exercises": {
+            "type": "translation",
+            "exercises": [
+                {"kind": "translate", "source": "I want bread", "direction": "en-sk",
+                 "translation": None, "modelAnswer": "Chcem chlieb", "keyPoints": []},
+                {"kind": "translate", "source": "Water, please", "direction": "en-sk",
+                 "translation": None, "modelAnswer": "Vodu, prosím", "keyPoints": []},
+            ],
+            "answers": [{"userAnswer": "Chcem chlieb", "score": 9, "feedback": "", "tier": "exact"}, None],
+            "phase": "active",
+        },
+        "messages": [],
     }
     await db_create_session(db, session)
     feedback = await end_session(db, session["id"])
-    assert feedback["overall_score"] == 6.5
-    assert feedback["scores"][0]["category"] == "Fluency"
+
+    assert model_calls == []
+    _assert_nothing_written_by_a_model(feedback)
+    assert feedback["overall_score"] == 4.5
+    assert feedback["scores"] == [{"category": "Translation quality", "score": 9, "comment": ""}]
+    assert feedback["vocabulary_learned"] == []
+    assert feedback["items_answered"] == 1
+    assert feedback["items_total"] == 2
+    assert feedback["corrections"] == []
 
 
-async def test_feedback_call_uses_schema_and_low_effort(db, fake_llm, sample_vocab_session):
-    from app.schemas import FEEDBACK_SCHEMA
-
-    session = {
-        **sample_vocab_session,
-        "id": f"fb-{uuid.uuid4().hex[:8]}",
-        "completed": False,
-        "feedback": None,
-    }
+async def test_conversation_results_have_no_score(db, model_calls, sample_conversation_session):
+    session = _unfinished(sample_conversation_session)
+    session["messages"] = [
+        {"role": "tutor", "content": "Dobrý deň! Čo si želáte?"},
+        {"role": "student", "content": "Chcem chlieb."},
+        {"role": "tutor", "content": f"Nech sa páči.\n{MEMO} chcem kúpiť chlieb → chcem chlieb"},
+        {"role": "system", "content": f"{MEMO} not from the tutor"},
+        {"role": "student", "content": "Ďakujem."},
+        {"role": "tutor", "content": f"  {MEMO}  ďakujem veľmi pekne  "},
+    ]
     await db_create_session(db, session)
-    await end_session(db, session["id"])
-    assert fake_llm["kwargs"]["schema"] is FEEDBACK_SCHEMA
-    assert fake_llm["kwargs"]["effort"] == "low"
-    assert fake_llm["kwargs"]["max_tokens"] == 8000
+    feedback = await end_session(db, session["id"])
+
+    assert model_calls == []
+    _assert_nothing_written_by_a_model(feedback)
+    assert feedback["overall_score"] is None
+    assert feedback["scores"] == []
+    assert feedback["vocabulary_learned"] == []
+    assert feedback["items_answered"] == 2
+    assert feedback["items_total"] == 10
+    assert feedback["corrections"] == [
+        "chcem kúpiť chlieb → chcem chlieb",
+        "ďakujem veľmi pekne",
+    ]
 
 
-async def test_feedback_prompt_never_says_general(db, fake_llm, sample_vocab_session):
-    session = {
-        **sample_vocab_session,
-        "id": f"fb-{uuid.uuid4().hex[:8]}",
-        "topic": "general",
-        "completed": False,
-        "feedback": None,
-    }
+async def test_end_session_stores_the_feedback_and_completes(db, model_calls, sample_vocab_session):
+    session = _unfinished(sample_vocab_session)
     await db_create_session(db, session)
-    await end_session(db, session["id"])
-    assert "Topic: general" not in fake_llm["prompt"]
-    assert "Topic: no set topic" in fake_llm["prompt"]
+    feedback = await end_session(db, session["id"])
+    stored = await get_session(db, session["id"])
+    assert stored["completed"] is True
+    assert stored["feedback"] == feedback
 
 
-async def test_end_session_twice_calls_the_model_once(db, monkeypatch, sample_vocab_session):
-    calls = {"n": 0}
-
-    async def counting_ask_json(prompt, system_prompt=None, **kwargs):
-        calls["n"] += 1
-        return dict(FULL_LLM)
-
-    monkeypatch.setattr(sessions_module, "ask_json", counting_ask_json)
+async def test_end_session_twice_records_progress_once(db, model_calls, sample_vocab_session):
     uid = f"fbu_{uuid.uuid4().hex[:8]}"
-    session = {
-        **sample_vocab_session,
-        "id": f"fb-{uuid.uuid4().hex[:8]}",
-        "user_id": uid,
-        "completed": False,
-        "feedback": None,
-    }
+    session = _unfinished(sample_vocab_session, user_id=uid)
     await db_create_session(db, session)
     first = await end_session(db, session["id"])
     second = await end_session(db, session["id"])
-    assert calls["n"] == 1
     assert second == first
-
-    from app.database import get_vocab_progress
+    assert model_calls == []
 
     rows = await get_vocab_progress(db, uid)
     assert {w["times_seen"] for w in rows} == {1}
 
 
-async def test_progress_survives_a_failed_feedback_call_once(db, monkeypatch, sample_vocab_session):
-    from app.database import get_vocab_progress
-    from app.llm import LLMError
-
-    state = {"fail": True}
-
-    async def flaky_ask_json(prompt, system_prompt=None, **kwargs):
-        if state["fail"]:
-            raise LLMError("upstream unavailable")
-        return dict(FULL_LLM)
-
-    monkeypatch.setattr(sessions_module, "ask_json", flaky_ask_json)
+async def test_ending_other_lessons_adds_no_words(
+    db, model_calls, sample_grammar_session, sample_conversation_session,
+):
     uid = f"fbu_{uuid.uuid4().hex[:8]}"
-    session = {
-        **sample_vocab_session,
-        "id": f"fb-{uuid.uuid4().hex[:8]}",
-        "user_id": uid,
-        "completed": False,
-        "feedback": None,
-    }
-    await db_create_session(db, session)
-
-    with pytest.raises(LLMError):
+    for fixture in (sample_grammar_session, sample_conversation_session):
+        session = _unfinished(fixture, user_id=uid)
+        await db_create_session(db, session)
         await end_session(db, session["id"])
-    assert len(await get_vocab_progress(db, uid)) == 3  # saved despite the failure
-
-    state["fail"] = False
-    await end_session(db, session["id"])
-    rows = await get_vocab_progress(db, uid)
-    assert {w["times_seen"] for w in rows} == {1}  # and not saved a second time
+    assert await get_vocab_progress(db, uid) == []

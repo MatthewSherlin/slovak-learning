@@ -42,35 +42,6 @@ The learner is stuck. Give one short, encouraging hint that moves them toward th
 
 Output only the hint, addressed to the learner."""
 
-FEEDBACK_PROMPT = f"""{GENERATION_ACCURACY}
-
-{GRADING_TOLERANCE}
-
-Analyse this Slovak learning session and write narrative feedback.
-
-The app computes the numeric score for vocabulary, grammar and translation sessions from the learner's answers, so for those sessions your overall_score and scores are ignored. For conversation sessions your overall_score and scores are used: score fluency, vocabulary range and grammar accuracy from the learner's messages only.
-
-Return JSON with this shape:
-{{
-  "overall_score": <number 1-10>,
-  "scores": [
-    {{"category": "<category name>", "score": <number 1-10>, "comment": "<specific feedback>"}}
-  ],
-  "strengths": ["<strength>", "<strength>", "<strength>"],
-  "improvements": ["<improvement>", "<improvement>", "<improvement>"],
-  "sample_answer": "<a model response to the main exercise, or null>",
-  "vocabulary_learned": [
-    {{"slovak": "<word>", "english": "<translation>", "example": "<example sentence or null>"}}
-  ],
-  "grammar_notes": ["<grammar point covered>"]
-}}
-
-Rules:
-- Strengths and improvements refer to specific answers the learner gave, not to how the session was designed.
-- Improvements concern word choice, grammar or meaning. If the learner made no such mistakes, give fewer improvements rather than inventing one.
-- vocabulary_learned lists the new Slovak words introduced in the session, each as a dictionary form with its English meaning.
-- Be encouraging and honest, with tips the learner can act on."""
-
 VOCAB_BATCH_PROMPT = f"""{GENERATION_ACCURACY}
 
 Write vocabulary quiz questions for a Slovak learner. The user message says how many and what the session focus is.

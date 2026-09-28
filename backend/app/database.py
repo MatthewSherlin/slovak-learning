@@ -337,7 +337,10 @@ async def get_dashboard_stats(db: aiosqlite.Connection, user_id: str | None = No
     sessions = await list_sessions(db, user_id)
     completed = [s for s in sessions if s["completed"] and s.get("feedback")]
 
-    scores = [s["feedback"]["overall_score"] for s in completed if s.get("feedback")]
+    # A lesson with no score (conversation) counts as completed but is left
+    # out of every average.
+    scores = [s["feedback"].get("overall_score") for s in completed]
+    scores = [score for score in scores if score is not None]
 
     scores_by_mode: dict[str, list[float]] = {}
     all_strengths: list[str] = []
@@ -346,8 +349,8 @@ async def get_dashboard_stats(db: aiosqlite.Connection, user_id: str | None = No
     for s in completed:
         fb = s.get("feedback")
         if fb:
-            mode = s["mode"]
-            scores_by_mode.setdefault(mode, []).append(fb["overall_score"])
+            if fb.get("overall_score") is not None:
+                scores_by_mode.setdefault(s["mode"], []).append(fb["overall_score"])
             all_strengths.extend(fb.get("strengths", [])[:2])
             all_weaknesses.extend(fb.get("improvements", [])[:2])
 
@@ -399,7 +402,8 @@ async def get_leaderboard(db: aiosqlite.Connection) -> list[dict]:
         uid = user["id"]
         user_sessions = [s for s in sessions if s["user_id"] == uid]
         completed = [s for s in user_sessions if s["completed"] and s.get("feedback")]
-        scores = [s["feedback"]["overall_score"] for s in completed if s.get("feedback")]
+        scores = [s["feedback"].get("overall_score") for s in completed]
+        scores = [score for score in scores if score is not None]
         total_vocab = vocab_counts.get(uid, 0)
 
         entries.append({
@@ -442,7 +446,7 @@ def _build_summaries(sessions: list[dict]) -> list[dict]:
             "topic": s["topic"],
             "difficulty": s["difficulty"],
             "completed": s["completed"],
-            "overall_score": s["feedback"]["overall_score"] if s.get("feedback") else None,
+            "overall_score": s["feedback"].get("overall_score") if s.get("feedback") else None,
             "question_preview": preview,
             "created_at": s["created_at"],
         })
@@ -453,10 +457,14 @@ def _calculate_xp(completed_sessions: list[dict]) -> int:
     xp = 0
     for s in completed_sessions:
         fb = s.get("feedback")
-        if fb:
-            xp += 10
-            xp += int(fb["overall_score"] * 2)
-            xp += len(fb.get("vocabulary_learned", [])) * 2
+        if not fb:
+            continue
+        if "items_answered" in fb:
+            xp += 10 + int((fb["overall_score"] or 0) * 2) + 2 * min(fb["items_answered"], 10)
+        else:
+            # Older lessons, whose feedback was written by the model, keep
+            # the XP they earned.
+            xp += 10 + int(fb["overall_score"] * 2) + 2 * len(fb.get("vocabulary_learned", []))
     return xp
 
 

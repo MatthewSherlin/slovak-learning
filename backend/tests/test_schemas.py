@@ -11,7 +11,6 @@ ALL = [
     schemas.GRAMMAR_LESSON_SCHEMA,
     schemas.TRANSLATION_BATCH_SCHEMA,
     schemas.TRANSLATION_GRADE_SCHEMA,
-    schemas.FEEDBACK_SCHEMA,
 ]
 
 

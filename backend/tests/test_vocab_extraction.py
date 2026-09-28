@@ -100,7 +100,6 @@ class TestVocabModeExtraction:
         assert words[0]["slovak"].lower() == "dom"
 
     def test_handles_missing_exercises(self):
-        """Should fall back to feedback extraction if exercises missing."""
         session = {
             "mode": "vocabulary",
             "exercises": None,
@@ -110,58 +109,19 @@ class TestVocabModeExtraction:
                 ],
             },
         }
-        words = extract_vocab_from_session(session)
-        assert len(words) == 1
-        assert words[0]["slovak"].lower() == "auto"
+        assert extract_vocab_from_session(session) == []
 
 
-class TestGrammarModeExtraction:
-    """Tests for extracting vocabulary from grammar mode sessions."""
+class TestOtherModes:
+    """Only vocabulary lessons have words to record; summaries are not read."""
 
-    def test_blanks_are_not_extracted(self, sample_grammar_session):
-        words = extract_vocab_from_session(sample_grammar_session)
-        slovaks = {w["slovak"].lower() for w in words}
-        assert "knihu" not in slovaks      # an inflected blank, not a vocabulary word
-        assert slovaks == {"dom", "kniha"}  # from feedback only
+    def test_grammar_extracts_nothing(self, sample_grammar_session):
+        assert extract_vocab_from_session(sample_grammar_session) == []
 
-    def test_supplements_with_feedback_vocab(self, sample_grammar_session):
-        """Should also include words from feedback.vocabulary_learned."""
-        words = extract_vocab_from_session(sample_grammar_session)
-        slovaks = {w["slovak"].lower() for w in words}
-        # "kniha" from feedback (different from "knihu" in blank)
-        assert "kniha" in slovaks
+    def test_conversation_extracts_nothing(self, sample_conversation_session):
+        assert extract_vocab_from_session(sample_conversation_session) == []
 
-    def test_source_mode_is_grammar(self, sample_grammar_session):
-        words = extract_vocab_from_session(sample_grammar_session)
-        for w in words:
-            assert w["source_mode"] == "grammar"
-
-
-class TestConversationModeExtraction:
-    """Tests for extracting vocabulary from conversation mode sessions."""
-
-    def test_extracts_from_feedback(self, sample_conversation_session):
-        words = extract_vocab_from_session(sample_conversation_session)
-        slovaks = {w["slovak"].lower() for w in words}
-        assert "obchod" in slovaks
-        assert "peniaze" in slovaks
-
-    def test_all_marked_correct(self, sample_conversation_session):
-        """Feedback-extracted words are always marked correct."""
-        words = extract_vocab_from_session(sample_conversation_session)
-        for w in words:
-            assert w["correct"] is True
-
-    def test_source_mode_is_conversation(self, sample_conversation_session):
-        words = extract_vocab_from_session(sample_conversation_session)
-        for w in words:
-            assert w["source_mode"] == "conversation"
-
-
-class TestTranslationModeExtraction:
-    """Tests for extracting vocabulary from translation mode sessions."""
-
-    def test_extracts_from_feedback(self):
+    def test_translation_extracts_nothing(self):
         session = {
             "mode": "translation",
             "exercises": {
@@ -175,57 +135,7 @@ class TestTranslationModeExtraction:
             "feedback": {
                 "vocabulary_learned": [
                     {"slovak": "chcem", "english": "I want", "example": None},
-                    {"slovak": "chlieb", "english": "bread", "example": None},
                 ],
             },
         }
-        words = extract_vocab_from_session(session)
-        slovaks = {w["slovak"].lower() for w in words}
-        assert "chcem" in slovaks
-        assert "chlieb" in slovaks
-
-
-class TestEdgeCases:
-    """Edge cases for vocabulary extraction."""
-
-    def test_empty_session_no_feedback(self):
-        session = {"mode": "vocabulary", "exercises": None, "feedback": None}
-        words = extract_vocab_from_session(session)
-        assert words == []
-
-    def test_empty_vocabulary_learned(self):
-        session = {
-            "mode": "conversation",
-            "exercises": None,
-            "feedback": {"vocabulary_learned": []},
-        }
-        words = extract_vocab_from_session(session)
-        assert words == []
-
-    def test_unknown_mode_uses_feedback(self):
-        session = {
-            "mode": "unknown_mode",
-            "exercises": None,
-            "feedback": {
-                "vocabulary_learned": [
-                    {"slovak": "test", "english": "test", "example": None},
-                ],
-            },
-        }
-        words = extract_vocab_from_session(session)
-        assert len(words) == 1
-
-    def test_empty_slovak_words_filtered(self):
-        session = {
-            "mode": "conversation",
-            "exercises": None,
-            "feedback": {
-                "vocabulary_learned": [
-                    {"slovak": "", "english": "empty", "example": None},
-                    {"slovak": "dobrý", "english": "good", "example": None},
-                ],
-            },
-        }
-        words = extract_vocab_from_session(session)
-        assert len(words) == 1
-        assert words[0]["slovak"].lower() == "dobrý"
+        assert extract_vocab_from_session(session) == []

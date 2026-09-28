@@ -68,21 +68,3 @@ TRANSLATION_GRADE_SCHEMA: dict = _obj({
     "score": {"type": "integer"},
     "feedback": _STR,
 })
-
-FEEDBACK_SCHEMA: dict = _obj({
-    "overall_score": {"type": "number"},
-    "scores": _list_of(_obj({
-        "category": _STR,
-        "score": {"type": "number"},
-        "comment": _STR,
-    })),
-    "strengths": _list_of(_STR),
-    "improvements": _list_of(_STR),
-    "sample_answer": _nullable(_STR),
-    "vocabulary_learned": _list_of(_obj({
-        "slovak": _STR,
-        "english": _STR,
-        "example": _nullable(_STR),
-    })),
-    "grammar_notes": _list_of(_STR),
-})

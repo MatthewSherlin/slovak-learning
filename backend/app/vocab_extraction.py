@@ -10,21 +10,16 @@ log = logging.getLogger(__name__)
 def extract_vocab_from_session(session: dict) -> list[dict]:
     """Extract vocabulary words with correctness from a completed session.
 
+    Only vocabulary lessons created before per-answer saving still need this:
+    newer ones saved each word as its first answer arrived, and other lesson
+    types have no words to record.
+
     Returns list of dicts: {slovak, english, correct: bool, source_mode}
     """
-    mode = session.get("mode", "")
     exercises = session.get("exercises")
-    feedback = session.get("feedback")
-
-    extractors = {
-        "vocabulary": _extract_from_vocab,
-        "grammar": _extract_from_feedback,
-        "translation": _extract_from_feedback,
-        "conversation": _extract_from_feedback,
-    }
-
-    extractor = extractors.get(mode, _extract_from_feedback)
-    words = extractor(session, exercises, feedback)
+    if session.get("mode") != "vocabulary" or not exercises or "questions" not in exercises:
+        return []
+    words = _extract_from_vocab(exercises)
 
     # Deduplicate by normalized slovak word
     seen: set[str] = set()
@@ -48,13 +43,8 @@ def question_pair(q: dict) -> tuple[str, str]:
     return answer, q.get("word", "")
 
 
-def _extract_from_vocab(
-    session: dict, exercises: dict | None, feedback: dict | None
-) -> list[dict]:
+def _extract_from_vocab(exercises: dict) -> list[dict]:
     """Extract from vocabulary mode exercises."""
-    if not exercises or "questions" not in exercises:
-        return _extract_from_feedback(session, exercises, feedback)
-
     if exercises.get("srsPerAnswer"):
         return []  # each word was saved when its first answer arrived
 
@@ -81,26 +71,6 @@ def _extract_from_vocab(
             "english": english,
             "correct": is_correct,
             "source_mode": "vocabulary",
-        })
-
-    return words
-
-
-def _extract_from_feedback(
-    session: dict, exercises: dict | None, feedback: dict | None
-) -> list[dict]:
-    """Extract from LLM-generated feedback vocabulary_learned."""
-    if not feedback or not feedback.get("vocabulary_learned"):
-        return []
-
-    mode = session.get("mode", "unknown")
-    words: list[dict] = []
-    for v in feedback["vocabulary_learned"]:
-        words.append({
-            "slovak": v.get("slovak", ""),
-            "english": v.get("english", ""),
-            "correct": True,
-            "source_mode": mode,
         })
 
     return words

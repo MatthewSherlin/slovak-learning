@@ -1,7 +1,7 @@
 """Deterministic answer grading and session scoring.
 
-The backend is the source of truth for all scoring. The LLM only writes
-narrative feedback (strengths, improvements, notes) — see prompts.py.
+The backend is the source of truth for all scoring. The results page is
+built from these numbers; no model writes a summary of the lesson.
 """
 
 from __future__ import annotations

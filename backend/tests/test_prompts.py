@@ -6,7 +6,6 @@ from app import prompts
 
 GRADING_PROMPTS = [
     prompts.TRANSLATION_EVALUATE_PROMPT,
-    prompts.FEEDBACK_PROMPT,
     prompts.CONVERSATION_TURN_PROMPT,
 ]
 
@@ -35,10 +34,6 @@ def test_no_prompt_calls_an_unaccented_word_wrong():
         if isinstance(value, str) and name.isupper():
             assert "is a WRONG word" not in value
             assert "watch the diacritics" not in value.lower()
-
-
-def test_feedback_prompt_does_not_ask_for_an_accent_improvement():
-    assert "accent marks" not in prompts.FEEDBACK_PROMPT
 
 
 def test_old_shared_block_is_gone():

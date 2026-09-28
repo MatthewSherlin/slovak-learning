@@ -102,6 +102,24 @@ class TestLearningContextSessionHistory:
         # Should NOT have "Recent grammar session history" since we only seeded vocab
         assert "[Recent grammar session history]" not in context
 
+    async def test_a_lesson_without_a_score_is_listed_without_one(
+        self, db, sample_conversation_session,
+    ):
+        uid = f"lc_{uuid.uuid4().hex[:8]}"
+        session = {
+            **sample_conversation_session,
+            "user_id": uid,
+            "feedback": {
+                "overall_score": None, "scores": [], "strengths": [], "improvements": [],
+                "sample_answer": None, "vocabulary_learned": [], "grammar_notes": [],
+                "items_answered": 1, "items_total": 10, "corrections": [],
+            },
+        }
+        await _seed_completed_session(db, session)
+        context = await _get_learning_context(db, uid, "conversation")
+        assert "- Shopping" in context
+        assert "score" not in context
+
 
 class TestLearningContextCombined:
     """Tests for the full combined context."""
