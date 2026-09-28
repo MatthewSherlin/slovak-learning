@@ -241,6 +241,15 @@ function VocabModeInner({
               fontWeight: 600, margin: '0 0 20px 0',
             }}>
               {directionLabel}
+              {currentQuestion.review && (
+                <span style={{
+                  marginLeft: 8, padding: '2px 8px', borderRadius: 999,
+                  background: 'rgba(245,196,94,0.12)', color: '#f5c45e',
+                  letterSpacing: '0.08em',
+                }}>
+                  Review
+                </span>
+              )}
             </p>
 
             {/* Word card */}

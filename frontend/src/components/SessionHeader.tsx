@@ -17,6 +17,7 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
   const [confirmOpen, setConfirmOpen] = useState(false);
   const modeLabel = session.mode.charAt(0).toUpperCase() + session.mode.slice(1);
   const topicDisplay = session.topic.replace(/_/g, ' ');
+  const focus = session.exercises?.instructions;
 
   return (
     <div
@@ -76,6 +77,14 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
             <div className="text-[11px] text-text-faint mt-0.5">
               {topicDisplay}
             </div>
+            {focus && (
+              <div
+                className="text-[11px] text-text-faint mt-0.5 max-w-[11rem] truncate"
+                title={focus}
+              >
+                Focus: {focus}
+              </div>
+            )}
           </div>
         </div>
 

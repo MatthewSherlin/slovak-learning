@@ -274,4 +274,23 @@ describe('VocabMode', () => {
     // The pill should show "/VOH-dah/"
     expect(screen.getByText('/VOH-dah/')).toBeTruthy();
   });
+
+  it('labels a question that is a review word', () => {
+    const session = makeVocabSession({
+      questions: [
+        { word: 'hrad', direction: 'sk-en', choices: ['castle', 'house', 'shop', 'road'],
+          correctIndex: 0, explanation: '', review: true },
+      ],
+      answers: [null],
+      credits: [null],
+    });
+    render(<VocabMode session={session} setSession={() => {}} />);
+    expect(screen.getByText('Review')).toBeTruthy();
+  });
+
+  it('shows no review label on a new word', () => {
+    const session = makeVocabSession();
+    render(<VocabMode session={session} setSession={() => {}} />);
+    expect(screen.queryByText('Review')).toBeNull();
+  });
 });

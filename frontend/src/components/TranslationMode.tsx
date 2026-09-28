@@ -10,6 +10,13 @@ import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitTranslation, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
 import { renderInlineMd } from '../lib/mdlite';
+import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
+import {
+  answersInSlovak,
+  translationBadge,
+  translationHeading,
+  translationPlaceholder,
+} from '../lib/translationKinds';
 import type { Session, SessionFeedback, TranslationExerciseData, TranslationAnswer } from '../lib/types';
 
 interface TranslationModeProps {
@@ -82,10 +89,10 @@ function TranslationModeInner({
     setTimeout(() => textareaRef.current?.focus(), 100);
   }, []);
 
-  // Auto-advance after high scores (>= 8)
+  // An accent-free answer stays a little longer so the accented spelling can be read.
   useEffect(() => {
     if (showResult && lastAnswer && lastAnswer.score >= 8) {
-      const timer = setTimeout(handleNext, 1400);
+      const timer = setTimeout(handleNext, lastAnswer.tier === 'accent' ? 2600 : 1400);
       return () => clearTimeout(timer);
     }
   }, [showResult, lastAnswer, handleNext]);
@@ -203,7 +210,7 @@ function TranslationModeInner({
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface-3 text-text-faint uppercase">
-                            {exercise.direction === 'en-sk' ? 'EN → SK' : 'SK → EN'}
+                            {translationBadge(exercise)}
                           </span>
                           <span className={`text-[12px] font-bold tabular-nums ${answer.score >= 7 ? 'text-success' : answer.score >= 5 ? 'text-warning' : 'text-danger'}`}>
                             {answer.score}/10
@@ -266,10 +273,6 @@ function TranslationModeInner({
     );
   }
 
-  const directionLabel = currentExercise.direction === 'en-sk'
-    ? 'Translate to Slovak'
-    : 'Translate to English';
-
   return (
     <div className="flex flex-col h-screen">
       <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={ex.currentIndex > 0 || showResult}>
@@ -304,7 +307,7 @@ function TranslationModeInner({
               {/* Direction badge */}
               <div className="flex items-center gap-1.5 mb-3">
                 <Languages size={13} className="text-mode-translation" />
-                <span className="text-[12px] font-medium text-mode-translation">{directionLabel}</span>
+                <span className="text-[12px] font-medium text-mode-translation">{translationHeading(currentExercise)}</span>
               </div>
 
               {/* Source sentence */}
@@ -316,6 +319,12 @@ function TranslationModeInner({
                 <p className="text-[18px] font-medium text-text-primary leading-relaxed">
                   {currentExercise.source}
                 </p>
+                {currentExercise.translation && (
+                  <p className="text-[13px] text-text-muted mt-3">
+                    <span className="text-text-faint">Meaning: </span>
+                    <span>{currentExercise.translation}</span>
+                  </p>
+                )}
               </motion.div>
 
               {showResult && lastAnswer ? (
@@ -379,9 +388,10 @@ function TranslationModeInner({
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your translation..."
+                    placeholder={translationPlaceholder(currentExercise)}
                     rows={2}
                     autoFocus
+                    {...(answersInSlovak(currentExercise) ? SLOVAK_INPUT_PROPS : {})}
                     className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-[14px] text-text-primary placeholder:text-text-faint resize-none focus:border-border-focus transition-colors"
                   />
                   <DiacriticsKeyboard inputRef={textareaRef} value={input} onChange={setInput} />
