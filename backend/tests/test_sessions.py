@@ -120,14 +120,16 @@ class TestGrammarPartialCredit:
         assert ex["credits"][0] == 1.0
         assert ex["tiers"][0] == "exact"
 
-    async def test_accent_miss_partial_credit(self, db, active_grammar_session):
+    async def test_accent_only_answer_full_credit(self, db, active_grammar_session):
         result = await submit_grammar_answer(db, active_grammar_session["id"], "vidim")
         ex = result["exercises"]
-        assert ex["correct"][0] is True  # counts as correct for advancement
-        assert ex["credits"][0] == 0.8
+        assert ex["correct"][0] is True
+        assert ex["credits"][0] == 1.0
         assert ex["tiers"][0] == "accent"
-        # transcript notes the accented form
-        assert "vidím" in result["messages"][-1]["content"]
+        note = result["messages"][-1]["content"]
+        assert "vidím" in note          # accented spelling is shown
+        assert "almost" not in note     # and never framed as a miss
+        assert "watch" not in note.lower()
 
     async def test_wrong_answer_zero_credit(self, db, active_grammar_session):
         result = await submit_grammar_answer(db, active_grammar_session["id"], "vidiel")

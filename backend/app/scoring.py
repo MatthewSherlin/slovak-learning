@@ -6,8 +6,12 @@ narrative feedback (strengths, improvements, notes) — see prompts.py.
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from typing import NamedTuple
+
+_APOSTROPHES = re.compile(r"['''`´]")
+_NON_WORD = re.compile(r"[^\w\s]", re.UNICODE)
 
 
 class AnswerGrade(NamedTuple):
@@ -21,23 +25,38 @@ def strip_accents(s: str) -> str:
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
-def _norm(s: str) -> str:
-    return s.strip().lower()
+def normalize_answer(s: str, *, strip_diacritics: bool = True) -> str:
+    """Reduce an answer to the parts that are graded.
+
+    Case, punctuation and spacing never matter. Diacritics are removed too
+    unless strip_diacritics is False.
+    """
+    text = unicodedata.normalize("NFC", s).lower()
+    if strip_diacritics:
+        text = strip_accents(text)
+    text = _APOSTROPHES.sub("", text)
+    text = _NON_WORD.sub(" ", text)
+    return " ".join(text.split())
 
 
 def grade_answer(expected: str, given: str) -> AnswerGrade:
     """Grade a typed answer against the expected form.
 
-    exact  (1.0): matches ignoring case/surrounding whitespace
-    accent (0.8): matches only after stripping diacritics — right word,
-                  wrong accents
-    wrong  (0.0): anything else
+    exact  (1.0): matches ignoring case, punctuation and spacing
+    accent (1.0): matches only after stripping diacritics. Learners type on
+                  English keyboards, so this is a correct answer; the tier
+                  lets the interface show the accented spelling.
+    wrong  (0.0): anything else, including an answer with no letters or digits
     """
-    exp, giv = _norm(expected), _norm(given)
-    if exp == giv:
+    given_plain = normalize_answer(given)
+    if not given_plain:
+        return AnswerGrade("wrong", 0.0)
+    if normalize_answer(expected, strip_diacritics=False) == normalize_answer(
+        given, strip_diacritics=False
+    ):
         return AnswerGrade("exact", 1.0)
-    if giv and strip_accents(exp) == strip_accents(giv):
-        return AnswerGrade("accent", 0.8)
+    if normalize_answer(expected) == given_plain:
+        return AnswerGrade("accent", 1.0)
     return AnswerGrade("wrong", 0.0)
 
 
@@ -118,18 +137,7 @@ def compute_category_scores(exercises: dict | None) -> list[dict]:
         if not credits:
             return []
         accuracy = _round1(sum(credits) / len(credits) * 10)
-        cats: list[dict] = [{"category": "Accuracy", "score": accuracy, "comment": ""}]
-        tiers = exercises.get("tiers") or []
-        answered = [t for t in tiers if t is not None]
-        if answered:
-            accent_misses = sum(1 for t in answered if t == "accent")
-            diacritics = _round1((1 - accent_misses / len(answered)) * 10)
-            comment = (
-                f"{accent_misses} answer(s) missed only the diacritics."
-                if accent_misses else "All diacritics correct."
-            )
-            cats.append({"category": "Diacritics", "score": diacritics, "comment": comment})
-        return cats
+        return [{"category": "Accuracy", "score": accuracy, "comment": ""}]
     if kind == "translation":
         answered = [a for a in exercises.get("answers", []) if a]
         if not answered:

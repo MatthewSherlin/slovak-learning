@@ -572,7 +572,7 @@ async def submit_grammar_answer(db: aiosqlite.Connection, session_id: str, answe
 
     # Synthetic message
     if grade.tier == "accent":
-        note = f"Answer: {answer} (almost — watch the diacritics: {correct_answer})"
+        note = f"Answer: {answer} (correct; written with accents: {correct_answer})"
     elif is_correct:
         note = f"Answer: {answer} (correct)"
     else:

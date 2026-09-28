@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.scoring import grade_answer, strip_accents
+from app.scoring import grade_answer, normalize_answer, strip_accents
 
 
 class TestStripAccents:
@@ -16,6 +16,17 @@ class TestStripAccents:
         assert strip_accents("dom") == "dom"
 
 
+class TestNormalizeAnswer:
+    def test_strips_accents_case_punctuation_spacing(self):
+        assert normalize_answer("  Prepáčte, kde je ŠKOLA? ") == "prepacte kde je skola"
+
+    def test_can_keep_accents(self):
+        assert normalize_answer("Mám vodu.", strip_diacritics=False) == "mám vodu"
+
+    def test_blank_marker_survives(self):
+        assert normalize_answer("Mám ____.") == "mam ____"
+
+
 class TestGradeAnswer:
     def test_exact_match(self):
         g = grade_answer("vidím", "vidím")
@@ -26,10 +37,10 @@ class TestGradeAnswer:
         g = grade_answer("vidím", "  VIDÍM ")
         assert g.tier == "exact"
 
-    def test_accent_only_miss_gets_partial_credit(self):
+    def test_accent_only_difference_gets_full_credit(self):
         g = grade_answer("vidím", "vidim")
         assert g.tier == "accent"
-        assert g.credit == 0.8
+        assert g.credit == 1.0
 
     def test_accent_miss_multiple_diacritics(self):
         g = grade_answer("mäso", "maso")
@@ -43,6 +54,32 @@ class TestGradeAnswer:
     def test_empty_answer_is_wrong(self):
         g = grade_answer("vidím", "")
         assert g.tier == "wrong"
+
+    def test_punctuation_and_case_ignored(self):
+        g = grade_answer("Áno, mám vodu.", "ano mam vodu")
+        assert g.tier == "accent"
+        assert g.credit == 1.0
+
+    def test_punctuation_only_difference_is_exact(self):
+        assert grade_answer("Mám vodu.", "mám vodu").tier == "exact"
+
+    def test_extra_inner_whitespace_ignored(self):
+        assert grade_answer("mám vodu", "mám    vodu").tier == "exact"
+
+    def test_curly_and_straight_apostrophes_match(self):
+        assert grade_answer("don't", "don't").tier == "exact"
+        assert grade_answer("don't", "dont").tier == "exact"
+
+    def test_combining_accent_matches_precomposed(self):
+        # i + U+0301, as produced by some on-screen keyboards
+        assert grade_answer("vidím", "vidím").tier == "exact"
+
+    def test_punctuation_only_answer_is_wrong(self):
+        assert grade_answer("vidím", "...").tier == "wrong"
+        assert grade_answer("?", "!").tier == "wrong"
+
+    def test_whitespace_only_answer_is_wrong(self):
+        assert grade_answer("vidím", "   ").tier == "wrong"
 
 
 from app.scoring import compute_category_scores, compute_session_score
@@ -124,17 +161,16 @@ class TestCategoryScores:
         assert by_name["Word recognition (SK→EN)"] == 10.0
         assert by_name["Recall (EN→SK)"] == 0.0
 
-    def test_grammar_has_accuracy_and_diacritics(self):
+    def test_grammar_has_accuracy_and_no_diacritics_category(self):
         ex = {
             "type": "grammar", "lesson": {}, "exercises": [{}, {}],
             "currentIndex": 2, "answers": ["a", "b"],
-            "correct": [True, False], "credits": [1.0, 0.8],
+            "correct": [True, True], "credits": [1.0, 1.0],
             "tiers": ["exact", "accent"], "phase": "complete",
         }
         cats = compute_category_scores(ex)
         names = [c["category"] for c in cats]
-        assert "Accuracy" in names
-        assert "Diacritics" in names
+        assert names == ["Accuracy"]
 
     def test_conversation_empty(self):
         assert compute_category_scores({"type": "conversation"}) == []
