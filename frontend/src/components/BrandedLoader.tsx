@@ -16,7 +16,12 @@ export default function BrandedLoader({
   return (
     <div
       style={{
-        minHeight: '100vh',
+        // Fixed overlay: this loader must cover the page it was launched
+        // from — rendered in normal flow it can end up below the fold and
+        // the tap looks like it did nothing.
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -138,7 +143,7 @@ export default function BrandedLoader({
           fontFamily: 'Inter, sans-serif',
         }}
       >
-        usually 5–10 seconds
+        usually 5–10 seconds — up to a minute if the tutor is waking up
       </p>
 
       {/* Keyframe styles — injected as a style tag */}

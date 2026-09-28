@@ -554,7 +554,7 @@ export default function Cards() {
 
   if (!user || loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-6 pt-32 pb-16">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
         {/* Header skeleton */}
         <div className="text-center mb-8">
           <div className="h-8 w-32 rounded-full bg-surface-2 animate-pulse mx-auto mb-3" />
@@ -571,7 +571,7 @@ export default function Cards() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-6 pt-32 pb-16">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
         <ErrorRetry message={error} onRetry={fetchData} />
       </div>
     );
@@ -592,7 +592,7 @@ export default function Cards() {
   // ── Pack loading (purchase in-flight) ───────────────────────────
   if (isPurchasing && openingSet) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-32 pb-16 flex flex-col items-center gap-6">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 pb-16 flex flex-col items-center gap-6" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 2rem)' }}>
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 8 }}
@@ -615,7 +615,7 @@ export default function Cards() {
   // ── Pack opening overlay ─────────────────────────────────────────
   if (openingSet && purchaseResult) {
     return (
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-28 pb-16">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 pb-16" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}>
         <PackOpening
           set={openingSet}
           result={purchaseResult}
@@ -627,7 +627,13 @@ export default function Cards() {
 
   // ── Main page with tabs ──────────────────────────────────────────
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 pt-32 pb-16">
+    <div
+      className="max-w-4xl mx-auto px-4 md:px-6"
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 6rem)',
+      }}
+    >
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-center justify-between">
@@ -640,7 +646,9 @@ export default function Cards() {
           {/* XP chip */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-1 border border-border">
             <Zap size={13} className="text-warning" />
-            <span className="text-sm font-bold text-warning tabular-nums">{xpAvailable} XP</span>
+            <span className="text-sm font-bold text-warning tabular-nums">
+              {xpAvailable} XP <span className="font-medium text-[11px] opacity-70">to spend</span>
+            </span>
           </div>
         </div>
       </motion.div>
@@ -746,7 +754,9 @@ export default function Cards() {
               <div className="p-6 text-center">
                 <div className="text-4xl mb-3">{confirmSet.emoji}</div>
                 <h3 className="text-lg font-bold text-text-primary mb-1">{confirmSet.name}</h3>
-                <p className="text-sm text-text-muted mb-4">Open this pack for {confirmSet.cost} XP?</p>
+                <p className="text-sm text-text-muted mb-4">
+                  Open this pack for {confirmSet.cost} XP? You'll get 5 random cards from this set.
+                </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setConfirmSet(null)}

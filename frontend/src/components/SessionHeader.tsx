@@ -19,7 +19,10 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
   const topicDisplay = session.topic.replace(/_/g, ' ');
 
   return (
-    <div className="border-b border-border-subtle glass px-6 py-2.5 relative">
+    <div
+      className="border-b border-border-subtle glass px-6 py-2.5 relative"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.625rem)' }}
+    >
       <div className="max-w-3xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Back button — opens inline confirm popover instead of window.confirm */}
