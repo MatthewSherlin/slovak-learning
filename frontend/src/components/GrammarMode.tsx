@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, ArrowRight, Trophy, BookOpen, Lightbulb, Sparkles, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -7,6 +8,8 @@ import ProgressBar from './ProgressBar';
 import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
+import MarkdownTable from './MarkdownTable';
+import { renderInlineMd } from '../lib/mdlite';
 import { advanceGrammarPhase, submitGrammarAnswer, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
 import type { Session, SessionFeedback } from '../lib/types';
@@ -45,6 +48,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   if (session.exercises?.type !== 'grammar') return null;
   const ex = session.exercises;
 
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [showResult, setShowResult] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
@@ -60,6 +64,8 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [shakeCards, setShakeCards] = useState<Set<number>>(new Set());
   const [showHint, setShowHint] = useState(false);
+  const [phaseLoading, setPhaseLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // Sync ref guard so end-session can't double-fire
   const endingRef = useRef(false);
@@ -72,17 +78,22 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   const isMultipleChoice = !!(currentExercise?.choices && currentExercise.choices.length > 0);
 
   const handleStartExercises = async () => {
+    if (phaseLoading) return;
+    setPhaseLoading(true);
     setStartError('');
     try {
       const updated = await advanceGrammarPhase(session.id);
       setSession(updated);
     } catch {
       setStartError('Failed to load exercises. Please try again.');
+    } finally {
+      setPhaseLoading(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || checking) return;
+    setChecking(true);
     setSubmitError('');
     try {
       const updated = await submitGrammarAnswer(session.id, input.trim());
@@ -107,11 +118,14 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
       setSession(updated);
     } catch {
       setSubmitError('Failed to submit answer. Please try again.');
+    } finally {
+      setChecking(false);
     }
   };
 
   const handleSelect = async (idx: number) => {
-    if (showResult || !currentExercise?.choices) return;
+    // selected is set synchronously, so it doubles as an in-flight guard
+    if (showResult || selected !== null || !currentExercise?.choices) return;
     setSelected(idx);
     try {
       const choiceText = currentExercise.choices[idx];
@@ -231,8 +245,8 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                 </div>
 
                 {ex.lesson.table && (
-                  <div className="bg-surface-2 rounded-xl p-4 border border-border-subtle overflow-x-auto text-[13px] markdown-content">
-                    <ReactMarkdown>{ex.lesson.table}</ReactMarkdown>
+                  <div className="bg-surface-2 rounded-xl p-4 border border-border-subtle overflow-x-auto text-[13px]">
+                    <MarkdownTable md={ex.lesson.table} />
                   </div>
                 )}
 
@@ -258,15 +272,36 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                     <span>{startError}</span>
                   </div>
                 )}
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleStartExercises}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-mode-grammar to-violet-400 text-white font-semibold py-3.5 px-6 rounded-xl cursor-pointer border-none text-[14px] shadow-lg shadow-mode-grammar/20 transition-all"
-                >
-                  Start Exercises ({ex.exercises.length} questions)
-                  <ArrowRight size={15} />
-                </motion.button>
+                {ex.exercises.length === 0 ? (
+                  <div className="text-center">
+                    <p className="text-[13px] text-danger mb-3">
+                      No exercises were generated for this lesson — try starting a new session.
+                    </p>
+                    <button
+                      onClick={() => navigate('/')}
+                      className="px-5 py-2.5 rounded-xl text-[13px] font-medium bg-surface-2 border border-border text-text-secondary cursor-pointer"
+                    >
+                      Back to Home
+                    </button>
+                  </div>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleStartExercises}
+                    disabled={phaseLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-mode-grammar to-violet-400 text-white font-semibold py-3.5 px-6 rounded-xl cursor-pointer border-none text-[14px] shadow-lg shadow-mode-grammar/20 transition-all disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {phaseLoading ? (
+                      <LoadingDots text="Loading exercises" />
+                    ) : (
+                      <>
+                        Start Exercises ({ex.exercises.length} questions)
+                        <ArrowRight size={15} />
+                      </>
+                    )}
+                  </motion.button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -387,10 +422,31 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
   }
 
   // ── Exercise phase ────────────────────────────────────────────────────────
-  if (!currentExercise) return null;
+  if (!currentExercise) {
+    // Defensive: never strand the user on a blank screen if the index and
+    // exercise array ever disagree.
+    return (
+      <div className="flex flex-col h-screen">
+        <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={false} />
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <p className="text-[14px] text-text-secondary mb-4">
+            Something went wrong loading this exercise.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-5 py-2.5 rounded-xl text-[13px] font-medium bg-surface-2 border border-border text-text-secondary cursor-pointer"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const correctChoiceIndex = isMultipleChoice
-    ? currentExercise.choices!.findIndex(c => c.toLowerCase() === currentExercise.blank.toLowerCase())
+    ? currentExercise.choices!.findIndex(
+        c => c.trim().toLowerCase() === currentExercise.blank.trim().toLowerCase()
+      )
     : -1;
 
   // Determine blank display state for the sentence card
@@ -581,7 +637,7 @@ export default function GrammarMode({ session, setSession }: GrammarModeProps) {
                     <motion.button
                       whileTap={{ scale: 0.92 }}
                       onClick={handleSubmit}
-                      disabled={!input.trim()}
+                      disabled={!input.trim() || checking}
                       className="shrink-0 h-[46px] px-5 rounded-xl bg-mode-grammar hover:bg-mode-grammar/80 text-white font-medium text-[13px] cursor-pointer border-none disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
                       Check
@@ -658,7 +714,7 @@ function TierFeedback({
       )}
 
       {isExact && !isAccent && explanation && (
-        <p className="text-[12px] text-text-muted ml-[23px] mt-1">{explanation}</p>
+        <p className="text-[12px] text-text-muted ml-[23px] mt-1">{renderInlineMd(explanation)}</p>
       )}
 
       {isWrong && (
@@ -667,7 +723,7 @@ function TierFeedback({
             The correct answer is <strong className="text-success">{correctAnswer}</strong>
           </p>
           {explanation && (
-            <p className="text-[12px] text-text-muted ml-[23px] mt-1">{explanation}</p>
+            <p className="text-[12px] text-text-muted ml-[23px] mt-1">{renderInlineMd(explanation)}</p>
           )}
           <motion.button
             whileHover={{ scale: 1.02 }}

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Trophy, Languages, Check, Sparkles } from 'lucide-react';
 import SessionHeader from './SessionHeader';
@@ -8,6 +9,7 @@ import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitTranslation, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
+import { renderInlineMd } from '../lib/mdlite';
 import type { Session, SessionFeedback, TranslationExerciseData, TranslationAnswer } from '../lib/types';
 
 interface TranslationModeProps {
@@ -16,7 +18,9 @@ interface TranslationModeProps {
 }
 
 export default function TranslationMode({ session, setSession }: TranslationModeProps) {
-  const ex = session.exercises as TranslationExerciseData;
+  if (session.exercises?.type !== 'translation') return null;
+  const ex = session.exercises;
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -88,8 +92,12 @@ export default function TranslationMode({ session, setSession }: TranslationMode
     }
   };
 
+  // Sync ref guard: the auto-end effect and a manual "End & Get Feedback"
+  // click can both pass a state guard in the same render cycle.
+  const endingRef = useRef(false);
   const handleEnd = useCallback(async () => {
-    if (ending || feedback) return;
+    if (endingRef.current || feedback) return;
+    endingRef.current = true;
     setEnding(true);
     setEndError('');
     try {
@@ -99,16 +107,17 @@ export default function TranslationMode({ session, setSession }: TranslationMode
       setSession(updated);
     } catch {
       setEnding(false);
+      endingRef.current = false;
       setEndError('Failed to get feedback. Please try again.');
     }
-  }, [ending, feedback, session.id, setSession]);
+  }, [feedback, session.id, setSession]);
 
   // Auto-end when exercises complete
   useEffect(() => {
-    if (ex.phase === 'complete' && !ending && !feedback) {
+    if (ex.phase === 'complete' && !endingRef.current && !feedback) {
       handleEnd();
     }
-  }, [ex.phase, ending, feedback, handleEnd]);
+  }, [ex.phase, feedback, handleEnd]);
 
   if (feedback) {
     return <FeedbackView session={session} feedback={feedback} />;
@@ -229,7 +238,25 @@ export default function TranslationMode({ session, setSession }: TranslationMode
   // Active exercise phase
   const exerciseIndex = showResult ? ex.currentIndex - 1 : ex.currentIndex;
   const currentExercise = ex.exercises[exerciseIndex];
-  if (!currentExercise) return null;
+  if (!currentExercise) {
+    // Defensive: never strand the user on a blank screen.
+    return (
+      <div className="flex flex-col h-screen">
+        <SessionHeader session={session} onEnd={handleEnd} ending={ending} canEnd={false} />
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <p className="text-[14px] text-text-secondary mb-4">
+            Something went wrong loading this exercise.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-5 py-2.5 rounded-xl text-[13px] font-medium bg-surface-2 border border-border text-text-secondary cursor-pointer"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const directionLabel = currentExercise.direction === 'en-sk'
     ? 'Translate to Slovak'
@@ -313,7 +340,7 @@ export default function TranslationMode({ session, setSession }: TranslationMode
                         />
                       </div>
                     </div>
-                    <p className="text-[12px] text-text-secondary leading-relaxed">{lastAnswer.feedback}</p>
+                    <p className="text-[12px] text-text-secondary leading-relaxed">{renderInlineMd(lastAnswer.feedback)}</p>
                   </div>
 
                   {/* Key points */}
@@ -327,14 +354,14 @@ export default function TranslationMode({ session, setSession }: TranslationMode
                     </div>
                   )}
 
-                  {lastAnswer.score < 8 && (
-                    <button
-                      onClick={handleNext}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-medium bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
-                    >
-                      {ex.currentIndex >= ex.exercises.length ? 'See Results' : 'Next Sentence'} <ArrowRight size={11} />
-                    </button>
-                  )}
+                  {/* Always rendered: high scores auto-advance after 1.4s,
+                      but the button is the guaranteed path forward */}
+                  <button
+                    onClick={handleNext}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-medium bg-surface-2 border border-border text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+                  >
+                    {ex.currentIndex >= ex.exercises.length ? 'See Results' : 'Next Sentence'} <ArrowRight size={11} />
+                  </button>
                 </motion.div>
               ) : (
                 /* Translation input */

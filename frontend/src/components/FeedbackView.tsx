@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import type { Session, SessionFeedback } from '../lib/types';
+import { renderInlineMd } from '../lib/mdlite';
 
 interface FeedbackViewProps {
   session: Session;
@@ -336,7 +337,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                       }}
                     >
                       <span style={{ color: '#5de4a5', flexShrink: 0, fontSize: 11, marginTop: 2 }}>+</span>
-                      {s}
+                      <span>{renderInlineMd(s)}</span>
                     </li>
                   ))}
                 </ul>
@@ -378,7 +379,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                       }}
                     >
                       <span style={{ color: '#f5c45e', flexShrink: 0, fontSize: 11, marginTop: 2 }}>*</span>
-                      {s}
+                      <span>{renderInlineMd(s)}</span>
                     </li>
                   ))}
                 </ul>
@@ -502,7 +503,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                   }}
                 >
                   <span style={{ color: '#a78bfa', flexShrink: 0, fontSize: 11, marginTop: 2 }}>*</span>
-                  {note}
+                  <span>{renderInlineMd(note)}</span>
                 </li>
               ))}
             </ul>
@@ -545,7 +546,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
                 border: '1px solid rgba(255,255,255,0.05)',
               }}
             >
-              {feedback.sample_answer}
+              {renderInlineMd(feedback.sample_answer)}
             </p>
           </motion.div>
         )}

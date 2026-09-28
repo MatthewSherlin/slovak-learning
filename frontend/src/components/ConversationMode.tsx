@@ -16,7 +16,7 @@ import LoadingDots from './LoadingDots';
 import FeedbackView from './FeedbackView';
 import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitAnswer, requestHint, endSession, getSession } from '../lib/api';
-import type { Session, SessionFeedback, ConversationExerciseData, Difficulty } from '../lib/types';
+import type { Session, SessionFeedback, Difficulty } from '../lib/types';
 
 interface ConversationModeProps {
   session: Session;
@@ -29,9 +29,9 @@ interface Correction {
 }
 
 const SUGGESTED_PHRASES: Record<Difficulty, string[]> = {
-  beginner: ['Dobry den...', 'Chcel by som...', 'Prosim...', 'Dakujem, ...'],
-  intermediate: ['Mohol by som...', 'Co mi odporucate?', 'Ako sa povie...?'],
-  advanced: ['Podla mna...', 'Suhlasim, ale...', 'Mohli by ste mi vysvetlit...?'],
+  beginner: ['Dobrý deň...', 'Chcel by som...', 'Prosím...', 'Ďakujem, ...'],
+  intermediate: ['Mohol by som...', 'Čo mi odporúčate?', 'Ako sa povie...?'],
+  advanced: ['Podľa mňa...', 'Súhlasím, ale...', 'Mohli by ste mi vysvetliť...?'],
 };
 
 function parseCorrections(messages: { role: string; content: string }[]): Correction[] {
@@ -50,8 +50,10 @@ function parseCorrections(messages: { role: string; content: string }[]): Correc
 }
 
 export default function ConversationMode({ session, setSession }: ConversationModeProps) {
-  const ex = session.exercises as ConversationExerciseData;
+  if (session.exercises?.type !== 'conversation') return null;
+  const ex = session.exercises;
   const [input, setInput] = useState('');
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hintLoading, setHintLoading] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -61,17 +63,21 @@ export default function ConversationMode({ session, setSession }: ConversationMo
   const [correctionsOpen, setCorrectionsOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const endingRef = useRef(false);
 
   const corrections = useMemo(() => parseCorrections(session.messages), [session.messages]);
 
   const studentMessages = session.messages.filter((m) => m.role === 'student').length;
 
-  // Auto-collapse scenario after first student message
+  // Auto-collapse scenario once after the first student message — a one-shot
+  // ref so the user can re-expand it without the effect snapping it shut.
+  const hasAutoCollapsed = useRef(false);
   useEffect(() => {
-    if (studentMessages > 0 && !scenarioCollapsed) {
+    if (studentMessages > 0 && !hasAutoCollapsed.current) {
+      hasAutoCollapsed.current = true;
       setScenarioCollapsed(true);
     }
-  }, [studentMessages, scenarioCollapsed]);
+  }, [studentMessages]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +89,7 @@ export default function ConversationMode({ session, setSession }: ConversationMo
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     setLoading(true);
+    setPendingMessage(answer);
     setError('');
 
     try {
@@ -93,6 +100,7 @@ export default function ConversationMode({ session, setSession }: ConversationMo
       setInput(answer);
     } finally {
       setLoading(false);
+      setPendingMessage(null);
       textareaRef.current?.focus();
     }
   };
@@ -111,6 +119,10 @@ export default function ConversationMode({ session, setSession }: ConversationMo
   };
 
   const handleEnd = async () => {
+    // Sync ref guard: feedback generation takes 10s+ and a second tap would
+    // start a duplicate job.
+    if (endingRef.current || feedback) return;
+    endingRef.current = true;
     setEnding(true);
     try {
       const fb = await endSession(session.id);
@@ -120,6 +132,7 @@ export default function ConversationMode({ session, setSession }: ConversationMo
     } catch {
       setError('Failed to end session.');
       setEnding(false);
+      endingRef.current = false;
     }
   };
 
@@ -283,6 +296,12 @@ export default function ConversationMode({ session, setSession }: ConversationMo
             <ChatMessage key={i} message={msg} />
           ))}
 
+          {/* Optimistic echo: show the just-sent message while the tutor is
+              replying — without it a slow reply looks like the send was lost */}
+          {loading && pendingMessage && (
+            <ChatMessage message={{ role: 'student', content: pendingMessage }} />
+          )}
+
           {loading && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -352,9 +371,10 @@ export default function ConversationMode({ session, setSession }: ConversationMo
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleEnd}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent to-sky-400 text-white font-medium text-[13px] cursor-pointer border-none shadow-md shadow-accent/20 transition-all"
+                  disabled={ending}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent to-sky-400 text-white font-medium text-[13px] cursor-pointer border-none shadow-md shadow-accent/20 transition-all disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Get Feedback <ArrowRight size={13} />
+                  {ending ? 'Preparing feedback…' : (<>Get Feedback <ArrowRight size={13} /></>)}
                 </motion.button>
               </motion.div>
             ) : (

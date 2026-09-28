@@ -4,6 +4,7 @@ import { Check, X, Volume2, Flame } from 'lucide-react';
 import SessionHeader from './SessionHeader';
 import LoadingDots from './LoadingDots';
 import { submitVocabAnswer, endSession, getSession } from '../lib/api';
+import { renderInlineMd } from '../lib/mdlite';
 import { playCorrect, playIncorrect } from '../lib/sounds';
 import type { Session, SessionFeedback } from '../lib/types';
 import FeedbackView from './FeedbackView';
@@ -22,9 +23,11 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
   const [showResult, setShowResult] = useState(false);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [feedback, setFeedback] = useState<SessionFeedback | null>(session.feedback);
   const [streak, setStreak] = useState(0);
-  const pendingRef = useRef<Session | null>(null);
+  // State (not a ref) so the auto-advance effect waits for the server ack.
+  const [pending, setPending] = useState<Session | null>(null);
   // Bug fix RISK: sync ref guard so end-session can't double-fire
   const endingRef = useRef(false);
 
@@ -45,6 +48,7 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
     if (showResult || !currentQuestion) return;
     setSelected(idx);
     setShowResult(true);
+    setSubmitError('');
 
     const correct = idx === currentQuestion.correctIndex;
     if (correct) {
@@ -55,18 +59,24 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
       playIncorrect();
     }
 
-    const updated = await submitVocabAnswer(session.id, idx);
-    pendingRef.current = updated;
+    try {
+      const updated = await submitVocabAnswer(session.id, idx);
+      setPending(updated);
+    } catch {
+      // Answer never reached the server — let the user re-select.
+      setSelected(null);
+      setShowResult(false);
+      setSubmitError('Connection hiccup — that answer was not saved. Try again.');
+    }
   }, [showResult, currentQuestion, session.id]);
 
   const handleNext = useCallback(() => {
-    if (pendingRef.current) {
-      setSession(pendingRef.current);
-      pendingRef.current = null;
-    }
+    if (!pending) return; // server hasn't acknowledged the answer yet
+    setSession(pending);
+    setPending(null);
     setSelected(null);
     setShowResult(false);
-  }, [setSession]);
+  }, [pending, setSession]);
 
   const handleEnd = useCallback(async () => {
     // Sync ref guard prevents double-fire
@@ -87,13 +97,14 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
     }
   }, [feedback, session.id, setSession]);
 
-  // Auto-advance after correct answer
+  // Auto-advance after correct answer — only once the server has responded,
+  // otherwise a slow request would advance the UI past an unsaved answer.
   useEffect(() => {
-    if (showResult && isCorrect) {
+    if (showResult && isCorrect && pending) {
       const timer = setTimeout(handleNext, 1400);
       return () => clearTimeout(timer);
     }
-  }, [showResult, isCorrect, handleNext]);
+  }, [showResult, isCorrect, pending, handleNext]);
 
   // Auto-end when exercises complete
   useEffect(() => {
@@ -111,10 +122,28 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
     return (
       <div className="flex flex-col h-screen" style={{ background: '#0e1017' }}>
         <div className="flex-1 flex items-center justify-center px-6">
-          <div className="flex flex-col items-center justify-center py-24">
-            <LoadingDots text="Analyzing your results" />
-            <p className="text-[11px] mt-3" style={{ color: '#6b7289' }}>Generating detailed feedback...</p>
-          </div>
+          {endError ? (
+            /* Never trap the user on a spinner: failed feedback gets a retry */
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <p className="text-[13px] mb-4" style={{ color: '#f07070' }}>{endError}</p>
+              <button
+                onClick={handleEnd}
+                style={{
+                  padding: '12px 24px', borderRadius: 14, border: 'none',
+                  background: '#5ea4f7', color: '#fff', fontSize: 14,
+                  fontWeight: 700, cursor: 'pointer', marginBottom: 12,
+                }}
+              >
+                Try again
+              </button>
+              <a href="#/" style={{ fontSize: 12, color: '#6b7289' }}>Back to Home</a>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24">
+              <LoadingDots text="Analyzing your results" />
+              <p className="text-[11px] mt-3" style={{ color: '#6b7289' }}>Generating detailed feedback...</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -180,6 +209,11 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
         ) : (
           <p data-testid="questions-progress" style={{ fontSize: 11, color: '#6b7289', fontWeight: 500, margin: 0 }}>
             {currentInPhase} / {totalInPhase}
+          </p>
+        )}
+        {submitError && (
+          <p style={{ fontSize: 11, color: '#f07070', fontWeight: 600, margin: '4px 0 0 0' }}>
+            {submitError}
           </p>
         )}
       </div>
@@ -372,14 +406,14 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
                       {streak >= 3 ? `${streak} in a row!` : 'Správne!'}
                     </span>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#f5c45e', fontVariantNumeric: 'tabular-nums' }}>
-                    +10 XP
-                  </span>
+                  {/* No fake per-answer XP — real XP is awarded per session
+                      and shown on the feedback screen */}
                 </div>
                 {/* Continue button */}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleNext}
+                  disabled={!pending}
                   style={{
                     width: '100%', height: 52,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -389,7 +423,8 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
                     fontSize: 16,
                     fontWeight: 800,
                     border: 'none',
-                    cursor: 'pointer',
+                    cursor: pending ? 'pointer' : 'wait',
+                    opacity: pending ? 1 : 0.6,
                   }}
                 >
                   Continue
@@ -418,7 +453,7 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
                     </p>
                     {currentQuestion.explanation && (
                       <p style={{ fontSize: 12, color: '#6b7289', margin: '3px 0 0 0' }}>
-                        {currentQuestion.explanation}
+                        {renderInlineMd(currentQuestion.explanation)}
                       </p>
                     )}
                   </div>
@@ -427,6 +462,7 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleNext}
+                  disabled={!pending}
                   style={{
                     width: '100%', height: 52,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -436,7 +472,8 @@ export default function VocabMode({ session, setSession }: VocabModeProps) {
                     color: '#eef1f8',
                     fontSize: 16,
                     fontWeight: 700,
-                    cursor: 'pointer',
+                    cursor: pending ? 'pointer' : 'wait',
+                    opacity: pending ? 1 : 0.6,
                   }}
                 >
                   Continue

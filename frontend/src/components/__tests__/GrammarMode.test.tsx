@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import GrammarMode from '../GrammarMode';
 import type { Session, GrammarExerciseData, VocabExerciseData, SessionFeedback } from '../../lib/types';
@@ -254,7 +255,7 @@ describe('GrammarMode', () => {
       feedback: null,
       exercises: vocabExercises,
     };
-    const { container } = render(<GrammarMode session={session} setSession={noop} />);
+    const { container } = render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
     expect(container.firstChild).toBeNull();
   });
 
@@ -271,21 +272,21 @@ describe('GrammarMode', () => {
       feedback: null,
       exercises: undefined,
     };
-    const { container } = render(<GrammarMode session={session} setSession={noop} />);
+    const { container } = render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
     expect(container.firstChild).toBeNull();
   });
 
   // ── Lesson phase ────────────────────────────────────────────────────────
   it('renders the lesson concept and explanation in lesson phase', () => {
     const session = makeGrammarLessonSession({ phase: 'lesson' });
-    render(<GrammarMode session={session} setSession={noop} />);
+    render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
     expect(screen.getByText('Noun Cases')).toBeTruthy();
     expect(screen.getByText(/In Slovak, nouns change/)).toBeTruthy();
   });
 
   it('renders the Start Exercises button in lesson phase', () => {
     const session = makeGrammarLessonSession({ phase: 'lesson' });
-    render(<GrammarMode session={session} setSession={noop} />);
+    render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
     expect(screen.getByText(/Start Exercises \(2 questions\)/)).toBeTruthy();
   });
 
@@ -308,7 +309,7 @@ describe('GrammarMode', () => {
       correct: [null],
     });
 
-    const { container } = render(<GrammarMode session={session} setSession={noop} />);
+    const { container } = render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
 
     // No <img> element should be injected into the DOM
     const imgs = container.querySelectorAll('img');
@@ -353,7 +354,7 @@ describe('GrammarMode', () => {
       correct: [null],
     });
 
-    const { container } = render(<GrammarMode session={session} setSession={noop} />);
+    const { container } = render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
 
     // No <script> element injected
     const scripts = container.querySelectorAll('script');
@@ -374,7 +375,7 @@ describe('GrammarMode', () => {
     const user = userEvent.setup();
     const session = makeFirstExerciseSession();
     // GrammarWrapper holds session in state so setSession(updated) works correctly
-    render(<GrammarWrapper initialSession={session} />);
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText('Type the missing word...');
     await user.type(input, 'hovorim');
@@ -395,7 +396,7 @@ describe('GrammarMode', () => {
 
     const user = userEvent.setup();
     const session = makeFirstExerciseSession();
-    render(<GrammarWrapper initialSession={session} />);
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText('Type the missing word...');
     await user.type(input, 'hovorim');
@@ -415,7 +416,7 @@ describe('GrammarMode', () => {
 
     const user = userEvent.setup();
     const session = makeFirstExerciseSession();
-    render(<GrammarWrapper initialSession={session} />);
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText('Type the missing word...');
     await user.type(input, 'nespravne');
@@ -438,7 +439,7 @@ describe('GrammarMode', () => {
 
     const user = userEvent.setup();
     const session = makeGrammarLessonSession({ phase: 'lesson' });
-    render(<GrammarMode session={session} setSession={noop} />);
+    render(<MemoryRouter><GrammarMode session={session} setSession={noop} /></MemoryRouter>);
 
     const startBtn = screen.getByText(/Start Exercises/);
     await user.click(startBtn);
@@ -456,7 +457,7 @@ describe('GrammarMode', () => {
       ...session,
       feedback: stubFeedback,
     };
-    render(<GrammarMode session={sessionWithFeedback} setSession={noop} />);
+    render(<MemoryRouter><GrammarMode session={sessionWithFeedback} setSession={noop} /></MemoryRouter>);
     expect(screen.getByTestId('feedback-view')).toBeTruthy();
   });
 
@@ -498,7 +499,7 @@ describe('GrammarMode', () => {
     );
 
     const user = userEvent.setup();
-    render(<GrammarWrapper initialSession={initialSession} />);
+    render(<MemoryRouter><GrammarWrapper initialSession={initialSession} /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText('Type the missing word...');
     await user.type(input, 'hovorim');
@@ -524,7 +525,7 @@ describe('GrammarMode', () => {
 
     const user = userEvent.setup();
     const session = makeFirstExerciseSession();
-    render(<GrammarWrapper initialSession={session} />);
+    render(<MemoryRouter><GrammarWrapper initialSession={session} /></MemoryRouter>);
 
     const input = screen.getByPlaceholderText('Type the missing word...');
     await user.type(input, 'hovorim');
