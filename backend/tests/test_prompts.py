@@ -1,0 +1,47 @@
+"""Prompts must separate what we write from how we judge what learners type."""
+
+from __future__ import annotations
+
+from app import prompts
+
+GRADING_PROMPTS = [
+    prompts.TRANSLATION_EVALUATE_PROMPT,
+    prompts.FEEDBACK_PROMPT,
+    prompts.CONVERSATION_TURN_PROMPT,
+]
+
+GENERATION_PROMPTS = [
+    prompts.VOCAB_BATCH_PROMPT,
+    prompts.GRAMMAR_LESSON_PROMPT,
+    prompts.TRANSLATION_BATCH_PROMPT,
+]
+
+
+def test_grading_prompts_carry_the_tolerance_rules():
+    for p in GRADING_PROMPTS:
+        assert prompts.GRADING_TOLERANCE in p
+
+
+def test_generation_prompts_carry_the_accuracy_rules():
+    for p in GENERATION_PROMPTS:
+        assert prompts.GENERATION_ACCURACY in p
+
+
+def test_no_prompt_calls_an_unaccented_word_wrong():
+    for name in dir(prompts):
+        value = getattr(prompts, name)
+        if isinstance(value, str) and name.isupper():
+            assert "is a WRONG word" not in value
+            assert "watch the diacritics" not in value.lower()
+
+
+def test_feedback_prompt_does_not_ask_for_an_accent_improvement():
+    assert "accent marks" not in prompts.FEEDBACK_PROMPT
+
+
+def test_old_shared_block_is_gone():
+    assert not hasattr(prompts, "ACCURACY")
+
+
+def test_quote_escaping_workaround_is_gone():
+    assert 'escaped as \\"' not in prompts.GRAMMAR_LESSON_PROMPT
