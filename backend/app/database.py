@@ -15,7 +15,7 @@ from typing import AsyncIterator
 import aiosqlite
 
 from .config import settings
-from .composition import has_non_latin_letters, is_meta_answer
+from .composition import has_non_latin_letters, is_quiz_artifact
 
 log = logging.getLogger(__name__)
 
@@ -97,13 +97,13 @@ FARM_ITEM_CATALOG = {
 
 
 async def _cleanup_bad_vocab_rows(db: aiosqlite.Connection) -> None:
-    """Remove rows a quiz could never use: a meta-answer as the meaning, or
-    Slovak text with letters from another script. Safe to run repeatedly."""
+    """Remove rows whose meaning is an "of the above" quiz option, or whose
+    Slovak text has letters from another script. Safe to run repeatedly."""
     cursor = await db.execute("SELECT id, slovak, english FROM vocabulary_progress")
     bad_ids = [
         row[0]
         for row in await cursor.fetchall()
-        if is_meta_answer(row[2] or "") or has_non_latin_letters(row[1] or "")
+        if is_quiz_artifact(row[2] or "") or has_non_latin_letters(row[1] or "")
     ]
     for row_id in bad_ids:
         await db.execute("DELETE FROM vocabulary_progress WHERE id = ?", (row_id,))

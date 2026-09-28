@@ -353,6 +353,8 @@ async def test_init_removes_unusable_vocab_rows(db):
         ("č\u00edt\u0430\u043b", ""),
         ("chlieb", "bread"),
         ("ťažký", "heavy"),
+        ("oba", "both"),
+        ("ani jeden", "neither"),
     ]
     for slovak, english in rows:
         await db.execute(
@@ -369,4 +371,4 @@ async def test_init_removes_unusable_vocab_rows(db):
     await init_db()  # safe to run repeatedly
 
     kept = {w["slovak"] for w in await get_vocab_progress(db, uid)}
-    assert kept == {"chlieb", "ťažký"}
+    assert kept == {"chlieb", "ťažký", "oba", "ani jeden"}

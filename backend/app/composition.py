@@ -87,6 +87,16 @@ def is_meta_answer(text: str) -> bool:
     return normalize_word(text).strip(" .!") in META_ANSWERS
 
 
+def is_quiz_artifact(text: str) -> bool:
+    """True for a stored meaning that can only have come from a bad quiz option.
+
+    Narrower than is_meta_answer on purpose: this decides what gets deleted
+    from learners' progress, and "both" or "neither" alone is the real
+    meaning of real words (oba, ani jeden).
+    """
+    return normalize_word(text).strip(" .!").endswith("of the above")
+
+
 def has_non_latin_letters(text: str) -> bool:
     """True when any letter is outside the Latin script (Cyrillic look-alikes)."""
     return any(

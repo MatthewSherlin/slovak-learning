@@ -10,6 +10,7 @@ from app.composition import (
     filter_new_questions,
     has_non_latin_letters,
     is_meta_answer,
+    is_quiz_artifact,
     normalize_word,
     question_defect,
     resolve_topic_label,
@@ -175,3 +176,17 @@ class TestQuestionDefect:
         assert is_meta_answer("All of the Above") is True
         assert is_meta_answer("both") is True
         assert is_meta_answer("bread") is False
+
+
+class TestIsQuizArtifact:
+    def test_of_the_above_phrases(self):
+        assert is_quiz_artifact("all of the above") is True
+        assert is_quiz_artifact("None of the Above.") is True
+        assert is_quiz_artifact("both of the above") is True
+
+    def test_real_meanings_are_kept(self):
+        assert is_quiz_artifact("both") is False
+        assert is_quiz_artifact("neither") is False
+        assert is_quiz_artifact("above") is False
+        assert is_quiz_artifact("bread") is False
+        assert is_quiz_artifact("") is False
