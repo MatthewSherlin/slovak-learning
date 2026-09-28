@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.vocab_extraction import extract_vocab_from_session, question_pair
 
 

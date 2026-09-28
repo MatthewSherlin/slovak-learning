@@ -111,7 +111,7 @@ function VocabModeInner({
       setSession(updated);
     } catch (err) {
       console.error('Failed to end session:', err);
-      setEndError('Failed to get feedback. Please try again.');
+      setEndError('Could not load your results. Please try again.');
       setEnding(false);
       endingRef.current = false;
     }

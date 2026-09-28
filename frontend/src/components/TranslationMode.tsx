@@ -128,7 +128,7 @@ function TranslationModeInner({
     } catch {
       setEnding(false);
       endingRef.current = false;
-      setEndError('Failed to get feedback. Please try again.');
+      setEndError('Could not load your results. Please try again.');
     }
   }, [feedback, session.id, setSession]);
 
@@ -239,7 +239,7 @@ function TranslationModeInner({
                   onClick={handleEnd}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-accent to-sky-400 text-white font-semibold py-3.5 px-6 rounded-xl cursor-pointer border-none text-[14px] shadow-lg shadow-accent/20 transition-all"
                 >
-                  Get Detailed Feedback
+                  See results
                   <ArrowRight size={15} />
                 </motion.button>
               </motion.div>

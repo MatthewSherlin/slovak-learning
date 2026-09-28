@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 
 import pytest
-import pytest_asyncio
 
 from app.database import (
     get_user_preferences,

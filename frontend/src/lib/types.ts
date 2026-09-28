@@ -37,7 +37,7 @@ export interface SessionFeedback {
   scores: FeedbackScore[];
   strengths: string[];
   improvements: string[];
-  sample_answer: string;
+  sample_answer: string | null;
   vocabulary_learned: VocabEntry[];
   grammar_notes: string[];
   /** Absent from feedback stored before results were counted from answers. */
