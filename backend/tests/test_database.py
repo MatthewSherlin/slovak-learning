@@ -251,3 +251,86 @@ async def test_get_db_rolls_back_on_exception(_init_schema):
     async with get_db() as db:
         cursor = await db.execute("SELECT id FROM users WHERE id = ?", (marker_id,))
         assert await cursor.fetchone() is None, "partial write leaked through"
+
+
+# ── Dashboard / Leaderboard vocab counts ─────────────────────────────
+
+
+async def test_dashboard_vocab_count_uses_vocabulary_progress(db):
+    """vocab_count must reflect unique tracked words, not per-session
+    feedback sums (which double-count words across sessions)."""
+    from app.database import create_session, get_dashboard_stats, update_session
+
+    words = [
+        {"slovak": "voda", "english": "water", "correct": True, "source_mode": "vocabulary"},
+        {"slovak": "chlieb", "english": "bread", "correct": True, "source_mode": "vocabulary"},
+    ]
+    await upsert_vocab_progress(db, "matt", words)
+    # Session feedback claims 3 words learned (one overlapping) — must not inflate.
+    feedback = {
+        "overall_score": 8,
+        "vocabulary_learned": [
+            {"slovak": "voda", "english": "water"},
+            {"slovak": "mlieko", "english": "milk"},
+            {"slovak": "syr", "english": "cheese"},
+        ],
+    }
+    session = {
+        "id": "dash-test-1",
+        "user_id": "matt",
+        "mode": "vocabulary",
+        "topic": "general",
+        "difficulty": "beginner",
+        "completed": False,
+        "created_at": "2025-01-15T10:00:00+00:00",
+        "feedback": None,
+        "exercises": None,
+        "messages": [],
+    }
+    await create_session(db, session)
+    await update_session(db, "dash-test-1", completed=True, feedback_json=feedback)
+
+    # The db fixture shares one database across the test session, so assert
+    # against the table count rather than an absolute number.
+    cursor = await db.execute(
+        "SELECT COUNT(*) AS total FROM vocabulary_progress WHERE user_id = 'matt'"
+    )
+    tracked = (await cursor.fetchone())["total"]
+    stats = await get_dashboard_stats(db, "matt")
+    assert stats["vocab_count"] == tracked
+
+
+async def test_leaderboard_total_vocab_uses_vocabulary_progress(db):
+    from app.database import get_leaderboard
+
+    await upsert_vocab_progress(
+        db, "zuki",
+        [{"slovak": "dom", "english": "house", "correct": True, "source_mode": "vocabulary"}],
+    )
+    cursor = await db.execute(
+        "SELECT COUNT(*) AS total FROM vocabulary_progress WHERE user_id = 'zuki'"
+    )
+    tracked = (await cursor.fetchone())["total"]
+    entries = await get_leaderboard(db)
+    zuki = next(e for e in entries if e["user_id"] == "zuki")
+    assert zuki["total_vocab"] == tracked
+    assert tracked >= 1
+
+
+# ── Streak timezone ─────────────────────────────────────────────────
+
+
+def test_streak_buckets_by_new_york_day():
+    """A session at 02:00 UTC belongs to the previous New York calendar day."""
+    from datetime import datetime, timedelta, timezone
+    from app.database import STREAK_TZ, _calculate_streak
+
+    now_ny = datetime.now(STREAK_TZ)
+    # Late-evening NY sessions today and yesterday, expressed in UTC.
+    today_utc = now_ny.replace(hour=22, minute=0).astimezone(timezone.utc)
+    yesterday_utc = today_utc - timedelta(days=1)
+    sessions = [
+        {"completed": True, "created_at": today_utc.isoformat()},
+        {"completed": True, "created_at": yesterday_utc.isoformat()},
+    ]
+    assert _calculate_streak(sessions) == 2

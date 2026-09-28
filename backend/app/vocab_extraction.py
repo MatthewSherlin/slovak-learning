@@ -48,6 +48,7 @@ def _extract_from_vocab(
     words: list[dict] = []
     questions = exercises["questions"]
     answers = exercises.get("answers", [])
+    credits = exercises.get("credits", [])
 
     for i, q in enumerate(questions):
         word = q.get("word", "")
@@ -56,7 +57,13 @@ def _extract_from_vocab(
         choices = q.get("choices", [])
         correct_answer = choices[correct_idx] if correct_idx < len(choices) else ""
         user_answer = answers[i] if i < len(answers) else None
-        is_correct = user_answer == correct_idx
+        # Credits preserve the first-attempt outcome (retry overwrites answers):
+        # only full credit counts as correct so missed words resurface in the SRS.
+        credit = credits[i] if i < len(credits) else None
+        if credit is not None:
+            is_correct = credit >= 1.0
+        else:
+            is_correct = user_answer == correct_idx
 
         if direction == "sk-en":
             slovak = word

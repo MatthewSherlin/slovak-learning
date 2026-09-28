@@ -164,3 +164,43 @@ class TestVocabCredits:
         assert ex["credits"][0] == 0.5
         assert ex["credits"][1] == 1.0
         assert ex["phase"] == "complete"
+
+
+class TestRetryQueueRotation:
+    async def test_wrong_retry_rotates_to_next_queued_question(self, db, active_vocab_session):
+        sid = active_vocab_session["id"]
+        # Miss both questions -> retryQueue [0, 1], retry starts at 0
+        await submit_vocab_answer(db, sid, 1)  # q0 wrong (correct 0)
+        result = await submit_vocab_answer(db, sid, 0)  # q1 wrong (correct 1)
+        assert result["exercises"]["phase"] == "retry"
+        assert result["exercises"]["currentIndex"] == 0
+
+        # Miss q0 again on retry: the queue must rotate so q1 gets a turn
+        result = await submit_vocab_answer(db, sid, 1)
+        assert result["exercises"]["retryQueue"] == [1, 0]
+        assert result["exercises"]["currentIndex"] == 1
+
+        # Recover both
+        result = await submit_vocab_answer(db, sid, 1)  # q1 correct
+        assert result["exercises"]["currentIndex"] == 0
+        result = await submit_vocab_answer(db, sid, 0)  # q0 correct
+        assert result["exercises"]["phase"] == "complete"
+
+
+class TestBidirectionalDedup:
+    def test_same_pair_in_both_directions_kept_once(self):
+        from app.sessions import _validate_vocab_questions
+
+        questions = [
+            {"word": "mäso", "direction": "sk-en",
+             "choices": ["meat", "fish", "pork", "beef"], "correctIndex": 0},
+            {"word": "meat", "direction": "en-sk",
+             "choices": ["mäso", "ryba", "kura", "hovädzie"], "correctIndex": 0},
+            {"word": "pes", "direction": "sk-en",
+             "choices": ["dog", "cat", "bird", "fish"], "correctIndex": 0},
+        ]
+        valid = _validate_vocab_questions(questions, [], [])
+        words = [q["word"] for q in valid]
+        assert "mäso" in words
+        assert "meat" not in words
+        assert "pes" in words

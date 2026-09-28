@@ -138,3 +138,45 @@ class TestCategoryScores:
 
     def test_conversation_empty(self):
         assert compute_category_scores({"type": "conversation"}) == []
+
+
+class TestPartialSessionScores:
+    """Ending a session early must not inflate scores — unanswered counts as 0."""
+
+    def test_translation_partial_counts_unanswered_as_zero(self):
+        ex = {
+            "type": "translation", "exercises": [{}, {}, {}, {}],
+            "currentIndex": 2, "phase": "exercises",
+            "answers": [
+                {"userAnswer": "x", "score": 8.0, "feedback": ""},
+                {"userAnswer": "y", "score": 6.0, "feedback": ""},
+                None,
+                None,
+            ],
+        }
+        assert compute_session_score(ex) == 3.5  # (8+6)/4
+
+    def test_grammar_legacy_partial_counts_unanswered_as_zero(self):
+        ex = {
+            "type": "grammar", "lesson": {}, "exercises": [{}, {}, {}, {}],
+            "currentIndex": 2, "answers": ["a", "b", None, None],
+            "correct": [True, True, None, None], "phase": "exercises",
+        }
+        assert compute_session_score(ex) == 5.0  # 2 correct / 4 total
+
+    def test_retry_recovery_reflects_actual_recovery_rate(self):
+        # 2 missed, 1 recovered -> 5.0, not a hardcoded 10.0
+        ex = {
+            "type": "vocabulary",
+            "questions": [
+                {"direction": "sk-en"}, {"direction": "sk-en"},
+                {"direction": "sk-en"}, {"direction": "sk-en"},
+            ],
+            "answers": [0, 0, 0, 0],
+            "credits": [1.0, 1.0, 0.5, 0.0],
+            "phase": "complete",
+        }
+        cats = compute_category_scores(ex)
+        recovery = next(c for c in cats if c["category"] == "Retry recovery")
+        assert recovery["score"] == 5.0
+        assert "1 of 2" in recovery["comment"]

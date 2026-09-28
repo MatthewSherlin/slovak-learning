@@ -195,7 +195,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
         data.get("questions", []), plan_words, exclusions
     )
 
-    if len(questions) < 6:
+    if len(questions) < 10:
         missing = 10 - len(questions)
         seen_norm: set[str] = set()
         used_words: list[str] = []
@@ -245,10 +245,16 @@ def _validate_vocab_questions(
     seen_words: set[str] = set()
     valid: list[dict] = []
     for q in filter_new_questions(questions, plan_words, exclusions):
-        word = q.get("word", "").strip().lower()
-        if word in seen_words:
+        # Dedupe on both the display word and the correct answer so the same
+        # pair can't appear twice via opposite directions (mäso→meat, meat→mäso).
+        keys = {normalize_word(q.get("word", ""))}
+        raw_choices = q.get("choices", [])
+        idx = q.get("correctIndex", 0)
+        if 0 <= idx < len(raw_choices):
+            keys.add(normalize_word(raw_choices[idx]))
+        if keys & seen_words:
             continue
-        seen_words.add(word)
+        seen_words |= keys
 
         choices = q.get("choices", [])
         if len(choices) < 4:
@@ -414,6 +420,8 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
 
     if topic_questions:
         question = random.choice(topic_questions)
+    elif topic in ("", "general"):
+        question = "Let's have a friendly get-to-know-you chat."
     else:
         question = f"Let's have a conversation about {topic.replace('_', ' ')}."
 
@@ -503,12 +511,15 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
             else:
                 ex["phase"] = "complete"
     elif ex["phase"] == "retry":
-        # Remove from retry queue on correct, keep on wrong
-        if is_correct and idx in ex["retryQueue"]:
-            ex["retryQueue"].remove(idx)
-        remaining = ex["retryQueue"]
-        if remaining:
-            ex["currentIndex"] = remaining[0]
+        # Remove from retry queue on correct; on wrong, rotate the queue so
+        # one stubborn word can't block the rest of the retries forever.
+        queue = ex["retryQueue"]
+        if is_correct and idx in queue:
+            queue.remove(idx)
+        elif not is_correct and len(queue) > 1 and queue[0] == idx:
+            queue.append(queue.pop(0))
+        if queue:
+            ex["currentIndex"] = queue[0]
         else:
             ex["phase"] = "complete"
 
@@ -796,22 +807,27 @@ async def end_session(db: aiosqlite.Connection, session_id: str) -> dict:
         feedback_json=feedback,
     )
 
-    # Extract and persist vocabulary progress
-    try:
-        session_with_feedback = await db_get_session(db, session_id)
-        if session_with_feedback:
+    # Extract and persist vocabulary progress. Kept in separate try blocks so
+    # a concept-recording failure can't silently drop the SRS update (and
+    # vice versa) — silent SRS loss makes vocab sessions repeat words.
+    session_with_feedback = await db_get_session(db, session_id)
+    if session_with_feedback:
+        try:
             words = extract_vocab_from_session(session_with_feedback)
             if words:
                 await upsert_vocab_progress(db, session_with_feedback["user_id"], words)
                 log.info("Tracked %d words for user %s", len(words), session_with_feedback["user_id"])
+        except Exception:
+            log.exception("Failed to persist vocab progress for session %s", session_id)
+        try:
             ex = session_with_feedback.get("exercises") or {}
             if ex.get("type") == "grammar":
                 concept = (ex.get("lesson") or {}).get("concept", "")
                 credits = [c for c in (ex.get("credits") or []) if c is not None]
                 if concept and credits:
                     await record_concept_result(db, session_with_feedback["user_id"], concept, credits)
-    except Exception:
-        log.exception("Failed to extract vocab progress for session %s", session_id)
+        except Exception:
+            log.exception("Failed to record concept result for session %s", session_id)
 
     return feedback
 

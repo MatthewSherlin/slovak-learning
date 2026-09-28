@@ -88,3 +88,23 @@ class TestPackPurchaseRace:
             assert len(result["cards"]) > 0
             # Second pack must fail: only 5 XP left
             assert await purchase_pack(db, user_id, "myty") is None
+
+
+class TestXpBalanceClamp:
+    async def test_xp_available_never_negative(self, _init_schema):
+        """Retroactive scoring changes can push earned below spent; the
+        reported balance must clamp at 0 instead of going negative."""
+        from app.database import get_user_farm
+
+        user_id = f"race_{uuid.uuid4().hex[:8]}"
+        async with get_db() as db:
+            # Record a historical spend with no matching earnings.
+            await db.execute(
+                "INSERT INTO pack_purchases (user_id, set_id, xp_cost, card_ids_json) "
+                "VALUES (?, 'myty', 150, '[]')",
+                (user_id,),
+            )
+            await db.commit()
+            farm = await get_user_farm(db, user_id)
+            assert farm["xp_spent"] == 150
+            assert farm["xp_available"] == 0

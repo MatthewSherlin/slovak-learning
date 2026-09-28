@@ -69,17 +69,21 @@ def compute_session_score(exercises: dict | None) -> float | None:
     if kind == "grammar":
         credits = exercises.get("credits")
         if not credits or all(c is None for c in credits):
-            correct = [c for c in exercises.get("correct", []) if c is not None]
-            if not correct:
+            # Legacy sessions: unanswered exercises count as 0, matching the
+            # credits path — ending early must not inflate the score.
+            correct = exercises.get("correct", [])
+            if all(c is None for c in correct):
                 return None
             return _round1(sum(1.0 for c in correct if c) / len(correct) * 10)
         vals = [c if c is not None else 0.0 for c in credits]
         return _round1(sum(vals) / len(vals) * 10)
     if kind == "translation":
-        answered = [a for a in exercises.get("answers", []) if a]
+        answers = exercises.get("answers", [])
+        answered = [a for a in answers if a]
         if not answered:
             return None
-        return _round1(sum(a.get("score", 0) for a in answered) / len(answered))
+        # Unanswered exercises count as 0 — same rule as vocab and grammar.
+        return _round1(sum(a.get("score", 0) for a in answered) / len(answers))
     return None  # conversation and unknown types
 
 
@@ -101,11 +105,12 @@ def compute_category_scores(exercises: dict | None) -> list[dict]:
                 score = _round1(sum(vals) / len(vals) * 10)
                 cats.append({"category": name, "score": score, "comment": ""})
         recovered = sum(1 for c in credits if c == 0.5)
-        if recovered:
+        missed = sum(1 for c in credits if c in (0.0, 0.5))
+        if recovered and missed:
             cats.append({
                 "category": "Retry recovery",
-                "score": 10.0,
-                "comment": f"Recovered {recovered} missed word(s) on retry.",
+                "score": _round1(recovered / missed * 10),
+                "comment": f"Recovered {recovered} of {missed} missed word(s) on retry.",
             })
         return cats
     if kind == "grammar":

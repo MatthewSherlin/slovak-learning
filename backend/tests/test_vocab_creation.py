@@ -15,11 +15,13 @@ from app.sessions import _create_vocab_session
 pytestmark = pytest.mark.asyncio
 
 
-def _q(word: str, correct: str = "x") -> dict:
+def _q(word: str, correct: str | None = None) -> dict:
+    # Unique correct answer per word — creation dedupes on the correct choice
+    # too, so a shared placeholder would collapse every question into one.
     return {
         "word": word,
         "direction": "sk-en",
-        "choices": [correct, f"{word}-b", f"{word}-c", f"{word}-d"],
+        "choices": [correct or f"{word}-en", f"{word}-b", f"{word}-c", f"{word}-d"],
         "correctIndex": 0,
         "explanation": "",
     }
@@ -78,8 +80,12 @@ async def test_seen_words_excluded_and_filtered(db, llm):
     await upsert_vocab_progress(db, uid, [
         {"slovak": "kniha", "english": "book", "correct": True, "source_mode": "vocabulary"},
     ])
-    # LLM disobeys and returns the excluded word; 10 total so no retry
-    llm["responses"] = [{"questions": [_q("kniha")] + [_q(f"s{i}") for i in range(9)]}]
+    # LLM disobeys and returns the excluded word; it gets filtered out and a
+    # top-up call replaces it
+    llm["responses"] = [
+        {"questions": [_q("kniha")] + [_q(f"s{i}") for i in range(9)]},
+        {"questions": [_q("s9")]},
+    ]
     session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
     words = [q["word"] for q in session["exercises"]["questions"]]
     assert "kniha" not in words
@@ -119,4 +125,27 @@ async def test_retry_fills_missing_questions(db, llm):
         {"questions": [_q(f"r{i}") for i in range(7)]},
     ]
     session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    assert len(session["exercises"]["questions"]) == 10
+
+
+async def test_tops_up_when_one_question_dropped(db, llm):
+    """9 valid questions should trigger a top-up retry so sessions deliver
+    the promised 10 flashcards."""
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    llm["responses"] = [
+        {"questions": [_q(f"s{i}") for i in range(9)]},
+        {"questions": [_q("extra")]},
+    ]
+    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    assert len(llm["prompts"]) == 2
+    assert len(session["exercises"]["questions"]) == 10
+
+
+async def test_no_retry_when_full_batch(db, llm):
+    uid = f"vc_{uuid.uuid4().hex[:8]}"
+    await _seed_user(db, uid)
+    llm["responses"] = [{"questions": [_q(f"s{i}") for i in range(10)]}]
+    session = await _create_vocab_session(db, {"user_id": uid, "mode": "vocabulary", "topic": "general"})
+    assert len(llm["prompts"]) == 1
     assert len(session["exercises"]["questions"]) == 10

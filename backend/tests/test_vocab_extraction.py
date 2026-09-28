@@ -40,6 +40,20 @@ class TestVocabModeExtraction:
         assert voda["correct"] is True     # answered 1, correctIndex 1
         assert maso["correct"] is False    # answered 0, correctIndex 1
 
+    def test_retry_recovered_word_counts_as_incorrect(self, sample_vocab_session):
+        """A word missed first and recovered on retry (credit 0.5) must not be
+        recorded as correct — otherwise the SRS never resurfaces it."""
+        ex = sample_vocab_session["exercises"]
+        # Final answers all match correctIndex (retry overwrote the miss),
+        # but credits preserve the first-attempt outcome.
+        ex["answers"] = [0, 1, 1]
+        ex["credits"] = [1.0, 0.5, 0.0]
+        words = extract_vocab_from_session(sample_vocab_session)
+        by_slovak = {w["slovak"].lower(): w for w in words}
+        assert by_slovak["chlieb"]["correct"] is True
+        assert by_slovak["voda"]["correct"] is False
+        assert by_slovak["mäso"]["correct"] is False
+
     def test_sets_source_mode(self, sample_vocab_session):
         words = extract_vocab_from_session(sample_vocab_session)
         for w in words:

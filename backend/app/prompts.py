@@ -93,7 +93,7 @@ You MUST respond with ONLY valid JSON in this exact format:
       "direction": "sk-en",
       "choices": ["<option A>", "<option B>", "<option C>", "<option D>"],
       "correctIndex": 0,
-      "explanation": "<brief note: etymology or usage tip>"
+      "explanation": "<brief note: etymology or usage tip — plain text, no markdown syntax>"
     }}
   ]
 }}
@@ -147,7 +147,7 @@ You MUST respond with ONLY valid JSON in this exact format:
       "sentence": "<sentence with ____ for the blank>",
       "blank": "<the correct word or form>",
       "hint": "<optional short hint about which rule to apply>",
-      "explanation": "<why this form is correct>",
+      "explanation": "<why this form is correct — plain text, no markdown syntax>",
       "choices": ["<option A>", "<option B>", "<option C>", "<option D>"] // ONLY for beginner level
     }}
   ]

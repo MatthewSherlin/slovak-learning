@@ -487,7 +487,8 @@ async def user_cards(user_id: str):
             "total_possible": len(CARDS),
             "xp_earned": xp_earned,
             "xp_spent": xp_spent,
-            "xp_available": xp_earned - xp_spent,
+            # Never report a negative balance (see get_user_farm).
+            "xp_available": max(0, xp_earned - xp_spent),
         }
 
 

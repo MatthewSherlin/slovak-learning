@@ -74,3 +74,30 @@ async def test_get_due_words(db):
     slovaks = [w["slovak"] for w in due]
     assert "zlý" in slovaks       # wrong -> due now
     assert "dobrý" not in slovaks  # correct -> due tomorrow
+
+
+async def test_init_backfills_null_due_at(db):
+    """Legacy rows (pre-SRS migration) with NULL due_at must become due
+    immediately, not vanish from the review loop."""
+    import uuid as _uuid
+    from app.database import get_due_words, init_db
+
+    uid = f"legacy_{_uuid.uuid4().hex[:8]}"
+    await db.execute(
+        "INSERT OR IGNORE INTO users (id, name, avatar, color) VALUES (?, 'L', 'L', '#000')",
+        (uid,),
+    )
+    await db.execute(
+        """INSERT INTO vocabulary_progress
+           (user_id, slovak, english, times_seen, times_correct, last_seen_at,
+            source_mode, created_at, due_at, interval_days)
+           VALUES (?, 'hrad', 'castle', 3, 3, '2026-01-01T00:00:00+00:00',
+                   'vocabulary', '2026-01-01T00:00:00+00:00', NULL, NULL)""",
+        (uid,),
+    )
+    await db.commit()
+
+    await init_db()  # re-running init applies the backfill
+
+    due = await get_due_words(db, uid)
+    assert [w["slovak"] for w in due] == ["hrad"]

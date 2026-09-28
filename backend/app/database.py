@@ -9,6 +9,7 @@ import random
 import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import AsyncIterator
 
 import aiosqlite
@@ -121,6 +122,16 @@ async def init_db() -> None:
                 await db.execute(ddl)
             except Exception:
                 pass  # Column already exists
+
+        # Backfill: rows created before the SRS migration have due_at = NULL,
+        # which get_due_words never returns — those words would otherwise be
+        # excluded from new slots yet never reviewed. Make them due now.
+        await db.execute(
+            """UPDATE vocabulary_progress
+               SET due_at = last_seen_at,
+                   interval_days = COALESCE(interval_days, 1)
+               WHERE due_at IS NULL"""
+        )
 
         # Create farm_items table
         await db.execute("""
@@ -306,7 +317,6 @@ async def get_dashboard_stats(db: aiosqlite.Connection, user_id: str | None = No
     scores_by_mode: dict[str, list[float]] = {}
     all_strengths: list[str] = []
     all_weaknesses: list[str] = []
-    total_vocab = 0
 
     for s in completed:
         fb = s.get("feedback")
@@ -315,7 +325,19 @@ async def get_dashboard_stats(db: aiosqlite.Connection, user_id: str | None = No
             scores_by_mode.setdefault(mode, []).append(fb["overall_score"])
             all_strengths.extend(fb.get("strengths", [])[:2])
             all_weaknesses.extend(fb.get("improvements", [])[:2])
-            total_vocab += len(fb.get("vocabulary_learned", []))
+
+    # Unique tracked words — matches the SRS store instead of re-counting
+    # feedback lists per session.
+    if user_id:
+        vocab_cursor = await db.execute(
+            "SELECT COUNT(*) AS total FROM vocabulary_progress WHERE user_id = ?",
+            (user_id,),
+        )
+    else:
+        vocab_cursor = await db.execute(
+            "SELECT COUNT(*) AS total FROM vocabulary_progress"
+        )
+    total_vocab = (await vocab_cursor.fetchone())["total"]
 
     avg_by_mode = {m: sum(v) / len(v) for m, v in scores_by_mode.items()}
 
@@ -343,16 +365,17 @@ async def get_leaderboard(db: aiosqlite.Connection) -> list[dict]:
     )
     adjustments = {r["user_id"]: r["total"] for r in await adj_cursor.fetchall()}
 
+    vocab_cursor = await db.execute(
+        "SELECT user_id, COUNT(*) AS total FROM vocabulary_progress GROUP BY user_id"
+    )
+    vocab_counts = {r["user_id"]: r["total"] for r in await vocab_cursor.fetchall()}
+
     for user in users:
         uid = user["id"]
         user_sessions = [s for s in sessions if s["user_id"] == uid]
         completed = [s for s in user_sessions if s["completed"] and s.get("feedback")]
         scores = [s["feedback"]["overall_score"] for s in completed if s.get("feedback")]
-        total_vocab = sum(
-            len(s["feedback"].get("vocabulary_learned", []))
-            for s in completed
-            if s.get("feedback")
-        )
+        total_vocab = vocab_counts.get(uid, 0)
 
         entries.append({
             "user_id": uid,
@@ -412,6 +435,14 @@ def _calculate_xp(completed_sessions: list[dict]) -> int:
     return xp
 
 
+# Streak days follow the household's local calendar, not UTC — a session at
+# 11pm New York time must count for that New York day.
+try:
+    STREAK_TZ = ZoneInfo("America/New_York")
+except Exception:  # missing tzdata on the host — fall back to UTC
+    STREAK_TZ = timezone.utc
+
+
 def _calculate_streak(user_sessions: list[dict]) -> int:
     if not user_sessions:
         return 0
@@ -421,14 +452,16 @@ def _calculate_streak(user_sessions: list[dict]) -> int:
         if s["completed"]:
             try:
                 dt = datetime.fromisoformat(s["created_at"].replace("Z", "+00:00"))
-                completed_dates.add(dt.date())
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                completed_dates.add(dt.astimezone(STREAK_TZ).date())
             except Exception:
                 pass
 
     if not completed_dates:
         return 0
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(STREAK_TZ).date()
     streak = 0
     current = today
 
@@ -742,7 +775,9 @@ async def get_user_farm(db: aiosqlite.Connection, user_id: str) -> dict:
         "items": items,
         "xp_earned": xp_earned,
         "xp_spent": xp_spent,
-        "xp_available": xp_earned - xp_spent,
+        # Earned XP is recomputed from feedback, so scoring changes can push it
+        # below recorded spends — never report a negative balance.
+        "xp_available": max(0, xp_earned - xp_spent),
         "catalog": FARM_ITEM_CATALOG,
     }
 
