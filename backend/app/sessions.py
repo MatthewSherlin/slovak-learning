@@ -58,6 +58,10 @@ from .vocab_extraction import extract_vocab_from_session, question_pair
 
 log = logging.getLogger(__name__)
 
+# Every lesson-generation call. Change the effort here to trade quality for speed.
+GENERATION_EFFORT = "medium"
+GENERATION_MAX_TOKENS = 16000
+
 DIFFICULTY_LABELS = {
     "beginner": "beginner (A1-A2)",
     "intermediate": "intermediate (B1-B2)",
@@ -238,7 +242,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
     data = await ask_json(
         prompt, VOCAB_BATCH_PROMPT,
         schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
-        effort="medium", max_tokens=16000,
+        effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
     )
     questions, spare = _split_vocab_questions(
         data.get("questions", []), plan_words, exclusions
@@ -273,7 +277,7 @@ async def _create_vocab_session(db: aiosqlite.Connection, req: dict) -> dict:
         more = await ask_json(
             retry_prompt, VOCAB_BATCH_PROMPT,
             schema=VOCAB_BATCH_SCHEMA, schema_name="vocab_batch",
-            effort="medium", max_tokens=16000,
+            effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
         )
         questions, more_spare = _split_vocab_questions(
             questions + more.get("questions", []), plan_words, exclusions
@@ -447,7 +451,7 @@ async def _create_grammar_session(db: aiosqlite.Connection, req: dict) -> dict:
     data = await ask_json(
         prompt, GRAMMAR_LESSON_PROMPT,
         schema=GRAMMAR_LESSON_SCHEMA, schema_name="grammar_lesson",
-        effort="medium", max_tokens=16000,
+        effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
     )
 
     lesson = data.get("lesson", {})
@@ -546,7 +550,7 @@ async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> di
     data = await ask_json(
         build_prompt(10, recent_sources), system_prompt,
         schema=TRANSLATION_BATCH_SCHEMA, schema_name="translation_batch",
-        effort="medium", max_tokens=16000,
+        effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
     )
     items = filter_translation_items(
         data.get("exercises", []), kind, direction, recent_sources,
@@ -557,7 +561,7 @@ async def _create_translation_session(db: aiosqlite.Connection, req: dict) -> di
         more = await ask_json(
             build_prompt(10 - len(items), used), system_prompt,
             schema=TRANSLATION_BATCH_SCHEMA, schema_name="translation_batch",
-            effort="medium", max_tokens=16000,
+            effort=GENERATION_EFFORT, max_tokens=GENERATION_MAX_TOKENS,
         )
         items += filter_translation_items(more.get("exercises", []), kind, direction, used)
 
