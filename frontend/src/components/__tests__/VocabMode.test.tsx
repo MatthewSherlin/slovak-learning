@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useState } from 'react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import VocabMode from '../VocabMode';
 import * as api from '../../lib/api';
+import { ADVANCE_AFTER_CORRECT_MS } from '../../lib/pacing';
 import type { Session, VocabExerciseData, GrammarExerciseData } from '../../lib/types';
 
 // Mock api so tests don't make real HTTP calls
@@ -33,6 +35,7 @@ vi.mock('framer-motion', async () => {
     motion,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+    useReducedMotion: () => false,
   };
 });
 
@@ -346,5 +349,43 @@ describe('VocabMode', () => {
     expect(api.getSession).toHaveBeenCalledWith('test-session-1');
     expect(screen.queryByText(/not saved/i)).toBeNull();
     expect(screen.queryByText(/already answered/i)).toBeNull();
+  });
+
+  // --- Pacing: a correct answer moves on quickly ---
+  describe('after a correct answer', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function Harness({ initial }: { initial: Session }) {
+      const [current, setCurrent] = useState(initial);
+      return <VocabMode session={current} setSession={setCurrent} />;
+    }
+
+    it('shows the next question once ADVANCE_AFTER_CORRECT_MS has passed, and not before', async () => {
+      const session = makeVocabSession({ currentIndex: 0 });
+      const next = makeVocabSession({ currentIndex: 1, answers: [0, null, null] });
+      vi.mocked(api.submitVocabAnswer).mockResolvedValue(next);
+      render(<Harness initial={session} />);
+
+      fireEvent.click(screen.getByText('thank you'));
+      // Let the mocked server acknowledgement resolve; the advance timer starts then.
+      await act(async () => {});
+
+      act(() => {
+        vi.advanceTimersByTime(ADVANCE_AFTER_CORRECT_MS - 1);
+      });
+      expect(screen.getByText('ďakujem')).toBeTruthy();
+      expect(screen.queryByText('prosím')).toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByText('prosím')).toBeTruthy();
+      expect(screen.queryByText('ďakujem')).toBeNull();
+    });
   });
 });

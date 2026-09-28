@@ -179,7 +179,8 @@ export default function ConfigSheet({
         instructions: instructions || undefined,
         include_review: offersReview ? includeReview : undefined,
       });
-      navigate(`/session/${session.id}`);
+      // Hand the session over so the lesson screen need not fetch it again.
+      navigate(`/session/${session.id}`, { state: { session } });
     } catch (e) {
       // The backend answered with a definite failure (an empty AI account, a
       // lesson it could not build): no session is coming, so say so now.

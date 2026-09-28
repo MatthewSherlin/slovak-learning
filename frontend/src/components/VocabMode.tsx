@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, X, Volume2, Flame } from 'lucide-react';
 import SessionHeader from './SessionHeader';
 import LoadingDots from './LoadingDots';
 import { submitVocabAnswer, endSession, getSession } from '../lib/api';
 import { renderInlineMd } from '../lib/mdlite';
 import { playCorrect, playIncorrect } from '../lib/sounds';
+import { ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S } from '../lib/pacing';
 import type { Session, SessionFeedback, VocabExerciseData } from '../lib/types';
 import FeedbackView from './FeedbackView';
 
@@ -36,6 +37,7 @@ function VocabModeInner({
   const [pending, setPending] = useState<Session | null>(null);
   // Bug fix RISK: sync ref guard so end-session can't double-fire
   const endingRef = useRef(false);
+  const reduceMotion = useReducedMotion();
 
   const currentQuestion = ex.questions[ex.currentIndex] ?? null;
 
@@ -117,7 +119,7 @@ function VocabModeInner({
   // otherwise a slow request would advance the UI past an unsaved answer.
   useEffect(() => {
     if (showResult && isCorrect && pending) {
-      const timer = setTimeout(handleNext, 1400);
+      const timer = setTimeout(handleNext, ADVANCE_AFTER_CORRECT_MS);
       return () => clearTimeout(timer);
     }
   }, [showResult, isCorrect, pending, handleNext]);
@@ -245,10 +247,10 @@ function VocabModeInner({
         <AnimatePresence mode="wait">
           <motion.div
             key={`${ex.phase}-${ex.currentIndex}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : SCREEN_FADE_S, ease: 'easeOut' }}
           >
             {/* Direction label */}
             <p style={{
@@ -268,8 +270,8 @@ function VocabModeInner({
               )}
             </p>
 
-            {/* Word card */}
-            <motion.div
+            {/* Word card — fades in with the question */}
+            <div
               style={{
                 borderRadius: 26,
                 padding: '44px 24px',
@@ -278,9 +280,6 @@ function VocabModeInner({
                 background: 'radial-gradient(circle at 50% 0%, rgba(93,228,165,0.08), transparent 65%), #151926',
                 border: '1px solid rgba(255,255,255,0.07)',
               }}
-              initial={{ rotateY: 90 }}
-              animate={{ rotateY: 0 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
             >
               <div style={{
                 fontSize: 40,
@@ -309,7 +308,7 @@ function VocabModeInner({
                   </span>
                 </div>
               )}
-            </motion.div>
+            </div>
 
             {/* Choice grid — 2x2 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

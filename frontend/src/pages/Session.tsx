@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Send, Lightbulb, Clock, MessageSquare, RefreshCw } from 'lucide-react';
 import ChatMessage from '../components/ChatMessage';
 import SessionHeader from '../components/SessionHeader';
 import LoadingDots from '../components/LoadingDots';
+import BrandedLoader from '../components/BrandedLoader';
 import FeedbackView from '../components/FeedbackView';
 import VocabMode from '../components/VocabMode';
 import GrammarMode from '../components/GrammarMode';
@@ -182,12 +183,22 @@ function LegacyChatMode({ session, setSession }: { session: SessionType; setSess
   );
 }
 
+/** The session ConfigSheet just created, handed over with the navigation so
+ *  the lesson renders at once. Absent when the lesson is opened any other way. */
+function handedOverSession(state: unknown, id: string | undefined): SessionType | null {
+  const handed = (state as { session?: SessionType } | null)?.session;
+  return handed && handed.id === id ? handed : null;
+}
+
 // Main session page — routes to mode-specific components
 export default function Session() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useUser();
-  const [session, setSession] = useState<SessionType | null>(null);
+  const [session, setSession] = useState<SessionType | null>(
+    () => handedOverSession(location.state, id),
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
@@ -202,7 +213,14 @@ export default function Session() {
   };
 
   useEffect(() => {
-    if (id) {
+    if (!id) return;
+    const handed = handedOverSession(location.state, id);
+    if (handed) {
+      setSession(handed);
+      // Use it once: browsers keep history state across a reload and Back,
+      // where this snapshot would be out of date. Those visits fetch instead.
+      navigate(location.pathname, { replace: true, state: null });
+    } else {
       loadSession(id);
     }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -250,11 +268,7 @@ export default function Session() {
   }
 
   if (!session) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center">
-        <LoadingDots text="Loading session" />
-      </div>
-    );
+    return <BrandedLoader subCopy="Loading your lesson" />;
   }
 
   // Ownership guard: a deep link or stale history entry can point at another

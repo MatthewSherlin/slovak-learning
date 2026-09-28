@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Session from '../Session';
 import type { Session as SessionType } from '../../lib/types';
 
@@ -42,6 +42,10 @@ function makeLegacySession(): SessionType {
 }
 
 describe('Session', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('uses a 16px font on the legacy chat box so iOS does not zoom in', async () => {
     vi.mocked(api.getSession).mockResolvedValue(makeLegacySession());
     render(
@@ -66,5 +70,80 @@ describe('Session', () => {
     );
     const end = await screen.findByRole('button', { name: 'End lesson and get feedback' });
     expect(end.textContent).toBe('End lesson');
+  });
+
+  it('renders a session handed over in router state without fetching it', () => {
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/session/s-legacy', state: { session: makeLegacySession() } }]}
+      >
+        <Routes>
+          <Route path="/session/:id" element={<Session />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    // Rendered at once, not after a loader.
+    expect(screen.getByRole('button', { name: 'End lesson and get feedback' })).toBeTruthy();
+    expect(api.getSession).not.toHaveBeenCalled();
+  });
+
+  it('clears the handed-over session from the history entry once it has used it', () => {
+    // Browsers keep history state across a reload and Back: a snapshot left
+    // there would show the lesson as it was when it was created.
+    function StateProbe() {
+      return <div data-testid="route-state">{JSON.stringify(useLocation().state)}</div>;
+    }
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/session/s-legacy', state: { session: makeLegacySession() } }]}
+      >
+        <Routes>
+          <Route path="/session/:id" element={<><Session /><StateProbe /></>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('route-state').textContent).toBe('null');
+    expect(screen.getByRole('button', { name: 'End lesson and get feedback' })).toBeTruthy();
+    expect(api.getSession).not.toHaveBeenCalled();
+  });
+
+  it('fetches when the session in router state is for another id', async () => {
+    vi.mocked(api.getSession).mockResolvedValue({ ...makeLegacySession(), id: 's-other' });
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/session/s-other', state: { session: makeLegacySession() } }]}
+      >
+        <Routes>
+          <Route path="/session/:id" element={<Session />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('button', { name: 'End lesson and get feedback' });
+    expect(api.getSession).toHaveBeenCalledWith('s-other');
+  });
+
+  it('applies the ownership guard to a session handed over in router state', () => {
+    const theirs = { ...makeLegacySession(), user_id: 'user-2' };
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/session/s-legacy', state: { session: theirs } }]}>
+        <Routes>
+          <Route path="/session/:id" element={<Session />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText('Not your session')).toBeTruthy();
+  });
+
+  it('shows the branded loader while it fetches the session', () => {
+    vi.mocked(api.getSession).mockReturnValue(new Promise(() => {}));
+    render(
+      <MemoryRouter initialEntries={['/session/s-legacy']}>
+        <Routes>
+          <Route path="/session/:id" element={<Session />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1);
+    expect(screen.queryByText('Loading session')).toBeNull();
   });
 });

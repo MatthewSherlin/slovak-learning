@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, X, ArrowRight, Trophy, BookOpen, Lightbulb, Sparkles, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import SessionHeader from './SessionHeader';
@@ -13,6 +13,7 @@ import { renderInlineMd } from '../lib/mdlite';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import { advanceGrammarPhase, submitGrammarAnswer, endSession, getSession } from '../lib/api';
 import { playCorrect, playIncorrect } from '../lib/sounds';
+import { ADVANCE_AFTER_ACCENT_MS, ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S } from '../lib/pacing';
 import type { Session, SessionFeedback, GrammarExerciseData } from '../lib/types';
 
 interface GrammarModeProps {
@@ -76,6 +77,7 @@ function GrammarModeInner({
   const inputRef = useRef<HTMLInputElement>(null);
   // Sync ref guard so end-session can't double-fire
   const endingRef = useRef(false);
+  const reduceMotion = useReducedMotion();
 
   // Derive currentExercise early so handlers can use it
   const exerciseIndex = ex.phase === 'exercises'
@@ -181,7 +183,7 @@ function GrammarModeInner({
   // can read the accented spelling.
   useEffect(() => {
     if (showResult && lastCorrect) {
-      const timer = setTimeout(handleNext, lastTier === 'accent' ? 2600 : 1400);
+      const timer = setTimeout(handleNext, lastTier === 'accent' ? ADVANCE_AFTER_ACCENT_MS : ADVANCE_AFTER_CORRECT_MS);
       return () => clearTimeout(timer);
     }
   }, [showResult, lastCorrect, lastTier, handleNext]);
@@ -496,7 +498,7 @@ function GrammarModeInner({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: reduceMotion ? 0 : SCREEN_FADE_S }}
             >
               {/* Sentence with blank — XSS safe: JSX split, no dangerouslySetInnerHTML */}
               <motion.div

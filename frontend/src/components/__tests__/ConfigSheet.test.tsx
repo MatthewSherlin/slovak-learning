@@ -108,8 +108,11 @@ describe('ConfigSheet', () => {
       );
     });
 
+    // The created session rides along so the lesson screen needs no second fetch.
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/session/sess-new');
+      expect(mockNavigate).toHaveBeenCalledWith('/session/sess-new', {
+        state: { session: expect.objectContaining({ id: 'sess-new' }) },
+      });
     });
   });
 

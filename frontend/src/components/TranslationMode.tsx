@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Trophy, Languages, Check, Sparkles } from 'lucide-react';
 import SessionHeader from './SessionHeader';
 import ProgressBar from './ProgressBar';
@@ -10,6 +10,7 @@ import DiacriticsKeyboard from './DiacriticsKeyboard';
 import { submitTranslation, endSession, getSession } from '../lib/api';
 import { tutorErrorMessage } from '../lib/errors';
 import { playCorrect, playIncorrect } from '../lib/sounds';
+import { ADVANCE_AFTER_ACCENT_MS, ADVANCE_AFTER_CORRECT_MS, SCREEN_FADE_S } from '../lib/pacing';
 import { renderInlineMd } from '../lib/mdlite';
 import { SLOVAK_INPUT_PROPS } from '../lib/slovakInput';
 import {
@@ -46,6 +47,7 @@ function TranslationModeInner({
   const [streak, setStreak] = useState(0);
   const [shakeInput, setShakeInput] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const reduceMotion = useReducedMotion();
 
   const [error, setError] = useState('');
   const [endError, setEndError] = useState('');
@@ -93,7 +95,7 @@ function TranslationModeInner({
   // An accent-free answer stays a little longer so the accented spelling can be read.
   useEffect(() => {
     if (showResult && lastAnswer && lastAnswer.score >= 8) {
-      const timer = setTimeout(handleNext, lastAnswer.tier === 'accent' ? 2600 : 1400);
+      const timer = setTimeout(handleNext, lastAnswer.tier === 'accent' ? ADVANCE_AFTER_ACCENT_MS : ADVANCE_AFTER_CORRECT_MS);
       return () => clearTimeout(timer);
     }
   }, [showResult, lastAnswer, handleNext]);
@@ -305,7 +307,7 @@ function TranslationModeInner({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: reduceMotion ? 0 : SCREEN_FADE_S }}
             >
               {/* Direction badge */}
               <div className="flex items-center gap-1.5 mb-3">

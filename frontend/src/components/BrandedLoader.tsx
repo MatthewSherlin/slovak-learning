@@ -32,8 +32,11 @@ export default function BrandedLoader({
     >
       {/* Spinner + logo container */}
       <div style={{ position: 'relative', width: 96, height: 96, marginBottom: 28 }}>
-        {/* Spinning ring */}
+        {/* Spinning ring — the loader's one progress indicator */}
         <svg
+          className="branded-loader-ring"
+          role="progressbar"
+          aria-label="Loading"
           viewBox="0 0 96 96"
           style={{
             position: 'absolute',
@@ -65,6 +68,7 @@ export default function BrandedLoader({
 
         {/* Pulsing icon badge */}
         <div
+          className="branded-loader-badge"
           style={{
             position: 'absolute',
             inset: 18,
@@ -113,27 +117,6 @@ export default function BrandedLoader({
         {subCopy}
       </p>
 
-      {/* Shimmer progress bar */}
-      <div
-        style={{
-          width: 180,
-          height: 5,
-          borderRadius: 999,
-          overflow: 'hidden',
-          background: 'rgba(255,255,255,0.06)',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent 25%, #5ea4f7 50%, transparent 75%)',
-            backgroundSize: '250% 100%',
-            animation: 'branded-loader-shimmer 1.4s linear infinite',
-          }}
-        />
-      </div>
-
       {/* Timing hint */}
       <p
         style={{
@@ -156,9 +139,8 @@ export default function BrandedLoader({
           0%, 100% { opacity: 1; transform: scale(1); }
           50%       { opacity: 0.85; transform: scale(0.96); }
         }
-        @keyframes branded-loader-shimmer {
-          0%   { background-position: 200% 0; }
-          100% { background-position: -50% 0; }
+        @media (prefers-reduced-motion: reduce) {
+          .branded-loader-ring, .branded-loader-badge { animation: none !important; }
         }
       `}</style>
     </div>
