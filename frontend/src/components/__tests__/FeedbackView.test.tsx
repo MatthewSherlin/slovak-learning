@@ -230,6 +230,20 @@ describe('FeedbackView', () => {
       render(<FeedbackView session={baseSession} feedback={makeFeedback(5)} />);
       expect(screen.queryByText('syr')).toBeNull();
     });
+
+    it('labels rows Right or Wrong, not First try or Missed, when the lesson has no stored credits', () => {
+      const ex = baseSession.exercises as VocabExerciseData;
+      const session: Session = {
+        ...baseSession,
+        exercises: { ...ex, answers: [0, 0, 1, null], credits: undefined },
+      };
+      render(<FeedbackView session={session} feedback={makeFeedback(5)} />);
+      expect(screen.getAllByText('Right')).toHaveLength(2);
+      expect(screen.getByText('Wrong')).toBeTruthy();
+      expect(screen.queryByText('First try')).toBeNull();
+      expect(screen.queryByText('On retry')).toBeNull();
+      expect(screen.queryByText('Missed')).toBeNull();
+    });
   });
 
   describe('grammar answers', () => {
@@ -248,6 +262,25 @@ describe('FeedbackView', () => {
       const row = screen.getByText('Pijem kávu každý deň.').closest('div')!.parentElement!;
       expect(row.textContent).toBe('Pijem kávu každý deň.You typed: kavuRight');
       expect(screen.getAllByText('Right')).toHaveLength(2);
+    });
+
+    it('shows an accent-only answer as Right even when its stored credit is partial (regression: the 0.8-credit shape stored 17 Jul-28 Sep)', () => {
+      const ex = grammarSession.exercises as GrammarExerciseData;
+      const session: Session = {
+        ...grammarSession,
+        exercises: {
+          ...ex,
+          exercises: [{ sentence: 'Vidím ____.', blank: 'dom', explanation: '' }],
+          currentIndex: 1,
+          answers: ['dom'],
+          correct: [true],
+          credits: [0.8],
+          tiers: ['accent'],
+        },
+      };
+      render(<FeedbackView session={session} feedback={makeFeedback(5)} />);
+      expect(screen.getByText('Right')).toBeTruthy();
+      expect(screen.queryByText('Wrong')).toBeNull();
     });
   });
 
@@ -271,15 +304,29 @@ describe('FeedbackView', () => {
   });
 
   describe('conversation', () => {
-    it('shows messages sent out of the maximum and the corrections, with no ring', () => {
+    it('shows messages sent out of the maximum, with no ring or breakdown', () => {
       render(<FeedbackView session={conversationSession} feedback={makeFeedback(null)} />);
       expect(screen.queryByText('out of 10')).toBeNull();
       expect(screen.queryByText('Breakdown')).toBeNull();
       expect(screen.getByText('2')).toBeTruthy();
       expect(screen.getByText('of 10 messages sent')).toBeTruthy();
+    });
+
+    it('shows the corrections stored on the feedback', () => {
+      const feedback = { ...makeFeedback(null), corrections: ['chcem kupit chleba → chcem kúpiť chlieb'] };
+      render(<FeedbackView session={conversationSession} feedback={feedback} />);
       expect(screen.getByText('Corrections')).toBeTruthy();
       expect(screen.getByText('chcem kupit chleba → chcem kúpiť chlieb')).toBeTruthy();
-      expect(screen.queryByText(/not a tutor line/)).toBeNull();
+    });
+
+    it('shows no corrections card for an older conversation, even though its messages hold an accent correction', () => {
+      // conversationSession's messages contain a tutor line starting with the
+      // memo emoji about missing diacritics; feedback with no `corrections`
+      // (the shape stored before the tutor learned to drop those lines) must
+      // not have that line parsed back out and shown as a mistake.
+      render(<FeedbackView session={conversationSession} feedback={makeFeedback(null)} />);
+      expect(screen.queryByText('Corrections')).toBeNull();
+      expect(screen.queryByText(/chcem kupit chleba/)).toBeNull();
     });
 
     it('shows no ring for an older conversation that has a stored score', () => {
@@ -293,11 +340,11 @@ describe('FeedbackView', () => {
       expect(screen.getByText('of 10 messages sent')).toBeTruthy();
     });
 
-    it('shows no corrections list when there are none', () => {
-      const session = { ...conversationSession, messages: conversationSession.messages.slice(0, 2) };
-      render(<FeedbackView session={session} feedback={makeFeedback(null)} />);
+    it('shows no corrections list when the feedback has an empty list', () => {
+      const feedback = { ...makeFeedback(null), corrections: [] };
+      render(<FeedbackView session={conversationSession} feedback={feedback} />);
       expect(screen.queryByText('Corrections')).toBeNull();
-      expect(screen.getByText('1')).toBeTruthy();
+      expect(screen.getByText('2')).toBeTruthy();
     });
   });
 
@@ -338,22 +385,52 @@ describe('FeedbackView', () => {
   });
 
   describe('breakdown of a lesson ended before results were counted', () => {
-    it('drops categories and comments the model wrote, keeps computed categories', () => {
+    it('drops a category the code does not compute for this lesson type, keeps one it does', () => {
       const feedback = makeFeedback(6, [
         { category: 'Diacritics & Spelling', score: 4, comment: 'You keep missing the accents on á and é.' },
-        { category: 'Recall (EN→SK)', score: 8, comment: 'Strong recall of food words.' },
+        { category: 'Word recognition (SK→EN)', score: 8, comment: '' },
       ]);
       render(<FeedbackView session={baseSession} feedback={feedback} />);
       expect(screen.queryByText('Diacritics & Spelling')).toBeNull();
       expect(screen.queryByText(/missing the accents/)).toBeNull();
       expect(screen.getByText('Breakdown')).toBeTruthy();
-      expect(screen.getByText('Recall (EN→SK)')).toBeTruthy();
+      expect(screen.getByText('Word recognition (SK→EN)')).toBeTruthy();
+    });
+
+    it('drops a category whose name is computed for this lesson type but whose comment is AI-written', () => {
+      // A model can write a category named the same as a computed one — its
+      // comment gives it away, since the code itself never writes prose there.
+      const feedback = makeFeedback(6, [
+        { category: 'Recall (EN→SK)', score: 8, comment: 'Strong recall of food words.' },
+      ]);
+      render(<FeedbackView session={baseSession} feedback={feedback} />);
+      expect(screen.queryByText('Breakdown')).toBeNull();
       expect(screen.queryByText('Strong recall of food words.')).toBeNull();
     });
 
     it('shows no breakdown when no computed category is left', () => {
       const feedback = makeFeedback(6, [{ category: 'Fluency', score: 6, comment: 'ok' }]);
       render(<FeedbackView session={baseSession} feedback={feedback} />);
+      expect(screen.queryByText('Breakdown')).toBeNull();
+    });
+
+    it('drops an AI-written "Accuracy" row on an older translation lesson (shape f268ee7f9b27)', () => {
+      const feedback = makeFeedback(4, [
+        { category: 'Accuracy', score: 3, comment: 'Missing diacritics (\'mam\' instead of \'Mám\').' },
+        { category: 'Grammar Application', score: 3, comment: 'Watch the case endings.' },
+        { category: 'Diacritics & Spelling', score: 2, comment: 'Several missing háčky.' },
+        { category: 'Vocabulary Recognition', score: 5, comment: 'Good range of words.' },
+      ]);
+      render(<FeedbackView session={translationSession} feedback={feedback} />);
+      expect(screen.queryByText('Breakdown')).toBeNull();
+      expect(screen.queryByText('Accuracy')).toBeNull();
+    });
+
+    it('drops an AI-written "Accuracy" row on an older grammar lesson', () => {
+      const feedback = makeFeedback(4, [
+        { category: 'Accuracy', score: 3, comment: 'Watch the accusative case.' },
+      ]);
+      render(<FeedbackView session={grammarSession} feedback={feedback} />);
       expect(screen.queryByText('Breakdown')).toBeNull();
     });
 

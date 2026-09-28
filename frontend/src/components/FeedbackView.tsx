@@ -55,6 +55,8 @@ const VOCAB_OUTCOME: Record<VocabOutcome, { label: string; color: string }> = {
   first_try: { label: 'First try', color: 'var(--color-success)' },
   retry: { label: 'On retry', color: 'var(--color-warning)' },
   missed: { label: 'Missed', color: 'var(--color-score-danger)' },
+  right: { label: 'Right', color: 'var(--color-success)' },
+  wrong: { label: 'Wrong', color: 'var(--color-score-danger)' },
 };
 
 const sectionStyle = {
@@ -111,7 +113,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
 
   // Built from the lesson itself; text a model once wrote about it is ignored.
   const ex = session.exercises;
-  const conversation = ex?.type === 'conversation' ? conversationSummary(ex, session.messages) : null;
+  const conversation = ex?.type === 'conversation' ? conversationSummary(ex, session.messages, feedback) : null;
   const vocab = ex?.type === 'vocabulary' ? vocabRows(ex) : [];
   const grammar = ex?.type === 'grammar' ? grammarRows(ex) : [];
   const translation = ex?.type === 'translation' ? translationRows(ex) : [];
@@ -120,7 +122,7 @@ export default function FeedbackView({ session, feedback }: FeedbackViewProps) {
   const itemTotal = ex?.type === 'vocabulary' ? ex.questions.length
     : ex?.type === 'grammar' || ex?.type === 'translation' ? ex.exercises.length
     : 0;
-  const breakdown = breakdownScores(feedback);
+  const breakdown = breakdownScores(feedback, ex?.type);
   const showBreakdown = !!ex && !conversation && breakdown.length > 0;
 
   return (
