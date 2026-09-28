@@ -66,15 +66,25 @@ function VocabModeInner({
     }
 
     try {
-      const updated = await submitVocabAnswer(session.id, idx);
+      const updated = await submitVocabAnswer(session.id, idx, ex.currentIndex);
       setPending(updated);
-    } catch {
-      // Answer never reached the server — let the user re-select.
+    } catch (e) {
       setSelected(null);
       setShowResult(false);
+      // The server already has an answer for this question (its reply was
+      // lost): show the question it is really on, without an error.
+      if (e instanceof Error && e.message.includes('stale_answer')) {
+        try {
+          setSession(await getSession(session.id));
+          return;
+        } catch {
+          // Fall through to the connection message.
+        }
+      }
+      // Answer never reached the server — let the user re-select.
       setSubmitError('Connection hiccup — that answer was not saved. Try again.');
     }
-  }, [showResult, currentQuestion, session.id]);
+  }, [showResult, currentQuestion, session.id, ex.currentIndex, setSession]);
 
   const handleNext = useCallback(() => {
     if (!pending) return; // server hasn't acknowledged the answer yet

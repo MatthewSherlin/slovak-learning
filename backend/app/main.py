@@ -61,6 +61,7 @@ from .models import (
 from .llm import LLMCreditsError, LLMError
 from .questions import QUESTIONS, TOPICS
 from .sessions import (
+    StaleAnswerError,
     advance_grammar_phase,
     create_session,
     end_session,
@@ -341,7 +342,14 @@ async def remove(session_id: str):
 async def vocab_answer(session_id: str, req: VocabAnswerRequest):
     async with get_db() as db:
         try:
-            return await submit_vocab_answer(db, session_id, req.choiceIndex)
+            return await submit_vocab_answer(
+                db, session_id, req.choiceIndex, question_index=req.questionIndex,
+            )
+        except StaleAnswerError:
+            return JSONResponse(
+                status_code=409,
+                content={"detail": "That question was already answered.", "code": "stale_answer"},
+            )
         except ValueError as e:
             raise HTTPException(404, str(e))
 

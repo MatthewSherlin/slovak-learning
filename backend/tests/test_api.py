@@ -171,3 +171,33 @@ async def test_users_endpoint(client):
     ids = [u["id"] for u in data]
     assert "matt" in ids
     assert "zuki" in ids
+
+
+# ── Vocab answers ────────────────────────────────────────────────────
+
+
+async def test_stale_vocab_answer_returns_409_with_code(client, sample_vocab_session):
+    from app.database import create_session as db_create_session
+
+    session = {
+        **sample_vocab_session,
+        "completed": False,
+        "feedback": None,
+        "exercises": {
+            **sample_vocab_session["exercises"],
+            "currentIndex": 1,
+            "answers": [0] + [None] * (len(sample_vocab_session["exercises"]["questions"]) - 1),
+            "retryQueue": [],
+            "phase": "questions",
+        },
+    }
+    async with get_db() as db:
+        await db_create_session(db, session)
+
+    async with client as c:
+        resp = await c.post(
+            f"/api/sessions/{session['id']}/vocab",
+            json={"choiceIndex": 0, "questionIndex": 0},
+        )
+    assert resp.status_code == 409
+    assert resp.json() == {"detail": "That question was already answered.", "code": "stale_answer"}

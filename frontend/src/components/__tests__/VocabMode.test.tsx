@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import VocabMode from '../VocabMode';
+import * as api from '../../lib/api';
 import type { Session, VocabExerciseData, GrammarExerciseData } from '../../lib/types';
 
 // Mock api so tests don't make real HTTP calls
@@ -292,5 +293,35 @@ describe('VocabMode', () => {
     const session = makeVocabSession();
     render(<VocabMode session={session} setSession={() => {}} />);
     expect(screen.queryByText('Review')).toBeNull();
+  });
+
+  // --- An answer names the question it was for ---
+  it('sends the index of the question being answered', async () => {
+    const session = makeVocabSession({ currentIndex: 1, answers: [0, null, null] });
+    vi.mocked(api.submitVocabAnswer).mockResolvedValue(session);
+    render(<VocabMode session={session} setSession={noop} />);
+    fireEvent.click(screen.getByText('please'));
+    await waitFor(() => {
+      expect(api.submitVocabAnswer).toHaveBeenCalledWith('test-session-1', 1, 1);
+    });
+  });
+
+  it('refetches the session and shows no error when the answer was stale', async () => {
+    const session = makeVocabSession({ currentIndex: 0 });
+    const fresh = makeVocabSession({ currentIndex: 1, answers: [0, null, null] });
+    vi.mocked(api.submitVocabAnswer).mockRejectedValue(
+      new Error('{"detail":"That question was already answered.","code":"stale_answer"}'),
+    );
+    vi.mocked(api.getSession).mockResolvedValue(fresh);
+    const setSession = vi.fn();
+    render(<VocabMode session={session} setSession={setSession} />);
+    fireEvent.click(screen.getByText('thank you'));
+
+    await waitFor(() => {
+      expect(setSession).toHaveBeenCalledWith(fresh);
+    });
+    expect(api.getSession).toHaveBeenCalledWith('test-session-1');
+    expect(screen.queryByText(/not saved/i)).toBeNull();
+    expect(screen.queryByText(/already answered/i)).toBeNull();
   });
 });

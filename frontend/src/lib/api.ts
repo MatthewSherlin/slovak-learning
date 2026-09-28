@@ -69,10 +69,14 @@ export const deleteSession = (sessionId: string): Promise<{ ok: boolean }> =>
 
 // ── Mode-specific answers ───────────────────────────────────────────
 
-export const submitVocabAnswer = (sessionId: string, choiceIndex: number): Promise<Session> =>
+export const submitVocabAnswer = (
+  sessionId: string,
+  choiceIndex: number,
+  questionIndex: number,
+): Promise<Session> =>
   apiFetch(`/api/sessions/${sessionId}/vocab`, {
     method: 'POST',
-    body: JSON.stringify({ choiceIndex }),
+    body: JSON.stringify({ choiceIndex, questionIndex }),
   });
 
 export const advanceGrammarPhase = (sessionId: string): Promise<Session> =>

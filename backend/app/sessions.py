@@ -608,7 +608,18 @@ async def _create_conversation_session(db: aiosqlite.Connection, req: dict) -> d
 
 # ── Answer Submission ────────────────────────────────────────────────
 
-async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_index: int) -> dict:
+
+class StaleAnswerError(Exception):
+    """An answer names a question that is no longer the current one.
+
+    Not a ValueError: the routes map ValueError to 404.
+    """
+
+
+async def submit_vocab_answer(
+    db: aiosqlite.Connection, session_id: str, choice_index: int,
+    question_index: int | None = None,
+) -> dict:
     session = await db_get_session(db, session_id)
     if not session:
         raise ValueError("Session not found")
@@ -619,6 +630,11 @@ async def submit_vocab_answer(db: aiosqlite.Connection, session_id: str, choice_
 
     idx = ex["currentIndex"]
     questions = ex["questions"]
+
+    # A resent answer whose first copy was already stored must not land on
+    # the next question, which the learner has not seen.
+    if question_index is not None and question_index != idx:
+        raise StaleAnswerError(f"Answer for question {question_index}, current is {idx}")
 
     if idx >= len(questions):
         raise ValueError("No more questions")

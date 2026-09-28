@@ -8,7 +8,7 @@ import pytest
 import pytest_asyncio
 
 from app.database import create_session as db_create_session
-from app.sessions import submit_vocab_answer, submit_grammar_answer
+from app.sessions import StaleAnswerError, submit_vocab_answer, submit_grammar_answer
 
 
 pytestmark = pytest.mark.asyncio
@@ -266,6 +266,42 @@ class TestPerAnswerProgress:
             await submit_vocab_answer(db, sid, 0)  # a resent request
         rows = await self._rows(db, uid)
         assert rows["chlieb"]["times_seen"] == 1
+        assert rows["voda"]["times_seen"] == 1
+
+    async def test_matching_question_index_records(self, db, active_vocab_session):
+        sid, uid = await self._fresh(db, active_vocab_session)
+        result = await submit_vocab_answer(db, sid, 0, question_index=0)
+        assert result["exercises"]["answers"][0] == 0
+        assert result["exercises"]["currentIndex"] == 1
+        rows = await self._rows(db, uid)
+        assert rows["chlieb"]["times_seen"] == 1
+
+    async def test_stale_question_index_records_nothing(self, db, active_vocab_session):
+        from app.database import get_session as db_get_session
+
+        sid, uid = await self._fresh(db, active_vocab_session)
+        await submit_vocab_answer(db, sid, 0, question_index=0)
+        # The reply to that answer was lost; the screen sends it again for q0.
+        with pytest.raises(StaleAnswerError):
+            await submit_vocab_answer(db, sid, 1, question_index=0)
+        session = await db_get_session(db, sid)
+        ex = session["exercises"]
+        assert ex["answers"] == [0, None]
+        assert ex["currentIndex"] == 1
+        assert len(session["messages"]) == 1
+        rows = await self._rows(db, uid)
+        assert "voda" not in rows
+        assert rows["chlieb"]["times_seen"] == 1
+
+    async def test_stale_answer_error_is_not_a_value_error(self):
+        assert not issubclass(StaleAnswerError, ValueError)
+
+    async def test_no_question_index_behaves_as_before(self, db, active_vocab_session):
+        sid, uid = await self._fresh(db, active_vocab_session)
+        await submit_vocab_answer(db, sid, 0)
+        result = await submit_vocab_answer(db, sid, 1)
+        assert result["exercises"]["answers"] == [0, 1]
+        rows = await self._rows(db, uid)
         assert rows["voda"]["times_seen"] == 1
 
     async def test_legacy_session_not_recorded_per_answer(self, db, active_vocab_session):

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getRecommendations, tradeInCards, setShowcase, getAllCards } from '../api';
+import { getRecommendations, tradeInCards, setShowcase, getAllCards, submitVocabAnswer } from '../api';
 
 describe('getRecommendations', () => {
   beforeEach(() => {
@@ -140,5 +140,28 @@ describe('getAllCards', () => {
     expect(result).toEqual(mockPayload);
     expect(result.cards).toHaveLength(1);
     expect(result.cards[0].id).toBe(1);
+  });
+});
+
+describe('submitVocabAnswer', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('POSTs the choice and the question index', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}),
+    } as Response);
+
+    await submitVocabAnswer('s1', 2, 4);
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain('/api/sessions/s1/vocab');
+    expect(JSON.parse(String(init?.body))).toEqual({ choiceIndex: 2, questionIndex: 4 });
   });
 });

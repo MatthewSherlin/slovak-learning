@@ -232,6 +232,8 @@ class AnswerRequest(BaseModel):
 
 class VocabAnswerRequest(BaseModel):
     choiceIndex: int
+    # Absent from older clients; when present, an answer for another question is refused.
+    questionIndex: int | None = None
 
 
 class GrammarAnswerRequest(BaseModel):
