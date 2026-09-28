@@ -263,7 +263,7 @@ export default function Guides() {
                               {isRead ? (
                                 <div
                                   className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                                  style={{ background: `${guide.accentColor}26` }}
+                                  style={{ background: `color-mix(in srgb, ${guide.accentColor} 15%, transparent)` }}
                                 >
                                   <Check size={11} color={guide.accentColor} strokeWidth={3} />
                                 </div>

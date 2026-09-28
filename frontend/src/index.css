@@ -61,6 +61,7 @@
   --color-error-text: #ef4444;
   --color-tabbar-bg: rgba(14, 16, 23, 0.92);
   --color-surface-button: #1e2130;
+  --color-badge-ink: #0e1017;
   --color-backdrop: rgba(5, 6, 10, 0.55);
   --color-shadow-badge: rgba(0, 0, 0, 0.35);
   --color-overlay-03: rgba(255, 255, 255, 0.03);
@@ -130,14 +131,15 @@
   --color-surface-sunken: #f8f9fc;
   --color-surface-card: #ffffff;
   --color-surface-sheet: #ffffff;
-  --color-score-danger: #d44a4a;
+  --color-score-danger: #bf3d3d;
   --color-score-danger-from: #e05555;
   --color-score-good-from: #3dcb8c;
   --color-score-warn-from: #d9a63e;
   --color-accent-gradient-end: #38bdf8;
-  --color-error-text: #d44a4a;
+  --color-error-text: #bf3d3d;
   --color-tabbar-bg: rgba(255, 255, 255, 0.85);
   --color-surface-button: #f0f2f7;
+  --color-badge-ink: #1a1e2e;
   --color-backdrop: rgba(10, 12, 18, 0.45);
   --color-shadow-badge: rgba(20, 24, 38, 0.18);
   --color-overlay-03: rgba(26, 30, 46, 0.05);
@@ -149,6 +151,28 @@
   --color-overlay-09: rgba(26, 30, 46, 0.11);
   --color-overlay-12: rgba(26, 30, 46, 0.14);
   --color-overlay-15: rgba(26, 30, 46, 0.18);
+}
+
+/* -- Older shorthand tokens still read elsewhere ------------- */
+/* ErrorBoundary.tsx (out of scope for this task) reads --bg, --text,
+   --text-dim and --accent via var(x, fallback) — restored here with their
+   original values so its fallback screen keeps following the theme.
+   --surface, --surface-2, --border and --accent-hover from the old set are
+   confirmed unused anywhere (including the var(x, fallback) form) and stay
+   removed. */
+
+:root {
+  --bg: #0a0b10;
+  --text: #eef1f8;
+  --text-dim: #6b7289;
+  --accent: #5ea4f7;
+}
+
+[data-theme="light"] {
+  --bg: #f4f5fa;
+  --text: #1a1e2e;
+  --text-dim: #6b7289;
+  --accent: #4a93e8;
 }
 
 /* -- Card frame keyframes ---------------- */

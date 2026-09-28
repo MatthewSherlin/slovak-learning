@@ -416,7 +416,7 @@ function VocabModeInner({
                           boxShadow: '0 4px 10px var(--color-shadow-badge)',
                         }}
                       >
-                        <Check size={13} color="var(--color-surface-sunken)" strokeWidth={3.2} />
+                        <Check size={13} color="var(--color-badge-ink)" strokeWidth={3.2} />
                       </motion.div>
                     )}
                     {/* Wrong selected badge */}
@@ -432,7 +432,7 @@ function VocabModeInner({
                           boxShadow: '0 4px 10px var(--color-shadow-badge)',
                         }}
                       >
-                        <X size={13} color="var(--color-surface-sunken)" strokeWidth={3.2} />
+                        <X size={13} color="var(--color-badge-ink)" strokeWidth={3.2} />
                       </motion.div>
                     )}
                     <span>{choice}</span>
@@ -470,7 +470,7 @@ function VocabModeInner({
                       background: 'var(--color-success)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <Check size={15} color="var(--color-surface-sunken)" strokeWidth={3.2} />
+                      <Check size={15} color="var(--color-badge-ink)" strokeWidth={3.2} />
                     </div>
                     <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--color-success)' }}>
                       {streak >= 3 ? `${streak} in a row!` : 'Správne!'}
@@ -489,7 +489,7 @@ function VocabModeInner({
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     borderRadius: 16,
                     background: 'var(--color-success)',
-                    color: 'var(--color-surface-sunken)',
+                    color: 'var(--color-badge-ink)',
                     fontSize: 16,
                     fontWeight: 800,
                     border: 'none',
@@ -509,7 +509,7 @@ function VocabModeInner({
                     background: 'var(--color-danger)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <X size={15} color="var(--color-surface-sunken)" strokeWidth={3.2} />
+                    <X size={15} color="var(--color-badge-ink)" strokeWidth={3.2} />
                   </div>
                   <div>
                     <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--color-danger)' }}>

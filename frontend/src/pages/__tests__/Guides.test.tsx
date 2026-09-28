@@ -159,6 +159,26 @@ describe('Guides', () => {
     expect(() => fireEvent.click(vowelSection)).not.toThrow();
   });
 
+  it('gives the read-indicator badge a valid, non-empty background', () => {
+    // Pre-seed a read section so the badge renders in its "read" (tinted) state.
+    lsStore[LS_KEY] = JSON.stringify(['pronunciation-0']);
+
+    const { container } = renderGuides();
+
+    // Expand the guide so its (already-read) section row renders.
+    const pronunciationHeader = screen.getByText('Slovak Pronunciation').closest('button')!;
+    fireEvent.click(pronunciationHeader);
+
+    const checkIcon = container.querySelector('svg.lucide-check');
+    expect(checkIcon).not.toBeNull();
+    const badge = checkIcon!.closest('div') as HTMLElement;
+    const background = badge.style.background;
+    // A token concatenated with a bare hex suffix (e.g. "var(--color-success)26")
+    // is not a valid CSS value and is dropped, leaving no background at all.
+    expect(background).not.toBe('');
+    expect(background).not.toMatch(/\)[0-9a-fA-F]{2}/);
+  });
+
   it('uses ReactMarkdown to render section content (not bespoke parser)', () => {
     renderGuides();
 
