@@ -92,9 +92,10 @@ export default function SessionHeader({ session, onEnd, ending, canEnd = true, c
 
         <div className="grow flex items-center justify-end gap-3">
           {/* Extras take only the room left over, so the end button stays on one line.
-              They are a size container: extras can drop words when the room is short. */}
+              They are a size container: extras can drop words when the room is short.
+              Clipped sideways only: an extra's tap target may reach above and below it. */}
           {children && (
-            <div className="@container flex-1 min-w-0 overflow-hidden flex items-center justify-end gap-3">
+            <div className="@container flex-1 min-w-0 overflow-x-clip flex items-center justify-end gap-3">
               {children}
             </div>
           )}

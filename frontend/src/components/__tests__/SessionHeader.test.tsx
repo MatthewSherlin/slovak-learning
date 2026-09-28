@@ -83,4 +83,18 @@ describe('SessionHeader', () => {
     expect(screen.getByText('Stay').className).toMatch(/\btap-target\b/);
     expect(screen.getByText('Leave').className).toMatch(/\btap-target\b/);
   });
+
+  it('clips extras sideways only, so their tap targets can reach above and below', () => {
+    render(
+      <MemoryRouter>
+        <SessionHeader session={makeSession()} onEnd={() => {}} ending={false}>
+          <button className="tap-target">2</button>
+        </SessionHeader>
+      </MemoryRouter>
+    );
+    // jsdom does not compute layout, so this checks the classes that set the clipping.
+    const extras = screen.getByRole('button', { name: '2' }).parentElement!;
+    expect(extras.className).toMatch(/\boverflow-x-clip\b/);
+    expect(extras.className).not.toMatch(/\boverflow-hidden\b/);
+  });
 });
