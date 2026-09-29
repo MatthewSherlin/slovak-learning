@@ -317,6 +317,127 @@ describe('Home', () => {
     });
   });
 
+  it('shows the lesson topic as a readable label in the Continue card', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-vocab-1',
+          mode: 'vocabulary',
+          topic: 'food_drink',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Vocabulary · Food Drink')).not.toBeNull();
+    });
+  });
+
+  it('capitalises each word of a topic, accented letters included', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-vocab-1',
+          mode: 'vocabulary',
+          topic: 'jedlo_a_n\u00e1poje',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Vocabulary \u00b7 Jedlo A N\u00e1poje')).not.toBeNull();
+    });
+  });
+
+  it('leaves the topic out of the Continue card when the lesson has none', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-vocab-1',
+          mode: 'vocabulary',
+          topic: 'general',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+
+    renderHome();
+
+    const label = await screen.findByText(/continue session/i);
+    const card = label.closest('[role="button"]')!;
+    expect(card.textContent).toContain('Vocabulary');
+    expect(card.textContent).not.toMatch(/general/i);
+    expect(card.textContent).not.toContain('·');
+  });
+
+  it('draws the Continue card progress ring in the colour of the lesson mode', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        in_progress_session: {
+          id: 'sess-vocab-1',
+          mode: 'vocabulary',
+          topic: 'Animals',
+          difficulty: 'beginner',
+          created_at: new Date().toISOString(),
+        },
+      })
+    );
+    vi.mocked(api.getSession).mockResolvedValue(makeVocabSession(3, 10));
+
+    renderHome();
+
+    const fraction = await screen.findByText('3/10');
+    const card = fraction.closest('[role="button"]')!;
+    const arc = card.querySelector('circle[stroke-dasharray]')!;
+    expect(arc.getAttribute('stroke')).toBe('var(--color-mode-vocab)');
+    expect(fraction.style.color).toBe('var(--color-mode-vocab)');
+  });
+
+  it('lists recommendations as full-width rows under a heading', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(
+      baseRecs({
+        recommended: [
+          { kind: 'review_vocab', label: 'Review 5 due words', mode: 'vocabulary' },
+          { kind: 'practice_concept', label: "Practice: Present Tense of the Verb 'byť' (to be)", mode: 'grammar' },
+        ],
+      })
+    );
+
+    renderHome();
+
+    expect(await screen.findByRole('heading', { name: 'Recommended' })).toBeTruthy();
+    const rows = [
+      screen.getByRole('button', { name: /review 5 due words/i }),
+      screen.getByRole('button', { name: /present tense/i }),
+    ];
+    for (const row of rows) {
+      // jsdom does not compute layout, so this checks the classes that set the size.
+      expect(row.className).toMatch(/\bw-full\b/);
+      expect(row.className).toMatch(/\bmin-h-11\b/);
+      expect(row.className).toMatch(/\btext-left\b/);
+    }
+  });
+
+  it('shows no Recommended heading when there is nothing to recommend', async () => {
+    vi.mocked(api.getRecommendations).mockResolvedValue(baseRecs());
+
+    renderHome();
+
+    await waitFor(() => {
+      expect(screen.queryByText('Vocabulary')).not.toBeNull();
+    });
+    expect(screen.queryByRole('heading', { name: 'Recommended' })).toBeNull();
+  });
+
   it('clicking the gear button opens the settings modal', async () => {
     vi.mocked(api.getRecommendations).mockResolvedValue(baseRecs());
 

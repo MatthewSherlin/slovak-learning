@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { WifiOff, RefreshCw, Play, Settings, X } from 'lucide-react';
+import { WifiOff, RefreshCw, Play, Settings, X, ChevronRight } from 'lucide-react';
 import HomeSkeleton from '../components/HomeSkeleton';
 import ConfigSheet from '../components/ConfigSheet';
 import SettingsModal from '../components/SettingsModal';
@@ -41,7 +41,6 @@ function getSlovakDate(): string {
 interface ModeConfig {
   label: string;
   color: string;
-  bgColor: string;
   icon: React.ReactNode;
   statFn: (stats: DashboardStats | null) => string;
 }
@@ -76,14 +75,12 @@ const MODES: Record<LearningMode, ModeConfig> = {
   vocabulary: {
     label: 'Vocabulary',
     color: 'var(--color-mode-vocab)',
-    bgColor: 'rgba(93,228,165,0.12)',
     icon: VOCAB_ICON,
     statFn: (s) => (s ? `${s.vocab_count} words learned` : 'Build your word bank'),
   },
   grammar: {
     label: 'Grammar',
     color: 'var(--color-mode-grammar)',
-    bgColor: 'rgba(167,139,250,0.12)',
     icon: GRAMMAR_ICON,
     statFn: (s) => {
       const avg = s?.scores_by_mode?.['grammar'];
@@ -93,20 +90,34 @@ const MODES: Record<LearningMode, ModeConfig> = {
   conversation: {
     label: 'Conversation',
     color: 'var(--color-mode-conversation)',
-    bgColor: 'rgba(245,196,94,0.12)',
     icon: CONVO_ICON,
     statFn: () => 'Talk with the tutor',
   },
   translation: {
     label: 'Translation',
     color: 'var(--color-mode-translation)',
-    bgColor: 'rgba(240,168,208,0.12)',
     icon: TRANSLATION_ICON,
     statFn: () => 'SK ⇄ EN',
   },
 };
 
 const MODE_ORDER: LearningMode[] = ['vocabulary', 'grammar', 'conversation', 'translation'];
+
+/** A mode colour at the given strength, for icon tiles and card glows. */
+function tint(color: string, percent: number): string {
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+}
+
+/** The topic as the learner reads it; nothing for a lesson without one. */
+function topicLabel(topic: string | null | undefined): string {
+  if (!topic || topic === 'general') return '';
+  // Word by word, not by \b: a regex word boundary splits at accented letters.
+  return topic
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 // ── Progress computation ───────────────────────────────────────────────
 
@@ -272,6 +283,11 @@ export default function Home() {
   }
 
   const inProgress = recs?.in_progress_session ?? null;
+  const inProgressColor = inProgress
+    ? MODES[inProgress.mode as LearningMode]?.color ?? 'var(--color-accent)'
+    : 'var(--color-accent)';
+  const inProgressTopic = topicLabel(inProgress?.topic);
+  const recommendations = (recs?.recommended ?? []).filter((r) => r.kind !== 'continue');
 
   // Compute real progress from the fetched session (null = no ring shown)
   const sessionProgress: SessionProgress | null =
@@ -313,7 +329,7 @@ export default function Home() {
           {/* Streak chip */}
           {streak > 0 && (
             <div
-              className="flex items-center gap-[5px] px-[11px] py-[7px] rounded-full border"
+              className="h-10 flex items-center gap-[5px] px-3 rounded-full border"
               style={{
                 background: 'rgba(245,196,94,0.10)',
                 borderColor: 'rgba(245,196,94,0.18)',
@@ -382,14 +398,14 @@ export default function Home() {
                     <circle cx="28" cy="28" r="24" fill="none" stroke="var(--color-overlay-08)" strokeWidth="5" />
                     <circle
                       cx="28" cy="28" r="24" fill="none"
-                      stroke="var(--color-mode-grammar)" strokeWidth="5" strokeLinecap="round"
+                      stroke={inProgressColor} strokeWidth="5" strokeLinecap="round"
                       strokeDasharray={progressRingProps.circumference}
                       strokeDashoffset={progressRingProps.dashOffset}
                     />
                   </svg>
                   <div
-                    className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tabular-nums"
-                    style={{ color: 'var(--color-mode-grammar)', fontFamily: "'JetBrains Mono', monospace" }}
+                    className="absolute inset-0 flex items-center justify-center text-[11px] font-bold tabular-nums"
+                    style={{ color: inProgressColor }}
                   >
                     {progressRingProps.label}
                   </div>
@@ -403,7 +419,7 @@ export default function Home() {
                 </p>
                 <p className="text-[15px] font-bold text-text-primary leading-tight mb-0.5">
                   {inProgress.mode.charAt(0).toUpperCase() + inProgress.mode.slice(1)}
-                  {inProgress.topic ? ` · ${inProgress.topic}` : ''}
+                  {inProgressTopic ? ` · ${inProgressTopic}` : ''}
                 </p>
                 <p className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
                   {sessionProgress
@@ -460,7 +476,7 @@ export default function Home() {
               disabled={!user}
               className="text-left rounded-[20px] p-4 border cursor-pointer transition-all duration-200 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
-                background: 'var(--color-surface-card)',
+                background: `radial-gradient(120% 90% at 0% 0%, ${tint(cfg.color, 9)}, transparent 62%), var(--color-surface-card)`,
                 borderColor: 'var(--color-overlay-06)',
                 minHeight: '118px',
                 boxSizing: 'border-box',
@@ -469,7 +485,7 @@ export default function Home() {
               {/* Mode icon */}
               <div
                 className="w-10 h-10 rounded-[13px] flex items-center justify-center mb-3"
-                style={{ background: cfg.bgColor, color: cfg.color }}
+                style={{ background: tint(cfg.color, 12), color: cfg.color }}
               >
                 {cfg.icon}
               </div>
@@ -482,37 +498,42 @@ export default function Home() {
         })}
       </div>
 
-      {/* ── Recommended chips (review_vocab / practice_concept) ── */}
-      {recs && recs.recommended.filter((r) => r.kind !== 'continue').length > 0 && (
+      {/* ── Recommended (review_vocab / practice_concept) ── */}
+      {recommendations.length > 0 && (
         <div className="mb-6">
-          <p className="text-[12px] text-text-muted mb-2">Recommended</p>
-          <div className="flex flex-wrap gap-2">
-            {recs.recommended
-              .filter((r) => r.kind !== 'continue')
-              .map((rec, i) => (
-                /* 44px-tall tap target; the visible chip is the inner span, and the
-                   negative margin keeps the chip row its original height. */
+          <h2 className="text-[17px] font-bold tracking-[-0.01em] text-text-primary mb-[14px]">Recommended</h2>
+          <div
+            className="rounded-[20px] border overflow-hidden"
+            style={{
+              background: 'var(--color-surface-card)',
+              borderColor: 'var(--color-overlay-06)',
+            }}
+          >
+            {recommendations.map((rec, i) => {
+              const color = MODES[rec.mode]?.color ?? 'var(--color-accent)';
+              return (
                 <button
                   key={i}
                   onClick={() => handleRecClick(rec)}
-                  className="group min-h-11 -my-[3.5px] flex items-center bg-transparent border-none p-0 cursor-pointer"
+                  className="w-full min-h-11 text-left flex items-center gap-3 px-4 py-2.5 bg-transparent border-none cursor-pointer transition-colors duration-150 hover:bg-overlay-04 active:bg-overlay-06"
+                  style={i > 0 ? { borderTop: '1px solid var(--color-overlay-06)' } : undefined}
                 >
                   <span
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold border transition-all duration-200 group-hover:brightness-110"
-                    style={{
-                      background: 'rgba(94,164,247,0.08)',
-                      borderColor: 'rgba(94,164,247,0.18)',
-                      color: 'var(--color-accent)',
-                    }}
+                    className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0"
+                    style={{ background: tint(color, 12), color }}
                   >
                     {/* Sparkle icon */}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
                     </svg>
+                  </span>
+                  <span className="flex-1 min-w-0 text-[13.5px] font-semibold leading-snug text-text-primary">
                     {rec.label}
                   </span>
+                  <ChevronRight size={16} className="flex-shrink-0 text-text-faint" />
                 </button>
-              ))}
+              );
+            })}
           </div>
         </div>
       )}
